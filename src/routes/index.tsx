@@ -184,6 +184,20 @@ function Index() {
                   exercises: session.exercises.filter((e) => e.id !== ex.id),
                 })
               }
+              onMoveUp={() =>
+                setSession({
+                  ...session,
+                  exercises: moveItem(session.exercises, i, -1),
+                })
+              }
+              onMoveDown={() =>
+                setSession({
+                  ...session,
+                  exercises: moveItem(session.exercises, i, 1),
+                })
+              }
+              canMoveUp={i > 0}
+              canMoveDown={i < session.exercises.length - 1}
             />
           ))}
         </div>
