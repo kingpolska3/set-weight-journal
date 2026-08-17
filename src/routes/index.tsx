@@ -89,7 +89,7 @@ function Index() {
     const to = from + delta;
     if (to < 0 || to >= list.length) return list;
     const next = list.slice();
-    const [item] = next.splice(from, 1);
+    const [item] = next.splice(from, 1) as [T];
     next.splice(to, 0, item);
     return next;
   }
