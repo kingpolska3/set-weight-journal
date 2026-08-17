@@ -52,6 +52,11 @@ export function ExerciseCard({
 
   const update = (patch: Partial<Exercise>) => onChange({ ...exercise, ...patch });
 
+  const clearPhoto = () => {
+    const { photo: _photo, ...rest } = exercise;
+    onChange(rest);
+  };
+
   const updateSet = (i: number, patch: Partial<Exercise["sets"][number]>) => {
     const sets = exercise.sets.map((s, si) => (si === i ? { ...s, ...patch } : s));
     update({ sets });
@@ -171,7 +176,7 @@ export function ExerciseCard({
               className="max-h-72 w-full object-cover"
             />
             <button
-              onClick={() => update({ photo: undefined })}
+              onClick={clearPhoto}
               aria-label="Usuń zdjęcie"
               className="absolute right-2 top-2 rounded-full bg-background/80 p-1.5 text-foreground backdrop-blur"
             >
