@@ -103,13 +103,31 @@ export function ExerciseCard({
           maxLength={80}
           className="min-w-0 flex-1 rounded-lg bg-transparent px-1 py-1 text-base font-semibold text-foreground outline-none focus:bg-secondary"
         />
-        <button
-          onClick={onRemove}
-          aria-label="Usuń ćwiczenie"
-          className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-danger"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+        <div className="flex shrink-0 items-center gap-0.5">
+          <button
+            onClick={onMoveUp}
+            disabled={!canMoveUp}
+            aria-label="Przesuń w górę"
+            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-25"
+          >
+            <ArrowUp className="h-4 w-4" />
+          </button>
+          <button
+            onClick={onMoveDown}
+            disabled={!canMoveDown}
+            aria-label="Przesuń w dół"
+            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-25"
+          >
+            <ArrowDown className="h-4 w-4" />
+          </button>
+          <button
+            onClick={onRemove}
+            aria-label="Usuń ćwiczenie"
+            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-danger"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
       </header>
 
       <div className="mt-3 space-y-2">
