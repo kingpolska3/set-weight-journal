@@ -1,5 +1,15 @@
 import { useRef, useState } from "react";
-import { Camera, Plus, Trash2, TrendingDown, TrendingUp, Minus, X } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Camera,
+  Plus,
+  Trash2,
+  TrendingDown,
+  TrendingUp,
+  Minus,
+  X,
+} from "lucide-react";
 import {
   computeProgress,
   fileToCompressedDataUrl,
@@ -17,6 +27,10 @@ type Props = {
   sessions: Session[];
   onChange: (ex: Exercise) => void;
   onRemove: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
 };
 
 function pctLabel(v: number) {
@@ -45,6 +59,10 @@ export function ExerciseCard({
   sessions,
   onChange,
   onRemove,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -85,13 +103,31 @@ export function ExerciseCard({
           maxLength={80}
           className="min-w-0 flex-1 rounded-lg bg-transparent px-1 py-1 text-base font-semibold text-foreground outline-none focus:bg-secondary"
         />
-        <button
-          onClick={onRemove}
-          aria-label="Usuń ćwiczenie"
-          className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-danger"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+        <div className="flex shrink-0 items-center gap-0.5">
+          <button
+            onClick={onMoveUp}
+            disabled={!canMoveUp}
+            aria-label="Przesuń w górę"
+            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-25"
+          >
+            <ArrowUp className="h-4 w-4" />
+          </button>
+          <button
+            onClick={onMoveDown}
+            disabled={!canMoveDown}
+            aria-label="Przesuń w dół"
+            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:pointer-events-none disabled:opacity-25"
+          >
+            <ArrowDown className="h-4 w-4" />
+          </button>
+          <button
+            onClick={onRemove}
+            aria-label="Usuń ćwiczenie"
+            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-danger"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
       </header>
 
       <div className="mt-3 space-y-2">

@@ -85,6 +85,15 @@ function Index() {
       exercises: [...session.exercises, { id: uid(), name: "", sets: [{ reps: 0, weight: 0 }] }],
     });
 
+  function moveItem<T>(list: T[], from: number, delta: number): T[] {
+    const to = from + delta;
+    if (to < 0 || to >= list.length) return list;
+    const next = list.slice();
+    const [item] = next.splice(from, 1) as [T];
+    next.splice(to, 0, item);
+    return next;
+  }
+
   const copyLastSame = () => {
     const weekday = new Date(date + "T00:00:00").getDay();
     const prev = sessions
@@ -184,6 +193,20 @@ function Index() {
                   exercises: session.exercises.filter((e) => e.id !== ex.id),
                 })
               }
+              onMoveUp={() =>
+                setSession({
+                  ...session,
+                  exercises: moveItem(session.exercises, i, -1),
+                })
+              }
+              onMoveDown={() =>
+                setSession({
+                  ...session,
+                  exercises: moveItem(session.exercises, i, 1),
+                })
+              }
+              canMoveUp={i > 0}
+              canMoveDown={i < session.exercises.length - 1}
             />
           ))}
         </div>
