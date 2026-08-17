@@ -1,5 +1,15 @@
 import { useRef, useState } from "react";
-import { Camera, Plus, Trash2, TrendingDown, TrendingUp, Minus, X } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Camera,
+  Plus,
+  Trash2,
+  TrendingDown,
+  TrendingUp,
+  Minus,
+  X,
+} from "lucide-react";
 import {
   computeProgress,
   fileToCompressedDataUrl,
@@ -17,6 +27,10 @@ type Props = {
   sessions: Session[];
   onChange: (ex: Exercise) => void;
   onRemove: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
 };
 
 function pctLabel(v: number) {
