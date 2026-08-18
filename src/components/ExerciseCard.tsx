@@ -1,21 +1,35 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import {
   ArrowDown,
   ArrowUp,
   Camera,
+  ChevronDown,
+  Copy,
+  Lightbulb,
   Plus,
   Trash2,
   TrendingDown,
   TrendingUp,
+  Trophy,
   Minus,
   X,
 } from "lucide-react";
+import { ExerciseChart } from "@/components/ExerciseChart";
+import { RestTimer } from "@/components/RestTimer";
 import {
+  best1RM,
+  bestInWindow,
   computeProgress,
+  exerciseHistory,
   fileToCompressedDataUrl,
+  nextSessionSuggestions,
+  prFlags,
+  shortDatePL,
   topWeight,
   totalReps,
   volume,
+  workingSets,
   type Exercise,
   type Session,
 } from "@/lib/workout-store";
@@ -66,7 +80,23 @@ export function ExerciseCard({
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [picked, setPicked] = useState<number[]>([]);
+
   const progress = computeProgress(sessions, date, exercise);
+  const history = useMemo(
+    () => exerciseHistory(sessions, exercise.name),
+    [sessions, exercise.name],
+  );
+  const pr = prFlags(sessions, date, exercise);
+  const suggestions = useMemo(
+    () => nextSessionSuggestions(sessions, date, exercise.name),
+    [sessions, date, exercise.name],
+  );
+  const best30 = bestInWindow(sessions, date, exercise.name, 30);
+  const best60 = bestInWindow(sessions, date, exercise.name, 60);
+  const e1rm = best1RM(exercise.sets);
+  const prevE1rm = history.filter((h) => h.date < date).slice(-1)[0]?.e1rm ?? 0;
 
   const update = (patch: Partial<Exercise>) => onChange({ ...exercise, ...patch });
 
@@ -88,6 +118,19 @@ export function ExerciseCard({
     } finally {
       setBusy(false);
     }
+  };
+
+  const lastSets = history.filter((h) => h.date < date).slice(-1)[0]?.sets ?? [];
+  const copyPicked = () => {
+    const copied = picked
+      .slice()
+      .sort((a, b) => a - b)
+      .map((i) => lastSets[i])
+      .filter((s): s is NonNullable<typeof s> => Boolean(s))
+      .map((s) => ({ ...s }));
+    if (copied.length === 0) return;
+    update({ sets: [...exercise.sets, ...copied] });
+    setPicked([]);
   };
 
   return (
@@ -130,55 +173,121 @@ export function ExerciseCard({
         </div>
       </header>
 
+      {pr.any ? (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-bold text-primary-foreground">
+            <Trophy className="h-3 w-3" /> PR
+          </span>
+          {pr.weight ? <PrTag>ciężar</PrTag> : null}
+          {pr.reps ? <PrTag>powtórzenia</PrTag> : null}
+          {pr.volume ? <PrTag>objętość</PrTag> : null}
+          {pr.e1rm ? <PrTag>1RM</PrTag> : null}
+        </div>
+      ) : null}
+
       <div className="mt-3 space-y-2">
         {exercise.sets.map((set, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <span className="w-6 text-sm font-medium text-muted-foreground tabular-nums">
-              {i + 1}-
-            </span>
-            <input
-              type="number"
-              inputMode="numeric"
-              value={set.reps || ""}
-              onChange={(e) => updateSet(i, { reps: Number(e.target.value) })}
-              placeholder="powt."
-              className="w-16 rounded-lg border border-input bg-secondary px-2 py-2 text-center text-sm tabular-nums outline-none focus:border-primary"
-            />
-            <span className="text-sm text-muted-foreground">x</span>
-            <input
-              type="number"
-              inputMode="decimal"
-              step="0.5"
-              value={set.weight || ""}
-              onChange={(e) => updateSet(i, { weight: Number(e.target.value) })}
-              placeholder="kg"
-              className="w-20 rounded-lg border border-input bg-secondary px-2 py-2 text-center text-sm tabular-nums outline-none focus:border-primary"
-            />
-            <span className="text-sm text-muted-foreground">kg</span>
+          <div key={i} className="rounded-xl border border-transparent px-0 py-0">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => updateSet(i, { warmup: !set.warmup })}
+                title={set.warmup ? "Seria rozgrzewkowa" : "Seria robocza"}
+                className={`w-8 shrink-0 rounded-md py-1 text-[10px] font-bold uppercase ${
+                  set.warmup
+                    ? "bg-secondary text-muted-foreground"
+                    : "bg-primary/15 text-primary"
+                }`}
+              >
+                {set.warmup ? "W-up" : `${i + 1}`}
+              </button>
+              <input
+                type="number"
+                inputMode="numeric"
+                value={set.reps || ""}
+                onChange={(e) => updateSet(i, { reps: Number(e.target.value) })}
+                placeholder="powt."
+                className="w-14 rounded-lg border border-input bg-secondary px-2 py-2 text-center text-sm tabular-nums outline-none focus:border-primary"
+              />
+              <span className="text-sm text-muted-foreground">x</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.5"
+                value={set.weight || ""}
+                onChange={(e) => updateSet(i, { weight: Number(e.target.value) })}
+                placeholder="kg"
+                className="w-16 rounded-lg border border-input bg-secondary px-2 py-2 text-center text-sm tabular-nums outline-none focus:border-primary"
+              />
+              <input
+                type="number"
+                inputMode="decimal"
+                step="0.5"
+                value={set.rpe ?? ""}
+                onChange={(e) =>
+                  updateSet(i, {
+                    rpe: e.target.value === "" ? undefined : Number(e.target.value),
+                  })
+                }
+                placeholder="RPE"
+                className="w-14 rounded-lg border border-input bg-secondary px-2 py-2 text-center text-xs tabular-nums outline-none focus:border-primary"
+              />
+              <input
+                type="number"
+                inputMode="numeric"
+                value={set.rir ?? ""}
+                onChange={(e) =>
+                  updateSet(i, {
+                    rir: e.target.value === "" ? undefined : Number(e.target.value),
+                  })
+                }
+                placeholder="RIR"
+                className="w-14 rounded-lg border border-input bg-secondary px-2 py-2 text-center text-xs tabular-nums outline-none focus:border-primary"
+              />
+              <button
+                onClick={() => update({ sets: exercise.sets.filter((_, si) => si !== i) })}
+                aria-label="Usuń serię"
+                className="rounded-md p-1 text-muted-foreground hover:text-danger"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
             <input
               value={set.note ?? ""}
               onChange={(e) => updateSet(i, { note: e.target.value })}
               placeholder="notatka (np. dropset)"
               maxLength={60}
-              className="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 py-2 text-xs text-muted-foreground outline-none focus:border-input focus:bg-secondary"
+              className="mt-1 w-full rounded-lg border border-transparent bg-transparent px-2 py-1 text-xs text-muted-foreground outline-none focus:border-input focus:bg-secondary"
             />
-            <button
-              onClick={() =>
-                update({ sets: exercise.sets.filter((_, si) => si !== i) })
-              }
-              aria-label="Usuń serię"
-              className="rounded-md p-1 text-muted-foreground hover:text-danger"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
+            {set.restSec ? (
+              <p className="px-2 text-[10px] text-muted-foreground">
+                przerwa: {Math.floor(set.restSec / 60)}:
+                {String(set.restSec % 60).padStart(2, "0")}
+              </p>
+            ) : null}
           </div>
         ))}
-        <button
-          onClick={() => update({ sets: [...exercise.sets, { reps: 0, weight: 0 }] })}
-          className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-primary hover:bg-secondary"
-        >
-          <Plus className="h-3.5 w-3.5" /> Dodaj serię
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => update({ sets: [...exercise.sets, { reps: 0, weight: 0 }] })}
+            className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-primary hover:bg-secondary"
+          >
+            <Plus className="h-3.5 w-3.5" /> Dodaj serię
+          </button>
+          <button
+            onClick={() =>
+              update({ sets: [...exercise.sets, { reps: 0, weight: 0, warmup: true }] })
+            }
+            className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-secondary"
+          >
+            <Plus className="h-3.5 w-3.5" /> Rozgrzewkowa
+          </button>
+          <RestTimer
+            onSave={(secVal) => {
+              const last = exercise.sets.length - 1;
+              if (last >= 0) updateSet(last, { restSec: secVal });
+            }}
+          />
+        </div>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
@@ -187,6 +296,7 @@ export function ExerciseCard({
             <ProgressPill label="objętość" value={progress.volumePct} />
             <ProgressPill label="ciężar" value={progress.weightPct} />
             <ProgressPill label="powt." value={progress.repsPct} />
+            <ProgressPill label="1RM" value={progress.e1rmPct} />
             <span className="text-[11px] text-muted-foreground">vs {progress.prevDate}</span>
           </>
         ) : (
@@ -200,7 +310,123 @@ export function ExerciseCard({
         <span>Objętość: {volume(exercise.sets).toFixed(1)} kg</span>
         <span>Max: {topWeight(exercise.sets)} kg</span>
         <span>Powtórzenia: {totalReps(exercise.sets)}</span>
+        <span className="text-foreground">
+          Estym. 1RM: <strong>{e1rm.toFixed(1)} kg</strong>{" "}
+          {prevE1rm > 0 ? (
+            <span className={e1rm >= prevE1rm ? "text-success" : "text-danger"}>
+              ({e1rm >= prevE1rm ? "+" : ""}
+              {(e1rm - prevE1rm).toFixed(1)} kg)
+            </span>
+          ) : null}
+        </span>
       </div>
+
+      {best30.date || best60.date ? (
+        <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-muted-foreground">
+          <BestBox title="Najlepsze 30 dni" best={best30} cur={{ v: volume(exercise.sets), e: e1rm }} />
+          <BestBox title="Najlepsze 60 dni" best={best60} cur={{ v: volume(exercise.sets), e: e1rm }} />
+        </div>
+      ) : null}
+
+      {suggestions.length > 0 ? (
+        <div className="mt-3 space-y-1.5 rounded-xl border border-border bg-secondary/50 p-3">
+          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
+            <Lightbulb className="h-3.5 w-3.5" /> Na następny trening
+          </p>
+          {suggestions.map((s, i) => (
+            <p
+              key={i}
+              className={`text-xs leading-snug ${
+                s.tone === "warn"
+                  ? "text-danger"
+                  : s.tone === "up"
+                    ? "text-success"
+                    : "text-foreground"
+              }`}
+            >
+              {s.text}
+            </p>
+          ))}
+        </div>
+      ) : null}
+
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="mt-3 flex w-full items-center justify-between rounded-lg px-1 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+      >
+        Wykres, historia i kopiowanie serii
+        <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open ? (
+        <div className="mt-2 space-y-3 rounded-xl border border-border p-3">
+          <ExerciseChart history={history} />
+
+          {lastSets.length > 0 ? (
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Skopiuj wybrane serie z ostatniego razu
+              </p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {lastSets.map((s, i) => (
+                  <button
+                    key={i}
+                    onClick={() =>
+                      setPicked((p) => (p.includes(i) ? p.filter((x) => x !== i) : [...p, i]))
+                    }
+                    className={`rounded-lg px-2 py-1 text-[11px] tabular-nums ${
+                      picked.includes(i)
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary text-muted-foreground"
+                    }`}
+                  >
+                    {s.reps}×{s.weight}kg
+                  </button>
+                ))}
+                <button
+                  onClick={copyPicked}
+                  disabled={picked.length === 0}
+                  className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-[11px] font-medium text-primary disabled:opacity-40"
+                >
+                  <Copy className="h-3 w-3" /> Kopiuj ({picked.length})
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Ostatnie treningi
+            </p>
+            <ul className="mt-1 space-y-1">
+              {history
+                .slice(-5)
+                .reverse()
+                .map((h) => (
+                  <li
+                    key={h.date}
+                    className="flex justify-between text-[11px] text-muted-foreground tabular-nums"
+                  >
+                    <span>{shortDatePL(h.date)}</span>
+                    <span>
+                      {workingSets(h.sets).length}×, {Math.round(h.volume)} kg obj., max{" "}
+                      {h.top} kg
+                    </span>
+                  </li>
+                ))}
+            </ul>
+            {exercise.name.trim() ? (
+              <Link
+                to="/historia"
+                search={{ ex: exercise.name.trim() }}
+                className="mt-2 inline-block text-[11px] font-medium text-primary"
+              >
+                Pełna historia ćwiczenia →
+              </Link>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       <div className="mt-3">
         {exercise.photo ? (
@@ -240,5 +466,38 @@ export function ExerciseCard({
         />
       </div>
     </article>
+  );
+}
+
+function PrTag({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-success">
+      {children}
+    </span>
+  );
+}
+
+function BestBox({
+  title,
+  best,
+  cur,
+}: {
+  title: string;
+  best: { volume: number; weight: number; e1rm: number; date: string | null };
+  cur: { v: number; e: number };
+}) {
+  if (!best.date) return <div />;
+  const diff = best.volume > 0 ? ((cur.v - best.volume) / best.volume) * 100 : 0;
+  return (
+    <div className="rounded-lg border border-border p-2">
+      <p className="text-[10px] uppercase tracking-wide">{title}</p>
+      <p className="text-foreground tabular-nums">
+        {Math.round(best.volume)} kg obj. · {best.weight} kg · 1RM {best.e1rm.toFixed(1)}
+      </p>
+      <p className={diff >= 0 ? "text-success" : "text-danger"}>
+        dziś {diff >= 0 ? "+" : ""}
+        {diff.toFixed(1)}% obj. vs best
+      </p>
+    </div>
   );
 }
