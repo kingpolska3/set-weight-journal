@@ -10,33 +10,53 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as HistoriaRouteImport } from './routes/historia'
+import { Route as NarzedziaRouteImport } from './routes/narzedzia'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HistoriaRoute = HistoriaRouteImport.update({
+  id: '/historia',
+  path: '/historia',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NarzedziaRoute = NarzedziaRouteImport.update({
+  id: '/narzedzia',
+  path: '/narzedzia',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/historia': typeof HistoriaRoute
+  '/narzedzia': typeof NarzedziaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/historia': typeof HistoriaRoute
+  '/narzedzia': typeof NarzedziaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/historia': typeof HistoriaRoute
+  '/narzedzia': typeof NarzedziaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/historia' | '/narzedzia'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/historia' | '/narzedzia'
+  id: '__root__' | '/' | '/historia' | '/narzedzia'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  HistoriaRoute: typeof HistoriaRoute
+  NarzedziaRoute: typeof NarzedziaRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +68,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/historia': {
+      id: '/historia'
+      path: '/historia'
+      fullPath: '/historia'
+      preLoaderRoute: typeof HistoriaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/narzedzia': {
+      id: '/narzedzia'
+      path: '/narzedzia'
+      fullPath: '/narzedzia'
+      preLoaderRoute: typeof NarzedziaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  HistoriaRoute: HistoriaRoute,
+  NarzedziaRoute: NarzedziaRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
