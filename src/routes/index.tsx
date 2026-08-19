@@ -1,19 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, Dumbbell, Plus, Copy } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CalendarDays, Camera, Dumbbell, Plus, Copy, Save, Trophy, X } from "lucide-react";
+import { toast } from "sonner";
+import { AppNav } from "@/components/AppNav";
 import { ExerciseCard } from "@/components/ExerciseCard";
 import {
   DAY_NAMES,
   DAY_PLAN,
   SEED_EXERCISES,
+  daySummary,
+  fileToCompressedDataUrl,
   formatDatePL,
   loadSessions,
+  loadTemplates,
   planForDate,
-  previousExercise,
   saveSessions,
+  saveTemplates,
   todayISO,
   uid,
-  volume,
   type Exercise,
   type Session,
 } from "@/lib/workout-store";
@@ -25,13 +29,13 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Zapisuj codzienne treningi: serie, powtórzenia, ciężary i zdjęcia. Automatyczny progres procentowy dla każdego ćwiczenia.",
+          "Zapisuj codzienne treningi: serie, powtórzenia, ciężary, RPE i zdjęcia. Estymowany 1RM, rekordy i inteligentne podpowiedzi progresji.",
       },
       { property: "og:title", content: "Dziennik treningowy — serie, ciężary i progres" },
       {
         property: "og:description",
         content:
-          "Codzienny zapis treningów z podziałem na partie, zdjęciami i procentowym progresem.",
+          "Codzienny zapis treningów z wykresami, estymowanym 1RM, rekordami i podpowiedziami na następny trening.",
       },
     ],
   }),
@@ -42,6 +46,7 @@ function Index() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [date, setDate] = useState<string>(todayISO());
   const [loaded, setLoaded] = useState(false);
+  const photoRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const stored = loadSessions();
@@ -104,7 +109,10 @@ function Index() {
           s.exercises.length > 0,
       )
       .sort((a, b) => (a.date < b.date ? 1 : -1))[0];
-    if (!prev) return;
+    if (!prev) {
+      toast.error("Brak wcześniejszego treningu tego typu");
+      return;
+    }
     setSession({
       date,
       exercises: prev.exercises.map((e) => ({
@@ -115,13 +123,27 @@ function Index() {
     });
   };
 
-  const dayVolume = session.exercises.reduce((sum, e) => sum + volume(e.sets), 0);
-  const prevDayVolume = session.exercises.reduce((sum, e) => {
-    const p = previousExercise(sessions, date, e.name);
-    return sum + (p ? volume(p.exercise.sets) : 0);
-  }, 0);
-  const dayPct =
-    prevDayVolume > 0 ? ((dayVolume - prevDayVolume) / prevDayVolume) * 100 : null;
+  const saveAsTemplate = () => {
+    if (session.exercises.length === 0) return;
+    const list = loadTemplates();
+    const tpl = {
+      id: uid(),
+      name: `${planForDate(date)} ${date}`,
+      exercises: session.exercises.map((e) => ({
+        name: e.name,
+        sets: e.sets.map((s) => ({ ...s })),
+      })),
+    };
+    saveTemplates([...list, tpl]);
+    toast.success("Zapisano jako szablon (zakładka Narzędzia)");
+  };
+
+  const handleSessionPhoto = async (file?: File) => {
+    if (!file) return;
+    setSession({ ...session, photo: await fileToCompressedDataUrl(file) });
+  };
+
+  const summary = useMemo(() => daySummary(sessions, date), [sessions, date]);
 
   return (
     <main className="min-h-screen bg-background pb-24">
@@ -155,17 +177,29 @@ function Index() {
               onClick={copyLastSame}
               className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground transition-colors hover:border-primary"
             >
-              <Copy className="h-4 w-4" /> Skopiuj poprzedni taki trening
+              <Copy className="h-4 w-4" /> Skopiuj poprzedni
+            </button>
+            <button
+              onClick={saveAsTemplate}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground transition-colors hover:border-primary"
+            >
+              <Save className="h-4 w-4" /> Zapisz szablon
             </button>
           </div>
 
           <div className="mt-4 grid grid-cols-3 gap-2">
             <Stat label="Ćwiczenia" value={String(session.exercises.length)} />
-            <Stat label="Objętość" value={`${Math.round(dayVolume)} kg`} />
+            <Stat label="Objętość" value={`${Math.round(summary.volume)} kg`} />
             <Stat
               label="Progres dnia"
-              value={dayPct === null ? "—" : `${dayPct > 0 ? "+" : ""}${dayPct.toFixed(1)}%`}
-              tone={dayPct === null ? "" : dayPct >= 0 ? "text-success" : "text-danger"}
+              value={
+                summary.pct === null
+                  ? "—"
+                  : `${summary.pct > 0 ? "+" : ""}${summary.pct.toFixed(1)}%`
+              }
+              tone={
+                summary.pct === null ? "" : summary.pct >= 0 ? "text-success" : "text-danger"
+              }
             />
           </div>
         </div>
@@ -218,7 +252,74 @@ function Index() {
           <Plus className="h-4 w-4" /> Dodaj ćwiczenie
         </button>
 
-        <div className="mt-10 rounded-2xl border border-border bg-card p-4">
+        <div className="mt-6 rounded-2xl border border-border bg-card p-4">
+          <h2 className="text-sm font-semibold text-foreground">Notatka do treningu</h2>
+          <textarea
+            value={session.note ?? ""}
+            onChange={(e) => setSession({ ...session, note: e.target.value })}
+            placeholder="Samopoczucie, sen, technika, plan na następny raz…"
+            rows={3}
+            className="mt-2 w-full resize-none rounded-xl border border-input bg-secondary px-3 py-2 text-sm outline-none focus:border-primary"
+          />
+          {session.photo ? (
+            <div className="relative mt-2 overflow-hidden rounded-xl border border-border">
+              <img
+                src={session.photo}
+                alt="Zdjęcie z treningu"
+                loading="lazy"
+                className="max-h-72 w-full object-cover"
+              />
+              <button
+                onClick={() => {
+                  const { photo: _p, ...rest } = session;
+                  setSession(rest);
+                }}
+                aria-label="Usuń zdjęcie treningu"
+                className="absolute right-2 top-2 rounded-full bg-background/80 p-1.5 backdrop-blur"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => photoRef.current?.click()}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border py-3 text-xs text-muted-foreground hover:border-primary hover:text-primary"
+            >
+              <Camera className="h-4 w-4" /> Zdjęcie do całego treningu
+            </button>
+          )}
+          <input
+            ref={photoRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              void handleSessionPhoto(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+          />
+        </div>
+
+        <div className="mt-6 rounded-2xl border border-primary/40 bg-card p-4">
+          <h2 className="flex items-center gap-1.5 text-sm font-semibold text-primary">
+            <Trophy className="h-4 w-4" /> Podsumowanie dnia
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-foreground">
+            {summary.exercises === 0
+              ? "Brak zapisanych ćwiczeń tego dnia."
+              : `Dzisiaj ${
+                  summary.pct === null
+                    ? "brak porównania"
+                    : `${summary.pct > 0 ? "+" : ""}${summary.pct.toFixed(1)}%`
+                }, ${Math.round(summary.volume)} kg objętości, ${summary.prCount} PR, ${
+                  summary.improved
+                } ćwiczeń powyżej poprzedniego wyniku, ${summary.sets} serii roboczych w ${
+                  summary.exercises
+                } ćwiczeniach.`}
+          </p>
+        </div>
+
+        <div className="mt-6 rounded-2xl border border-border bg-card p-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Rozkład tygodnia
           </h2>
@@ -232,6 +333,7 @@ function Index() {
           </ul>
         </div>
       </section>
+      <AppNav />
     </main>
   );
 }
