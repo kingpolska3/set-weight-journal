@@ -105,10 +105,21 @@ export function ExerciseCard({
     onChange(rest);
   };
 
-  const updateSet = (i: number, patch: Partial<Exercise["sets"][number]>) => {
-    const sets = exercise.sets.map((s, si) => (si === i ? { ...s, ...patch } : s));
+  type SetPatch = {
+    [K in keyof Exercise["sets"][number]]?: Exercise["sets"][number][K] | undefined;
+  };
+  const updateSet = (i: number, patch: SetPatch) => {
+    const sets = exercise.sets.map((s, si) => {
+      if (si !== i) return s;
+      const next = { ...s, ...patch } as Record<string, unknown>;
+      for (const k of Object.keys(patch)) {
+        if ((patch as Record<string, unknown>)[k] === undefined) delete next[k];
+      }
+      return next as Exercise["sets"][number];
+    });
     update({ sets });
   };
+
 
   const handlePhoto = async (file?: File) => {
     if (!file) return;
