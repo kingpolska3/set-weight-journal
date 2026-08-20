@@ -29,7 +29,11 @@ export type Template = {
 const KEY = "trening-dziennik-v1";
 const TEMPLATE_KEY = "trening-szablony-v1";
 
-export const DAY_PLAN: Record<number, string> = {
+const PLAN_KEY = "trening-rozklad-v1";
+
+export type WeekPlan = Record<number, string>;
+
+export const DEFAULT_DAY_PLAN: WeekPlan = {
   0: "Brzuch",
   1: "Ręce i barki",
   2: "Nogi i brzuch",
@@ -38,6 +42,31 @@ export const DAY_PLAN: Record<number, string> = {
   5: "Nogi i brzuch",
   6: "Klata i plecy",
 };
+
+/** Zapisany (edytowalny) rozkład tygodnia. */
+export function loadPlan(): WeekPlan {
+  if (typeof window === "undefined") return { ...DEFAULT_DAY_PLAN };
+  try {
+    const raw = window.localStorage.getItem(PLAN_KEY);
+    if (!raw) return { ...DEFAULT_DAY_PLAN };
+    const parsed = JSON.parse(raw) as WeekPlan;
+    return { ...DEFAULT_DAY_PLAN, ...parsed };
+  } catch {
+    return { ...DEFAULT_DAY_PLAN };
+  }
+}
+
+export function savePlan(plan: WeekPlan) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(PLAN_KEY, JSON.stringify(plan));
+  } catch {
+    /* quota */
+  }
+}
+
+/** Zgodność wstecz – domyślny rozkład. */
+export const DAY_PLAN = DEFAULT_DAY_PLAN;
 
 export const DAY_NAMES = [
   "Niedziela",
@@ -75,9 +104,9 @@ export function daysBetween(a: string, b: string): number {
   return Math.round((db - da) / 86400000);
 }
 
-export function planForDate(iso: string): string {
+export function planForDate(iso: string, plan?: WeekPlan): string {
   const d = new Date(iso + "T00:00:00");
-  return DAY_PLAN[d.getDay()] ?? "";
+  return (plan ?? loadPlan())[d.getDay()] ?? "";
 }
 
 export function uid(): string {
@@ -132,8 +161,18 @@ export function workingSets(sets: SetEntry[]): SetEntry[] {
   return working.length > 0 ? working : [];
 }
 
-export function volume(sets: SetEntry[]): number {
-  return workingSets(sets).reduce((sum, s) => sum + (s.reps || 0) * (s.weight || 0), 0);
+/** Ćwiczenia jednostronne – powtórzenia wpisywane na jedną stronę, więc objętość ×2. */
+export function unilateralFactor(name?: string): number {
+  const n = (name ?? "").toLowerCase();
+  return /jednor(ą|a)cz|jednon(ó|o)(ż|z)/.test(n) ? 2 : 1;
+}
+
+export function volume(sets: SetEntry[], name?: string): number {
+  const base = workingSets(sets).reduce(
+    (sum, s) => sum + (s.reps || 0) * (s.weight || 0),
+    0,
+  );
+  return base * unilateralFactor(name);
 }
 
 export function topWeight(sets: SetEntry[]): number {
@@ -193,7 +232,7 @@ export function exerciseHistory(sessions: Session[], name: string): ExerciseStat
       out.push({
         date: s.date,
         sets: ex.sets,
-        volume: volume(ex.sets),
+        volume: volume(ex.sets, ex.name),
         top: topWeight(ex.sets),
         reps: totalReps(ex.sets),
         e1rm: best1RM(ex.sets),
@@ -241,7 +280,7 @@ export function computeProgress(
   const prev = previousExercise(sessions, date, exercise.name);
   if (!prev) return null;
   return {
-    volumePct: pct(volume(exercise.sets), volume(prev.exercise.sets)),
+    volumePct: pct(volume(exercise.sets, exercise.name), volume(prev.exercise.sets, exercise.name)),
     weightPct: pct(topWeight(exercise.sets), topWeight(prev.exercise.sets)),
     repsPct: pct(totalReps(exercise.sets), totalReps(prev.exercise.sets)),
     e1rmPct: pct(best1RM(exercise.sets), best1RM(prev.exercise.sets)),
@@ -293,7 +332,7 @@ export function prFlags(sessions: Session[], date: string, exercise: Exercise): 
   const cur = {
     weight: topWeight(exercise.sets),
     reps: totalReps(exercise.sets),
-    volume: volume(exercise.sets),
+    volume: volume(exercise.sets, exercise.name),
     e1rm: best1RM(exercise.sets),
   };
   if (hist.length === 0 || cur.volume === 0) {
@@ -401,28 +440,50 @@ export type DaySummary = {
   improved: number;
   exercises: number;
   sets: number;
+  prevDate: string | null;
+  planName: string;
 };
 
-export function daySummary(sessions: Session[], date: string): DaySummary {
+/** Suma objętości całej sesji (z uwzględnieniem ćwiczeń jednostronnych). */
+export function sessionVolume(session: Session): number {
+  return session.exercises.reduce((sum, ex) => sum + volume(ex.sets, ex.name), 0);
+}
+
+/** Ostatnia wcześniejsza sesja o tej samej nazwie z rozkładu tygodnia. */
+export function previousSameTypeSession(
+  sessions: Session[],
+  date: string,
+  plan?: WeekPlan,
+): Session | null {
+  const p = plan ?? loadPlan();
+  const target = planForDate(date, p);
+  return (
+    sessions
+      .filter(
+        (s) => s.date < date && planForDate(s.date, p) === target && sessionVolume(s) > 0,
+      )
+      .sort((a, b) => (a.date < b.date ? 1 : -1))[0] ?? null
+  );
+}
+
+export function daySummary(sessions: Session[], date: string, plan?: WeekPlan): DaySummary {
+  const p = plan ?? loadPlan();
   const session = sessions.find((s) => s.date === date);
   const exercises = session?.exercises ?? [];
   let vol = 0;
-  let prevVol = 0;
   let prCount = 0;
   let improved = 0;
   let sets = 0;
   for (const ex of exercises) {
-    vol += volume(ex.sets);
+    vol += volume(ex.sets, ex.name);
     sets += workingSets(ex.sets).length;
     const prev = previousExercise(sessions, date, ex.name);
-    if (prev) {
-      const pv = volume(prev.exercise.sets);
-      prevVol += pv;
-      if (volume(ex.sets) > pv) improved++;
-    }
+    if (prev && volume(ex.sets, ex.name) > volume(prev.exercise.sets, ex.name)) improved++;
     const flags = prFlags(sessions, date, ex);
     if (flags.any) prCount++;
   }
+  const prevSession = previousSameTypeSession(sessions, date, p);
+  const prevVol = prevSession ? sessionVolume(prevSession) : 0;
   return {
     volume: vol,
     prevVolume: prevVol,
@@ -431,6 +492,8 @@ export function daySummary(sessions: Session[], date: string): DaySummary {
     improved,
     exercises: exercises.length,
     sets,
+    prevDate: prevSession?.date ?? null,
+    planName: planForDate(date, p),
   };
 }
 

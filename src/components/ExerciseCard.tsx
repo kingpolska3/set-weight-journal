@@ -293,7 +293,7 @@ export function ExerciseCard({
       </div>
 
       <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-muted-foreground tabular-nums">
-        <span>Objętość: {volume(exercise.sets).toFixed(1)} kg</span>
+        <span>Objętość: {volume(exercise.sets, exercise.name).toFixed(1)} kg</span>
         <span>Max: {topWeight(exercise.sets)} kg</span>
         <span>Powtórzenia: {totalReps(exercise.sets)}</span>
         <span className="text-foreground">
@@ -309,8 +309,8 @@ export function ExerciseCard({
 
       {best30.date || best60.date ? (
         <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-muted-foreground">
-          <BestBox title="Najlepsze 30 dni" best={best30} cur={{ v: volume(exercise.sets), e: e1rm }} />
-          <BestBox title="Najlepsze 60 dni" best={best60} cur={{ v: volume(exercise.sets), e: e1rm }} />
+          <BestBox title="Najlepsze 30 dni" best={best30} cur={{ v: volume(exercise.sets, exercise.name), e: e1rm }} />
+          <BestBox title="Najlepsze 60 dni" best={best60} cur={{ v: volume(exercise.sets, exercise.name), e: e1rm }} />
         </div>
       ) : null}
 

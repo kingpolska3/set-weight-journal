@@ -1,25 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, Camera, Dumbbell, Plus, Copy, Save, Trophy, X } from "lucide-react";
+import { CalendarDays, Camera, Dumbbell, Pencil, Plus, Copy, Save, Trophy, X } from "lucide-react";
 import { toast } from "sonner";
 import { AppNav } from "@/components/AppNav";
 import { ExerciseCard } from "@/components/ExerciseCard";
 import {
   DAY_NAMES,
-  DAY_PLAN,
+  DEFAULT_DAY_PLAN,
   SEED_EXERCISES,
   daySummary,
   fileToCompressedDataUrl,
   formatDatePL,
+  loadPlan,
   loadSessions,
   loadTemplates,
   planForDate,
+  savePlan,
   saveSessions,
   saveTemplates,
   todayISO,
   uid,
   type Exercise,
   type Session,
+  type WeekPlan,
 } from "@/lib/workout-store";
 
 export const Route = createFileRoute("/")({
@@ -46,6 +49,8 @@ function Index() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [date, setDate] = useState<string>(todayISO());
   const [loaded, setLoaded] = useState(false);
+  const [plan, setPlan] = useState<WeekPlan>(() => loadPlan());
+  const [editPlan, setEditPlan] = useState(false);
   const photoRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -62,6 +67,7 @@ function Index() {
     } else {
       setSessions(stored);
     }
+    setPlan(loadPlan());
     setLoaded(true);
   }, []);
 
@@ -105,7 +111,7 @@ function Index() {
       .filter(
         (s) =>
           s.date < date &&
-          DAY_PLAN[new Date(s.date + "T00:00:00").getDay()] === DAY_PLAN[weekday] &&
+          plan[new Date(s.date + "T00:00:00").getDay()] === plan[weekday] &&
           s.exercises.length > 0,
       )
       .sort((a, b) => (a.date < b.date ? 1 : -1))[0];
@@ -128,7 +134,7 @@ function Index() {
     const list = loadTemplates();
     const tpl = {
       id: uid(),
-      name: `${planForDate(date)} ${date}`,
+      name: `${planForDate(date, plan)} ${date}`,
       exercises: session.exercises.map((e) => ({
         name: e.name,
         sets: e.sets.map((s) => ({ ...s })),
@@ -143,7 +149,7 @@ function Index() {
     setSession({ ...session, photo: await fileToCompressedDataUrl(file) });
   };
 
-  const summary = useMemo(() => daySummary(sessions, date), [sessions, date]);
+  const summary = useMemo(() => daySummary(sessions, date, plan), [sessions, date, plan]);
 
   return (
     <main className="min-h-screen bg-background pb-24">
@@ -159,7 +165,7 @@ function Index() {
             </span>
           </div>
           <h1 className="mt-2 text-3xl font-bold leading-tight text-foreground">
-            {planForDate(date)}
+            {planForDate(date, plan)}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">{formatDatePL(date)}</p>
 
@@ -317,21 +323,60 @@ function Index() {
                   summary.exercises
                 } ćwiczeniach.`}
           </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {summary.prevDate
+              ? `Porównanie z ostatnim treningiem „${summary.planName}” (${formatDatePL(summary.prevDate)}) – ${Math.round(summary.prevVolume)} kg.`
+              : `Brak wcześniejszego treningu „${summary.planName}” do porównania.`}
+          </p>
+
         </div>
 
         <div className="mt-6 rounded-2xl border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Rozkład tygodnia
-          </h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Rozkład tygodnia
+            </h2>
+            <button
+              onClick={() => setEditPlan((v) => !v)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs text-foreground transition-colors hover:border-primary"
+            >
+              <Pencil className="h-3.5 w-3.5" /> {editPlan ? "Gotowe" : "Edytuj"}
+            </button>
+          </div>
           <ul className="mt-3 space-y-1.5">
             {[1, 2, 3, 4, 5, 6, 0].map((d) => (
-              <li key={d} className="flex justify-between text-sm">
+              <li key={d} className="flex items-center justify-between gap-3 text-sm">
                 <span className="text-muted-foreground">{DAY_NAMES[d]}</span>
-                <span className="font-medium text-foreground">{DAY_PLAN[d]}</span>
+                {editPlan ? (
+                  <input
+                    value={plan[d] ?? ""}
+                    onChange={(e) => {
+                      const next = { ...plan, [d]: e.target.value };
+                      setPlan(next);
+                      savePlan(next);
+                    }}
+                    placeholder="np. Klata i plecy"
+                    className="w-48 rounded-lg border border-input bg-secondary px-2 py-1 text-right text-sm outline-none focus:border-primary"
+                  />
+                ) : (
+                  <span className="font-medium text-foreground">{plan[d]}</span>
+                )}
               </li>
             ))}
           </ul>
+          {editPlan ? (
+            <button
+              onClick={() => {
+                setPlan({ ...DEFAULT_DAY_PLAN });
+                savePlan({ ...DEFAULT_DAY_PLAN });
+              }}
+              className="mt-3 text-xs text-muted-foreground underline hover:text-primary"
+            >
+              Przywróć domyślny rozkład
+            </button>
+          ) : null}
         </div>
+
       </section>
       <AppNav />
     </main>
