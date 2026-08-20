@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, Camera, Dumbbell, Plus, Copy, Save, Trophy, X } from "lucide-react";
+import { CalendarDays, Camera, Dumbbell, Pencil, Plus, Copy, Save, Trophy, X } from "lucide-react";
 import { toast } from "sonner";
 import { AppNav } from "@/components/AppNav";
 import { ExerciseCard } from "@/components/ExerciseCard";
 import {
   DAY_NAMES,
+  DEFAULT_DAY_PLAN,
   SEED_EXERCISES,
   daySummary,
   fileToCompressedDataUrl,
