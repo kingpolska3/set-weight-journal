@@ -392,18 +392,6 @@ export function nextSessionSuggestions(
     });
   }
 
-  // RPE
-  const rpes = sets.map((s) => s.rpe).filter((r): r is number => typeof r === "number" && r > 0);
-  if (rpes.length > 0) {
-    const avg = rpes.reduce((a, b) => a + b, 0) / rpes.length;
-    if (avg <= 7)
-      out.push({ tone: "up", text: `Średnie RPE ${avg.toFixed(1)} – masz zapas, śmiało dokładaj.` });
-    if (avg >= 9.5)
-      out.push({
-        tone: "warn",
-        text: `Średnie RPE ${avg.toFixed(1)} – bardzo ciężko. Utrzymaj ciężar i popraw technikę/regenerację.`,
-      });
-  }
   return out;
 }
 

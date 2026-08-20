@@ -229,31 +229,6 @@ export function ExerciseCard({
                 placeholder="kg"
                 className="w-16 rounded-lg border border-input bg-secondary px-2 py-2 text-center text-sm tabular-nums outline-none focus:border-primary"
               />
-              <input
-                type="number"
-                inputMode="decimal"
-                step="0.5"
-                value={set.rpe ?? ""}
-                onChange={(e) =>
-                  updateSet(i, {
-                    rpe: e.target.value === "" ? undefined : Number(e.target.value),
-                  })
-                }
-                placeholder="RPE"
-                className="w-14 rounded-lg border border-input bg-secondary px-2 py-2 text-center text-xs tabular-nums outline-none focus:border-primary"
-              />
-              <input
-                type="number"
-                inputMode="numeric"
-                value={set.rir ?? ""}
-                onChange={(e) =>
-                  updateSet(i, {
-                    rir: e.target.value === "" ? undefined : Number(e.target.value),
-                  })
-                }
-                placeholder="RIR"
-                className="w-14 rounded-lg border border-input bg-secondary px-2 py-2 text-center text-xs tabular-nums outline-none focus:border-primary"
-              />
               <button
                 onClick={() => update({ sets: exercise.sets.filter((_, si) => si !== i) })}
                 aria-label="Usuń serię"
