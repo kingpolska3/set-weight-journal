@@ -49,7 +49,7 @@ export function loadPlan(): WeekPlan {
   try {
     const raw = window.localStorage.getItem(PLAN_KEY);
     if (!raw) return { ...DEFAULT_DAY_PLAN };
-    const parsed = JSON.parse(raw) as Partial<WeekPlan>;
+    const parsed = JSON.parse(raw) as WeekPlan;
     return { ...DEFAULT_DAY_PLAN, ...parsed };
   } catch {
     return { ...DEFAULT_DAY_PLAN };
