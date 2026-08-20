@@ -323,6 +323,12 @@ function Index() {
                   summary.exercises
                 } ćwiczeniach.`}
           </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {summary.prevDate
+              ? `Porównanie z ostatnim treningiem „${summary.planName}” (${formatDatePL(summary.prevDate)}) – ${Math.round(summary.prevVolume)} kg.`
+              : `Brak wcześniejszego treningu „${summary.planName}” do porównania.`}
+          </p>
+
         </div>
 
         <div className="mt-6 rounded-2xl border border-border bg-card p-4">
