@@ -440,28 +440,50 @@ export type DaySummary = {
   improved: number;
   exercises: number;
   sets: number;
+  prevDate: string | null;
+  planName: string;
 };
 
-export function daySummary(sessions: Session[], date: string): DaySummary {
+/** Suma objętości całej sesji (z uwzględnieniem ćwiczeń jednostronnych). */
+export function sessionVolume(session: Session): number {
+  return session.exercises.reduce((sum, ex) => sum + volume(ex.sets, ex.name), 0);
+}
+
+/** Ostatnia wcześniejsza sesja o tej samej nazwie z rozkładu tygodnia. */
+export function previousSameTypeSession(
+  sessions: Session[],
+  date: string,
+  plan?: WeekPlan,
+): Session | null {
+  const p = plan ?? loadPlan();
+  const target = planForDate(date, p);
+  return (
+    sessions
+      .filter(
+        (s) => s.date < date && planForDate(s.date, p) === target && sessionVolume(s) > 0,
+      )
+      .sort((a, b) => (a.date < b.date ? 1 : -1))[0] ?? null
+  );
+}
+
+export function daySummary(sessions: Session[], date: string, plan?: WeekPlan): DaySummary {
+  const p = plan ?? loadPlan();
   const session = sessions.find((s) => s.date === date);
   const exercises = session?.exercises ?? [];
   let vol = 0;
-  let prevVol = 0;
   let prCount = 0;
   let improved = 0;
   let sets = 0;
   for (const ex of exercises) {
-    vol += volume(ex.sets);
+    vol += volume(ex.sets, ex.name);
     sets += workingSets(ex.sets).length;
     const prev = previousExercise(sessions, date, ex.name);
-    if (prev) {
-      const pv = volume(prev.exercise.sets);
-      prevVol += pv;
-      if (volume(ex.sets) > pv) improved++;
-    }
+    if (prev && volume(ex.sets, ex.name) > volume(prev.exercise.sets, ex.name)) improved++;
     const flags = prFlags(sessions, date, ex);
     if (flags.any) prCount++;
   }
+  const prevSession = previousSameTypeSession(sessions, date, p);
+  const prevVol = prevSession ? sessionVolume(prevSession) : 0;
   return {
     volume: vol,
     prevVolume: prevVol,
@@ -470,6 +492,8 @@ export function daySummary(sessions: Session[], date: string): DaySummary {
     improved,
     exercises: exercises.length,
     sets,
+    prevDate: prevSession?.date ?? null,
+    planName: planForDate(date, p),
   };
 }
 
