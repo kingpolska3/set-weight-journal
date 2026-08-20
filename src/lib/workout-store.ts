@@ -104,9 +104,9 @@ export function daysBetween(a: string, b: string): number {
   return Math.round((db - da) / 86400000);
 }
 
-export function planForDate(iso: string): string {
+export function planForDate(iso: string, plan?: WeekPlan): string {
   const d = new Date(iso + "T00:00:00");
-  return DAY_PLAN[d.getDay()] ?? "";
+  return (plan ?? loadPlan())[d.getDay()] ?? "";
 }
 
 export function uid(): string {
@@ -161,8 +161,18 @@ export function workingSets(sets: SetEntry[]): SetEntry[] {
   return working.length > 0 ? working : [];
 }
 
-export function volume(sets: SetEntry[]): number {
-  return workingSets(sets).reduce((sum, s) => sum + (s.reps || 0) * (s.weight || 0), 0);
+/** Ćwiczenia jednostronne – powtórzenia wpisywane na jedną stronę, więc objętość ×2. */
+export function unilateralFactor(name?: string): number {
+  const n = (name ?? "").toLowerCase();
+  return /jednor(ą|a)cz|jednon(ó|o)(ż|z)/.test(n) ? 2 : 1;
+}
+
+export function volume(sets: SetEntry[], name?: string): number {
+  const base = workingSets(sets).reduce(
+    (sum, s) => sum + (s.reps || 0) * (s.weight || 0),
+    0,
+  );
+  return base * unilateralFactor(name);
 }
 
 export function topWeight(sets: SetEntry[]): number {
