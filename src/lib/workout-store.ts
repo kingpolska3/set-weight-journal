@@ -232,7 +232,7 @@ export function exerciseHistory(sessions: Session[], name: string): ExerciseStat
       out.push({
         date: s.date,
         sets: ex.sets,
-        volume: volume(ex.sets),
+        volume: volume(ex.sets, ex.name),
         top: topWeight(ex.sets),
         reps: totalReps(ex.sets),
         e1rm: best1RM(ex.sets),
@@ -280,7 +280,7 @@ export function computeProgress(
   const prev = previousExercise(sessions, date, exercise.name);
   if (!prev) return null;
   return {
-    volumePct: pct(volume(exercise.sets), volume(prev.exercise.sets)),
+    volumePct: pct(volume(exercise.sets, exercise.name), volume(prev.exercise.sets, exercise.name)),
     weightPct: pct(topWeight(exercise.sets), topWeight(prev.exercise.sets)),
     repsPct: pct(totalReps(exercise.sets), totalReps(prev.exercise.sets)),
     e1rmPct: pct(best1RM(exercise.sets), best1RM(prev.exercise.sets)),
@@ -332,7 +332,7 @@ export function prFlags(sessions: Session[], date: string, exercise: Exercise): 
   const cur = {
     weight: topWeight(exercise.sets),
     reps: totalReps(exercise.sets),
-    volume: volume(exercise.sets),
+    volume: volume(exercise.sets, exercise.name),
     e1rm: best1RM(exercise.sets),
   };
   if (hist.length === 0 || cur.volume === 0) {
