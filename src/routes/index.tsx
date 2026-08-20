@@ -325,18 +325,51 @@ function Index() {
         </div>
 
         <div className="mt-6 rounded-2xl border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Rozkład tygodnia
-          </h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Rozkład tygodnia
+            </h2>
+            <button
+              onClick={() => setEditPlan((v) => !v)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs text-foreground transition-colors hover:border-primary"
+            >
+              <Pencil className="h-3.5 w-3.5" /> {editPlan ? "Gotowe" : "Edytuj"}
+            </button>
+          </div>
           <ul className="mt-3 space-y-1.5">
             {[1, 2, 3, 4, 5, 6, 0].map((d) => (
-              <li key={d} className="flex justify-between text-sm">
+              <li key={d} className="flex items-center justify-between gap-3 text-sm">
                 <span className="text-muted-foreground">{DAY_NAMES[d]}</span>
-                <span className="font-medium text-foreground">{DAY_PLAN[d]}</span>
+                {editPlan ? (
+                  <input
+                    value={plan[d] ?? ""}
+                    onChange={(e) => {
+                      const next = { ...plan, [d]: e.target.value };
+                      setPlan(next);
+                      savePlan(next);
+                    }}
+                    placeholder="np. Klata i plecy"
+                    className="w-48 rounded-lg border border-input bg-secondary px-2 py-1 text-right text-sm outline-none focus:border-primary"
+                  />
+                ) : (
+                  <span className="font-medium text-foreground">{plan[d]}</span>
+                )}
               </li>
             ))}
           </ul>
+          {editPlan ? (
+            <button
+              onClick={() => {
+                setPlan({ ...DEFAULT_DAY_PLAN });
+                savePlan({ ...DEFAULT_DAY_PLAN });
+              }}
+              className="mt-3 text-xs text-muted-foreground underline hover:text-primary"
+            >
+              Przywróć domyślny rozkład
+            </button>
+          ) : null}
         </div>
+
       </section>
       <AppNav />
     </main>
