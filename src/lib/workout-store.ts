@@ -29,7 +29,11 @@ export type Template = {
 const KEY = "trening-dziennik-v1";
 const TEMPLATE_KEY = "trening-szablony-v1";
 
-export const DAY_PLAN: Record<number, string> = {
+const PLAN_KEY = "trening-rozklad-v1";
+
+export type WeekPlan = Record<number, string>;
+
+export const DEFAULT_DAY_PLAN: WeekPlan = {
   0: "Brzuch",
   1: "Ręce i barki",
   2: "Nogi i brzuch",
@@ -38,6 +42,31 @@ export const DAY_PLAN: Record<number, string> = {
   5: "Nogi i brzuch",
   6: "Klata i plecy",
 };
+
+/** Zapisany (edytowalny) rozkład tygodnia. */
+export function loadPlan(): WeekPlan {
+  if (typeof window === "undefined") return { ...DEFAULT_DAY_PLAN };
+  try {
+    const raw = window.localStorage.getItem(PLAN_KEY);
+    if (!raw) return { ...DEFAULT_DAY_PLAN };
+    const parsed = JSON.parse(raw) as Partial<WeekPlan>;
+    return { ...DEFAULT_DAY_PLAN, ...parsed };
+  } catch {
+    return { ...DEFAULT_DAY_PLAN };
+  }
+}
+
+export function savePlan(plan: WeekPlan) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(PLAN_KEY, JSON.stringify(plan));
+  } catch {
+    /* quota */
+  }
+}
+
+/** Zgodność wstecz – domyślny rozkład. */
+export const DAY_PLAN = DEFAULT_DAY_PLAN;
 
 export const DAY_NAMES = [
   "Niedziela",
