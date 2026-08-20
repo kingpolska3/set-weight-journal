@@ -137,8 +137,6 @@ function HistoryPage() {
                 {h.sets.map((s, i) => (
                   <li key={i} className="text-xs text-muted-foreground tabular-nums">
                     {s.warmup ? "W-up" : `${i + 1}-`} {s.reps}×{s.weight} kg
-                    {s.rpe ? ` · RPE ${s.rpe}` : ""}
-                    {s.rir !== undefined ? ` · RIR ${s.rir}` : ""}
                     {s.note ? ` · ${s.note}` : ""}
                   </li>
                 ))}

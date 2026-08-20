@@ -29,7 +29,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Zapisuj codzienne treningi: serie, powtórzenia, ciężary, RPE i zdjęcia. Estymowany 1RM, rekordy i inteligentne podpowiedzi progresji.",
+          "Zapisuj codzienne treningi: serie, powtórzenia, ciężary i zdjęcia. Estymowany 1RM, rekordy i inteligentne podpowiedzi progresji.",
       },
       { property: "og:title", content: "Dziennik treningowy — serie, ciężary i progres" },
       {

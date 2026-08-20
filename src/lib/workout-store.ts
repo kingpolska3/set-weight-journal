@@ -2,8 +2,6 @@ export type SetEntry = {
   reps: number;
   weight: number;
   note?: string;
-  rpe?: number;
-  rir?: number;
   warmup?: boolean;
   restSec?: number;
 };
@@ -392,18 +390,6 @@ export function nextSessionSuggestions(
     });
   }
 
-  // RPE
-  const rpes = sets.map((s) => s.rpe).filter((r): r is number => typeof r === "number" && r > 0);
-  if (rpes.length > 0) {
-    const avg = rpes.reduce((a, b) => a + b, 0) / rpes.length;
-    if (avg <= 7)
-      out.push({ tone: "up", text: `Średnie RPE ${avg.toFixed(1)} – masz zapas, śmiało dokładaj.` });
-    if (avg >= 9.5)
-      out.push({
-        tone: "warn",
-        text: `Średnie RPE ${avg.toFixed(1)} – bardzo ciężko. Utrzymaj ciężar i popraw technikę/regenerację.`,
-      });
-  }
   return out;
 }
 
@@ -491,7 +477,7 @@ export function fileToCompressedDataUrl(file: File, max = 900): Promise<string> 
 
 export function sessionsToCSV(sessions: Session[]): string {
   const rows = [
-    ["data", "cwiczenie", "seria", "typ", "powtorzenia", "ciezar_kg", "rpe", "rir", "notatka"],
+    ["data", "cwiczenie", "seria", "typ", "powtorzenia", "ciezar_kg", "notatka"],
   ];
   for (const s of [...sessions].sort((a, b) => (a.date < b.date ? -1 : 1))) {
     for (const ex of s.exercises) {
@@ -503,8 +489,6 @@ export function sessionsToCSV(sessions: Session[]): string {
           set.warmup ? "warmup" : "robocza",
           String(set.reps ?? ""),
           String(set.weight ?? ""),
-          set.rpe ? String(set.rpe) : "",
-          set.rir !== undefined ? String(set.rir) : "",
           set.note ?? "",
         ]);
       });
