@@ -6,20 +6,22 @@ import { AppNav } from "@/components/AppNav";
 import { ExerciseCard } from "@/components/ExerciseCard";
 import {
   DAY_NAMES,
-  DAY_PLAN,
   SEED_EXERCISES,
   daySummary,
   fileToCompressedDataUrl,
   formatDatePL,
+  loadPlan,
   loadSessions,
   loadTemplates,
   planForDate,
+  savePlan,
   saveSessions,
   saveTemplates,
   todayISO,
   uid,
   type Exercise,
   type Session,
+  type WeekPlan,
 } from "@/lib/workout-store";
 
 export const Route = createFileRoute("/")({
@@ -46,6 +48,8 @@ function Index() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [date, setDate] = useState<string>(todayISO());
   const [loaded, setLoaded] = useState(false);
+  const [plan, setPlan] = useState<WeekPlan>(() => loadPlan());
+  const [editPlan, setEditPlan] = useState(false);
   const photoRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -62,6 +66,7 @@ function Index() {
     } else {
       setSessions(stored);
     }
+    setPlan(loadPlan());
     setLoaded(true);
   }, []);
 
@@ -105,7 +110,7 @@ function Index() {
       .filter(
         (s) =>
           s.date < date &&
-          DAY_PLAN[new Date(s.date + "T00:00:00").getDay()] === DAY_PLAN[weekday] &&
+          plan[new Date(s.date + "T00:00:00").getDay()] === plan[weekday] &&
           s.exercises.length > 0,
       )
       .sort((a, b) => (a.date < b.date ? 1 : -1))[0];
@@ -128,7 +133,7 @@ function Index() {
     const list = loadTemplates();
     const tpl = {
       id: uid(),
-      name: `${planForDate(date)} ${date}`,
+      name: `${planForDate(date, plan)} ${date}`,
       exercises: session.exercises.map((e) => ({
         name: e.name,
         sets: e.sets.map((s) => ({ ...s })),
@@ -143,7 +148,7 @@ function Index() {
     setSession({ ...session, photo: await fileToCompressedDataUrl(file) });
   };
 
-  const summary = useMemo(() => daySummary(sessions, date), [sessions, date]);
+  const summary = useMemo(() => daySummary(sessions, date, plan), [sessions, date, plan]);
 
   return (
     <main className="min-h-screen bg-background pb-24">
@@ -159,7 +164,7 @@ function Index() {
             </span>
           </div>
           <h1 className="mt-2 text-3xl font-bold leading-tight text-foreground">
-            {planForDate(date)}
+            {planForDate(date, plan)}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">{formatDatePL(date)}</p>
 
