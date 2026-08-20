@@ -2,8 +2,6 @@ export type SetEntry = {
   reps: number;
   weight: number;
   note?: string;
-  rpe?: number;
-  rir?: number;
   warmup?: boolean;
   restSec?: number;
 };
@@ -479,7 +477,7 @@ export function fileToCompressedDataUrl(file: File, max = 900): Promise<string> 
 
 export function sessionsToCSV(sessions: Session[]): string {
   const rows = [
-    ["data", "cwiczenie", "seria", "typ", "powtorzenia", "ciezar_kg", "rpe", "rir", "notatka"],
+    ["data", "cwiczenie", "seria", "typ", "powtorzenia", "ciezar_kg", "notatka"],
   ];
   for (const s of [...sessions].sort((a, b) => (a.date < b.date ? -1 : 1))) {
     for (const ex of s.exercises) {
@@ -491,8 +489,6 @@ export function sessionsToCSV(sessions: Session[]): string {
           set.warmup ? "warmup" : "robocza",
           String(set.reps ?? ""),
           String(set.weight ?? ""),
-          set.rpe ? String(set.rpe) : "",
-          set.rir !== undefined ? String(set.rir) : "",
           set.note ?? "",
         ]);
       });
