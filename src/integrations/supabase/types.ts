@@ -14,13 +14,101 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string
+          id: string
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string
+          id: string
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string
+          id?: string
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          updated_at: string
+          user_id: string
+          week_plan: Json
+        }
+        Insert: {
+          updated_at?: string
+          user_id: string
+          week_plan?: Json
+        }
+        Update: {
+          updated_at?: string
+          user_id?: string
+          week_plan?: Json
+        }
+        Relationships: []
+      }
+      workout_days: {
+        Row: {
+          data: Json
+          date: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          data?: Json
+          date: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          data?: Json
+          date?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      delete_my_account: { Args: never; Returns: undefined }
+      public_stats: {
+        Args: { days?: number; target: string }
+        Returns: {
+          display_name: string
+          last_date: string
+          sessions: number
+          total_sets: number
+          total_volume: number
+          user_id: string
+        }[]
+      }
+      search_profiles: {
+        Args: { q: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          id: string
+          username: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
