@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, Camera, Dumbbell, Pencil, Plus, Copy, Save, Trophy, X } from "lucide-react";
 import { toast } from "sonner";
 import { AppNav } from "@/components/AppNav";
+import { useAuth } from "@/hooks/useAuth";
+import { WORKOUTS_UPDATED, pushPlan, stampSession, syncNow } from "@/lib/cloud-sync";
 import { ExerciseCard } from "@/components/ExerciseCard";
 import {
   DAY_NAMES,
@@ -52,6 +54,7 @@ function Index() {
   const [plan, setPlan] = useState<WeekPlan>(() => loadPlan());
   const [editPlan, setEditPlan] = useState(false);
   const photoRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     const stored = loadSessions();
@@ -75,12 +78,42 @@ function Index() {
     if (loaded) saveSessions(sessions);
   }, [sessions, loaded]);
 
+  // Synchronizacja w tle: po zalogowaniu, po zmianach i po powrocie online.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    const run = () => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) return;
+      void syncNow(user.id).catch(() => undefined);
+    };
+    const onUpdated = () => {
+      if (!cancelled) setSessions(loadSessions());
+    };
+    window.addEventListener(WORKOUTS_UPDATED, onUpdated);
+    window.addEventListener("online", run);
+    run();
+    return () => {
+      cancelled = true;
+      window.removeEventListener(WORKOUTS_UPDATED, onUpdated);
+      window.removeEventListener("online", run);
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!loaded || !user) return;
+    const t = setTimeout(() => {
+      void syncNow(user.id).catch(() => undefined);
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [sessions, loaded, user]);
+
   const session = useMemo(
     () => sessions.find((s) => s.date === date) ?? { date, exercises: [] },
     [sessions, date],
   );
 
-  const setSession = (next: Session) => {
+  const setSession = (input: Session) => {
+    const next = stampSession(input);
     setSessions((prev) => {
       const exists = prev.some((s) => s.date === next.date);
       const list = exists
@@ -195,7 +228,24 @@ function Index() {
 
           <div className="mt-4 grid grid-cols-3 gap-2">
             <Stat label="Ćwiczenia" value={String(session.exercises.length)} />
-            <Stat label="Objętość" value={`${Math.round(summary.volume)} kg`} />
+            <Stat
+              label="Objętość"
+              value={`${Math.round(summary.volume)} kg`}
+              sub={
+                summary.prevDate
+                  ? `${summary.volume - summary.prevVolume >= 0 ? "+" : "−"}${Math.abs(
+                      Math.round(summary.volume - summary.prevVolume),
+                    )} kg vs ostatni „${summary.planName}”`
+                  : "brak porównania"
+              }
+              subTone={
+                summary.prevDate
+                  ? summary.volume - summary.prevVolume >= 0
+                    ? "text-success"
+                    : "text-danger"
+                  : ""
+              }
+            />
             <Stat
               label="Progres dnia"
               value={
@@ -354,6 +404,7 @@ function Index() {
                       const next = { ...plan, [d]: e.target.value };
                       setPlan(next);
                       savePlan(next);
+                      if (user) void pushPlan(user.id, next);
                     }}
                     placeholder="np. Klata i plecy"
                     className="w-48 rounded-lg border border-input bg-secondary px-2 py-1 text-right text-sm outline-none focus:border-primary"
@@ -369,6 +420,7 @@ function Index() {
               onClick={() => {
                 setPlan({ ...DEFAULT_DAY_PLAN });
                 savePlan({ ...DEFAULT_DAY_PLAN });
+                if (user) void pushPlan(user.id, { ...DEFAULT_DAY_PLAN });
               }}
               className="mt-3 text-xs text-muted-foreground underline hover:text-primary"
             >
@@ -383,13 +435,28 @@ function Index() {
   );
 }
 
-function Stat({ label, value, tone = "" }: { label: string; value: string; tone?: string }) {
+function Stat({
+  label,
+  value,
+  tone = "",
+  sub,
+  subTone = "",
+}: {
+  label: string;
+  value: string;
+  tone?: string;
+  sub?: string;
+  subTone?: string;
+}) {
   return (
     <div className="rounded-xl border border-border bg-card px-3 py-2">
       <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className={`mt-0.5 text-lg font-bold tabular-nums ${tone || "text-foreground"}`}>
         {value}
       </p>
+      {sub ? (
+        <p className={`text-[10px] leading-tight ${subTone || "text-muted-foreground"}`}>{sub}</p>
+      ) : null}
     </div>
   );
 }

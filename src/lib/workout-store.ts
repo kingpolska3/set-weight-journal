@@ -18,6 +18,8 @@ export type Session = {
   exercises: Exercise[];
   note?: string;
   photo?: string;
+  /** ISO timestamp ostatniej zmiany – używany przy synchronizacji z chmurą. */
+  updatedAt?: string;
 };
 
 export type Template = {
