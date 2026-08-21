@@ -51,9 +51,9 @@ export async function syncNow(userId: string): Promise<{ pulled: number; pushed:
     const cloudSession: Session = {
       date: row.date,
       exercises: payload.exercises ?? [],
-      note: payload.note,
-      photo: payload.photo,
       updatedAt: payload.updatedAt ?? row.updated_at,
+      ...(payload.note === undefined ? {} : { note: payload.note }),
+      ...(payload.photo === undefined ? {} : { photo: payload.photo }),
     };
     cloudStamp.set(row.date, stamp(cloudSession));
     const localSession = merged.get(row.date);
