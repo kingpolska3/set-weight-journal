@@ -1,10 +1,12 @@
 import { Link } from "@tanstack/react-router";
-import { BarChart3, Dumbbell, LayoutGrid } from "lucide-react";
+import { BarChart3, Dumbbell, LayoutGrid, Swords, User } from "lucide-react";
 
 const items = [
   { to: "/", label: "Trening", icon: Dumbbell },
   { to: "/historia", label: "Historia", icon: BarChart3 },
   { to: "/narzedzia", label: "Narzędzia", icon: LayoutGrid },
+  { to: "/vs", label: "VS", icon: Swords },
+  { to: "/profil", label: "Profil", icon: User },
 ] as const;
 
 export function AppNav() {
