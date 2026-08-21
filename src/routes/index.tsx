@@ -404,6 +404,7 @@ function Index() {
                       const next = { ...plan, [d]: e.target.value };
                       setPlan(next);
                       savePlan(next);
+                      if (user) void pushPlan(user.id, next);
                     }}
                     placeholder="np. Klata i plecy"
                     className="w-48 rounded-lg border border-input bg-secondary px-2 py-1 text-right text-sm outline-none focus:border-primary"
@@ -419,6 +420,7 @@ function Index() {
               onClick={() => {
                 setPlan({ ...DEFAULT_DAY_PLAN });
                 savePlan({ ...DEFAULT_DAY_PLAN });
+                if (user) void pushPlan(user.id, { ...DEFAULT_DAY_PLAN });
               }}
               className="mt-3 text-xs text-muted-foreground underline hover:text-primary"
             >
@@ -433,13 +435,28 @@ function Index() {
   );
 }
 
-function Stat({ label, value, tone = "" }: { label: string; value: string; tone?: string }) {
+function Stat({
+  label,
+  value,
+  tone = "",
+  sub,
+  subTone = "",
+}: {
+  label: string;
+  value: string;
+  tone?: string;
+  sub?: string;
+  subTone?: string;
+}) {
   return (
     <div className="rounded-xl border border-border bg-card px-3 py-2">
       <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className={`mt-0.5 text-lg font-bold tabular-nums ${tone || "text-foreground"}`}>
         {value}
       </p>
+      {sub ? (
+        <p className={`text-[10px] leading-tight ${subTone || "text-muted-foreground"}`}>{sub}</p>
+      ) : null}
     </div>
   );
 }
