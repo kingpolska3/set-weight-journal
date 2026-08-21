@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, Camera, Dumbbell, Pencil, Plus, Copy, Save, Trophy, X } from "lucide-react";
 import { toast } from "sonner";
 import { AppNav } from "@/components/AppNav";
+import { useAuth } from "@/hooks/useAuth";
+import { WORKOUTS_UPDATED, pushPlan, stampSession, syncNow } from "@/lib/cloud-sync";
 import { ExerciseCard } from "@/components/ExerciseCard";
 import {
   DAY_NAMES,
@@ -52,6 +54,7 @@ function Index() {
   const [plan, setPlan] = useState<WeekPlan>(() => loadPlan());
   const [editPlan, setEditPlan] = useState(false);
   const photoRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     const stored = loadSessions();
@@ -75,12 +78,42 @@ function Index() {
     if (loaded) saveSessions(sessions);
   }, [sessions, loaded]);
 
+  // Synchronizacja w tle: po zalogowaniu, po zmianach i po powrocie online.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    const run = () => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) return;
+      void syncNow(user.id).catch(() => undefined);
+    };
+    const onUpdated = () => {
+      if (!cancelled) setSessions(loadSessions());
+    };
+    window.addEventListener(WORKOUTS_UPDATED, onUpdated);
+    window.addEventListener("online", run);
+    run();
+    return () => {
+      cancelled = true;
+      window.removeEventListener(WORKOUTS_UPDATED, onUpdated);
+      window.removeEventListener("online", run);
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!loaded || !user) return;
+    const t = setTimeout(() => {
+      void syncNow(user.id).catch(() => undefined);
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [sessions, loaded, user]);
+
   const session = useMemo(
     () => sessions.find((s) => s.date === date) ?? { date, exercises: [] },
     [sessions, date],
   );
 
-  const setSession = (next: Session) => {
+  const setSession = (input: Session) => {
+    const next = stampSession(input);
     setSessions((prev) => {
       const exists = prev.some((s) => s.date === next.date);
       const list = exists
@@ -195,7 +228,24 @@ function Index() {
 
           <div className="mt-4 grid grid-cols-3 gap-2">
             <Stat label="Ćwiczenia" value={String(session.exercises.length)} />
-            <Stat label="Objętość" value={`${Math.round(summary.volume)} kg`} />
+            <Stat
+              label="Objętość"
+              value={`${Math.round(summary.volume)} kg`}
+              sub={
+                summary.prevDate
+                  ? `${summary.volume - summary.prevVolume >= 0 ? "+" : "−"}${Math.abs(
+                      Math.round(summary.volume - summary.prevVolume),
+                    )} kg vs ostatni „${summary.planName}”`
+                  : "brak porównania"
+              }
+              subTone={
+                summary.prevDate
+                  ? summary.volume - summary.prevVolume >= 0
+                    ? "text-success"
+                    : "text-danger"
+                  : ""
+              }
+            />
             <Stat
               label="Progres dnia"
               value={
