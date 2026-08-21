@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import {
   loadPlan,
   loadSessions,
@@ -78,7 +79,7 @@ export async function syncNow(userId: string): Promise<{ pulled: number; pushed:
           ...s,
           volume: sessionVolume(s),
           sets: sessionSetCount(s),
-        } as unknown as Record<string, unknown>,
+        } as unknown as Json,
         updated_at: new Date().toISOString(),
       })),
       { onConflict: "user_id,date" },
@@ -105,7 +106,7 @@ async function syncPlan(userId: string) {
     await supabase
       .from("user_settings")
       .upsert(
-        { user_id: userId, week_plan: localPlan as unknown as Record<string, string>, updated_at: new Date().toISOString() },
+        { user_id: userId, week_plan: localPlan as unknown as Json, updated_at: new Date().toISOString() },
         { onConflict: "user_id" },
       );
   }
@@ -115,7 +116,7 @@ export async function pushPlan(userId: string, plan: WeekPlan) {
   await supabase.from("user_settings").upsert(
     {
       user_id: userId,
-      week_plan: plan as unknown as Record<string, string>,
+      week_plan: plan as unknown as Json,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id" },
