@@ -1,14 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { CloudUpload, FileDown, LogOut, RefreshCw, Trash2, User } from "lucide-react";
+import { CloudUpload, Eye, LogOut, RefreshCw, Trash2, User } from "lucide-react";
 import { toast } from "sonner";
 import { AppNav } from "@/components/AppNav";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/hooks/useAuth";
 import { syncNow } from "@/lib/cloud-sync";
-import { exportSessionsToPdf } from "@/lib/pdf-export";
-import { loadPlan, loadSessions } from "@/lib/workout-store";
 
 export const Route = createFileRoute("/profil")({
   head: () => ({
@@ -37,6 +35,7 @@ function ProfilePage() {
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [lastSync, setLastSync] = useState<string | null>(null);
+  const [shareFull, setShareFull] = useState(false);
   const [online, setOnline] = useState(true);
 
   useEffect(() => {
@@ -55,11 +54,12 @@ function ProfilePage() {
     void (async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("display_name, username")
+        .select("display_name, username, share_full")
         .eq("id", user.id)
         .maybeSingle();
       setDisplayName(data?.display_name ?? (user.user_metadata["full_name"] as string) ?? "");
       setUsername(data?.username ?? "");
+      setShareFull(data?.share_full ?? false);
     })();
   }, [user]);
 
@@ -108,6 +108,7 @@ function ProfilePage() {
         id: user.id,
         display_name: displayName.trim(),
         username: username.trim() === "" ? null : username.trim().toLowerCase(),
+        share_full: shareFull,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "id" },
@@ -119,6 +120,26 @@ function ProfilePage() {
       return;
     }
     toast.success("Profil zapisany");
+  };
+
+  const toggleShare = async (value: boolean) => {
+    if (!user) return;
+    setShareFull(value);
+    const { error } = await supabase.from("profiles").upsert(
+      {
+        id: user.id,
+        display_name: displayName.trim(),
+        share_full: value,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "id" },
+    );
+    if (error) {
+      setShareFull(!value);
+      toast.error("Nie udało się zapisać zgody");
+      return;
+    }
+    toast.success(value ? "Pełny plan jest teraz widoczny w VS" : "Udostępnianie planu wyłączone");
   };
 
   const deleteAccount = async () => {
@@ -219,15 +240,23 @@ function ProfilePage() {
 
             <div className="rounded-xl border border-border bg-card p-4">
               <div className="flex items-center gap-2">
-                <FileDown className="h-4 w-4 text-primary" />
-                <h2 className="text-sm font-semibold text-foreground">Eksport PDF</h2>
+                <Eye className="h-4 w-4 text-primary" />
+                <h2 className="text-sm font-semibold text-foreground">Prywatność w zakładce VS</h2>
               </div>
-              <button
-                onClick={() => exportSessionsToPdf(loadSessions(), loadPlan())}
-                className="mt-3 rounded-lg bg-secondary px-3 py-2 text-sm font-medium text-secondary-foreground"
-              >
-                Pobierz dziennik jako PDF
-              </button>
+              <label className="mt-3 flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={shareFull}
+                  onChange={(e) => void toggleShare(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-[var(--primary)]"
+                />
+                <span className="text-xs text-muted-foreground">
+                  Zgadzam się, żeby osoby, które mnie wyszukają, widziały{" "}
+                  <span className="font-semibold text-foreground">cały mój plan treningowy</span> (ćwiczenia,
+                  serie, ciężary, notatki), a nie tylko zbiorcze statystyki (objętość, liczba treningów i serii).
+                  Zgodę możesz cofnąć w każdej chwili.
+                </span>
+              </label>
             </div>
 
             <div className="flex flex-col gap-2">

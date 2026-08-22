@@ -1,6 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, Camera, Dumbbell, Pencil, Plus, Copy, Save, Trophy, X } from "lucide-react";
+import {
+  CalendarDays,
+  Camera,
+  Dumbbell,
+  Pencil,
+  Play,
+  Plus,
+  Copy,
+  Save,
+  Square,
+  Timer,
+  Trophy,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { AppNav } from "@/components/AppNav";
 import { useAuth } from "@/hooks/useAuth";
@@ -54,10 +67,20 @@ function Index() {
   const [plan, setPlan] = useState<WeekPlan>(() => loadPlan());
   const [editPlan, setEditPlan] = useState(false);
   const photoRef = useRef<HTMLInputElement>(null);
+  const [now, setNow] = useState(() => Date.now());
   const { user } = useAuth();
 
   useEffect(() => {
     const stored = loadSessions();
+    // Link „udostępnij pusty dziennik” (/?nowy=1) startuje bez przykładowych treningów.
+    const cleanStart = new URLSearchParams(window.location.search).get("nowy") === "1";
+    if (cleanStart) {
+      window.history.replaceState(null, "", window.location.pathname);
+      setSessions(stored);
+      setPlan(loadPlan());
+      setLoaded(true);
+      return;
+    }
     if (stored.length === 0) {
       const seed: Session[] = [
         {
@@ -121,6 +144,54 @@ function Index() {
         : [...prev, next];
       return list.sort((a, b) => (a.date < b.date ? 1 : -1));
     });
+  };
+
+  const running = Boolean(session.startTime && !session.endTime);
+
+  useEffect(() => {
+    if (!running) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [running]);
+
+  const elapsedMs = session.startTime
+    ? (session.endTime ? new Date(session.endTime).getTime() : now) -
+      new Date(session.startTime).getTime()
+    : 0;
+
+  const formatDuration = (ms: number) => {
+    const total = Math.max(0, Math.floor(ms / 1000));
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const sec = total % 60;
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`;
+  };
+
+  const startWorkout = () => {
+    setNow(Date.now());
+    const next = { ...session, startTime: new Date().toISOString() };
+    delete next.endTime;
+    setSession(next);
+    toast.success("Stoper treningu włączony");
+  };
+
+  const stopWorkout = () => {
+    if (!session.startTime) return;
+    const ended = { ...session, endTime: new Date().toISOString() };
+    setSession(ended);
+    toast.success(
+      `Trening zakończony – czas ${formatDuration(
+        new Date(ended.endTime).getTime() - new Date(session.startTime).getTime(),
+      )}`,
+    );
+  };
+
+  const resetWorkoutTimer = () => {
+    const next = { ...session };
+    delete next.startTime;
+    delete next.endTime;
+    setSession(next);
   };
 
   const addExercise = () =>
@@ -224,6 +295,41 @@ function Index() {
             >
               <Save className="h-4 w-4" /> Zapisz szablon
             </button>
+          </div>
+
+          <div className="mt-3 flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5">
+            <Timer className={`h-4 w-4 ${running ? "text-primary" : "text-muted-foreground"}`} />
+            <div className="min-w-0">
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Czas treningu</p>
+              <p className="font-mono text-lg font-semibold tabular-nums text-foreground">
+                {formatDuration(elapsedMs)}
+              </p>
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+              {running ? (
+                <button
+                  onClick={stopWorkout}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
+                >
+                  <Square className="h-3.5 w-3.5" /> Zakończ
+                </button>
+              ) : (
+                <button
+                  onClick={startWorkout}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
+                >
+                  <Play className="h-3.5 w-3.5" /> {session.endTime ? "Nowy pomiar" : "Start"}
+                </button>
+              )}
+              {session.startTime ? (
+                <button
+                  onClick={resetWorkoutTimer}
+                  className="rounded-xl border border-border px-2.5 py-2 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Wyzeruj
+                </button>
+              ) : null}
+            </div>
           </div>
 
           <div className="mt-4 grid grid-cols-3 gap-2">

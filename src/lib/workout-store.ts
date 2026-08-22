@@ -18,6 +18,9 @@ export type Session = {
   exercises: Exercise[];
   note?: string;
   photo?: string;
+  /** Stoper treningu – ISO timestampy startu i końca. */
+  startTime?: string;
+  endTime?: string;
   /** ISO timestamp ostatniej zmiany – używany przy synchronizacji z chmurą. */
   updatedAt?: string;
 };
@@ -364,37 +367,79 @@ function roundStep(w: number) {
   return Math.round(w * 2) / 2;
 }
 
+/** Charakterystyka ćwiczenia – decyduje o zakresie powtórzeń i skoku ciężaru. */
+export type ExerciseProfile = {
+  kind: "wyciskanie" | "przysiad/martwy ciąg" | "wiosłowanie/podciąganie" | "maszyna/wyciąg" | "izolacja" | "brzuch";
+  repRange: [number, number];
+  /** Minimalny sensowny skok ciężaru w kg. */
+  step: number;
+  unilateral: boolean;
+};
+
+const has = (n: string, ...words: string[]) => words.some((w) => n.includes(w));
+
+export function exerciseProfile(name: string): ExerciseProfile {
+  const n = name.toLowerCase();
+  const unilateral = has(n, "jednorącz", "jednonóż");
+  if (has(n, "brzuch", "spięcia", "plank", "deska", "allahy", "nogi w zwisie", "russian"))
+    return { kind: "brzuch", repRange: [12, 20], step: 2.5, unilateral };
+  if (has(n, "przysiad", "martwy", "hack", "wykrok", "suwnic", "prostowanie nóg", "uginanie nóg", "wypychanie"))
+    return { kind: "przysiad/martwy ciąg", repRange: [6, 10], step: 5, unilateral };
+  if (has(n, "wyciskanie", "ława", "ławka", "military", "ohp", "pompki"))
+    return { kind: "wyciskanie", repRange: [6, 10], step: 2.5, unilateral };
+  if (has(n, "wiosłowanie", "podciąganie", "ściąganie", "przyciąganie"))
+    return { kind: "wiosłowanie/podciąganie", repRange: [8, 12], step: 2.5, unilateral };
+  if (has(n, "wyciąg", "maszyn", "butterfly", "peck", "brama"))
+    return { kind: "maszyna/wyciąg", repRange: [10, 14], step: 2.5, unilateral };
+  return { kind: "izolacja", repRange: [10, 15], step: 2.5, unilateral };
+}
+
 /**
- * Podpowiedzi na następny trening – double progression:
- * najpierw dobijamy powtórzenia w zakresie, potem dokładamy ciężar.
+ * Podpowiedzi na następny trening – double progression dopasowana do konkretnego
+ * ćwiczenia (inny zakres powtórzeń i skok ciężaru dla bojów, maszyn i izolacji).
  */
 export function nextSessionSuggestions(
   sessions: Session[],
   date: string,
   name: string,
-  repRange: [number, number] = [8, 12],
+  repRange?: [number, number],
 ): Suggestion[] {
   const hist = exerciseHistory(sessions, name).filter((h) => h.date <= date);
   const last = hist[hist.length - 1];
   if (!last) return [];
+  const prof = exerciseProfile(name);
+  const [lo, hi] = repRange ?? prof.repRange;
+  const step = prof.step;
   const out: Suggestion[] = [];
   const sets = workingSets(last.sets);
   const count = sets.length;
+  if (count === 0) return [];
   const minReps = Math.min(...sets.map((s) => s.reps || 0));
+  const maxReps = Math.max(...sets.map((s) => s.reps || 0));
   const topW = last.top;
-  const [lo, hi] = repRange;
+  const perSide = prof.unilateral ? " (na stronę)" : "";
 
   if (minReps >= hi) {
-    const nextW = roundStep(topW * 1.025);
+    const nextW = roundStep(topW + step);
     out.push({
       tone: "up",
-      text: `Ostatnio ${count}×${minReps}@${topW} kg – zakres domknięty. Dołóż ciężar: ${count}×${lo}@${nextW} kg.`,
+      text: `${count}×${minReps}@${topW} kg${perSide} – górny zakres (${lo}–${hi}) domknięty we wszystkich seriach. Następnie ${count}×${lo}@${nextW} kg.`,
     });
-  } else {
-    const nextW = roundStep(topW + 2.5);
+  } else if (maxReps >= hi) {
     out.push({
       tone: "info",
-      text: `Ostatnio ${count}×${minReps}@${topW} kg. Celuj w ${count}×${Math.min(minReps + 1, hi)}@${topW} kg (albo ${count}×${minReps}@${nextW} kg jeśli czujesz zapas).`,
+      text: `Pierwsza seria już w górnym zakresie (${maxReps} powt.), a najsłabsza ma ${minReps}. Zostań na ${topW} kg${perSide} i wyrównaj wszystkie serie do ${hi} powt., dopiero potem +${step} kg.`,
+    });
+  } else if (minReps < lo) {
+    const downW = roundStep(topW - step);
+    out.push({
+      tone: "warn",
+      text: `${minReps} powt. to poniżej zakresu ${lo}–${hi} dla tego ruchu (${prof.kind}). Zejdź na ${downW} kg${perSide} i trzymaj ${count}×${lo}–${hi}.`,
+    });
+  } else {
+    out.push({
+      tone: "info",
+      text: `${count}×${minReps}@${topW} kg${perSide}. Cel na następny raz: ${count}×${Math.min(minReps + 1, hi)}@${topW} kg (${prof.kind}, zakres ${lo}–${hi}).`,
     });
   }
 
@@ -413,6 +458,19 @@ export function nextSessionSuggestions(
         text: `Estymowany 1RM rośnie (${prev.e1rm.toFixed(1)} → ${last.e1rm.toFixed(1)} kg) – trzymaj obecną progresję.`,
       });
     }
+    if (Math.abs(last.e1rm - prev.e1rm) < 0.5 && last.top === prev.top && minReps === Math.min(...workingSets(prev.sets).map((x) => x.reps || 0))) {
+      out.push({
+        tone: "info",
+        text: `Dwa identyczne wyniki z rzędu – dorzuć 4. serię albo zwolnij fazę ekscentryczną (3 s), żeby ruszyć z miejsca.`,
+      });
+    }
+  }
+
+  if (count < 3 && prof.kind !== "brzuch") {
+    out.push({
+      tone: "info",
+      text: `Tylko ${count} ${count === 1 ? "seria robocza" : "serie robocze"} – dla tego ruchu 3–4 serie robocze dadzą lepszy bodziec.`,
+    });
   }
 
   // seria regresji
@@ -427,7 +485,7 @@ export function nextSessionSuggestions(
   if (streak >= 3) {
     out.push({
       tone: "warn",
-      text: `To już ${streak}. trening z rzędu z regresją – rozważ deload (−10% ciężaru) lub zmianę wariantu ćwiczenia.`,
+      text: `To już ${streak}. trening z rzędu z regresją – zrób deload (${roundStep(topW * 0.9)} kg przez tydzień) lub zmień wariant (${prof.kind}).`,
     });
   }
 
