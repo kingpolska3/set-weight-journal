@@ -1,6 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, Camera, Dumbbell, Pencil, Plus, Copy, Save, Trophy, X } from "lucide-react";
+import {
+  CalendarDays,
+  Camera,
+  Dumbbell,
+  Pencil,
+  Play,
+  Plus,
+  Copy,
+  Save,
+  Square,
+  Timer,
+  Trophy,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { AppNav } from "@/components/AppNav";
 import { useAuth } from "@/hooks/useAuth";
@@ -54,10 +67,20 @@ function Index() {
   const [plan, setPlan] = useState<WeekPlan>(() => loadPlan());
   const [editPlan, setEditPlan] = useState(false);
   const photoRef = useRef<HTMLInputElement>(null);
+  const [now, setNow] = useState(() => Date.now());
   const { user } = useAuth();
 
   useEffect(() => {
     const stored = loadSessions();
+    // Link „udostępnij pusty dziennik” (/?nowy=1) startuje bez przykładowych treningów.
+    const cleanStart = new URLSearchParams(window.location.search).get("nowy") === "1";
+    if (cleanStart) {
+      window.history.replaceState(null, "", window.location.pathname);
+      setSessions(stored);
+      setPlan(loadPlan());
+      setLoaded(true);
+      return;
+    }
     if (stored.length === 0) {
       const seed: Session[] = [
         {
@@ -106,6 +129,14 @@ function Index() {
     }, 2500);
     return () => clearTimeout(t);
   }, [sessions, loaded, user]);
+
+  const running = Boolean(session0Running(sessions, date));
+
+  useEffect(() => {
+    if (!running) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [running]);
 
   const session = useMemo(
     () => sessions.find((s) => s.date === date) ?? { date, exercises: [] },
