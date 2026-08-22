@@ -40,7 +40,7 @@ type Stats = {
 type RivalDay = {
   date: string;
   exercises: { name: string; sets: { reps: number; weight: number; warmup?: boolean }[] }[];
-  note?: string;
+  note?: string | undefined;
 };
 
 const DAYS = 30;
