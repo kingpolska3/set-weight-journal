@@ -37,6 +37,12 @@ type Stats = {
   last_date: string | null;
 };
 
+type RivalDay = {
+  date: string;
+  exercises: { name: string; sets: { reps: number; weight: number; warmup?: boolean }[] }[];
+  note?: string;
+};
+
 const DAYS = 30;
 
 function StatRow({ label, mine, theirs }: { label: string; mine: number; theirs: number }) {
@@ -64,6 +70,7 @@ function VsPage() {
   const [mine, setMine] = useState<Stats | null>(null);
   const [rival, setRival] = useState<Stats | null>(null);
   const [searching, setSearching] = useState(false);
+  const [rivalPlan, setRivalPlan] = useState<RivalDay[] | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -94,6 +101,21 @@ function VsPage() {
       return;
     }
     setRival((data as Stats[] | null)?.[0] ?? null);
+
+    // Pełny plan zobaczymy tylko wtedy, gdy właściciel wyraził na to zgodę w profilu.
+    const { data: days } = await supabase
+      .from("workout_days")
+      .select("date, data")
+      .eq("user_id", p.id)
+      .order("date", { ascending: false })
+      .limit(10);
+    const plan = (days ?? [])
+      .map((row) => {
+        const payload = row.data as unknown as RivalDay;
+        return { date: row.date, exercises: payload?.exercises ?? [], note: payload?.note };
+      })
+      .filter((d) => d.exercises.length > 0);
+    setRivalPlan(plan.length > 0 ? plan : null);
   };
 
   return (
@@ -174,9 +196,39 @@ function VsPage() {
               </div>
             )}
 
+            {rival && (
+              <div className="rounded-xl border border-border bg-card p-4">
+                <h3 className="text-sm font-semibold text-foreground">Plan treningowy rywala</h3>
+                {rivalPlan ? (
+                  <div className="mt-2 space-y-3">
+                    {rivalPlan.map((day) => (
+                      <div key={day.date}>
+                        <p className="text-xs font-semibold text-primary">{day.date}</p>
+                        <ul className="mt-1 space-y-0.5">
+                          {day.exercises.map((ex, i) => (
+                            <li key={i} className="text-xs text-muted-foreground">
+                              {i + 1}. {ex.name} —{" "}
+                              {ex.sets
+                                .filter((set) => !set.warmup)
+                                .map((set) => `${set.reps}×${set.weight}kg`)
+                                .join(", ")}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Ta osoba nie udostępnia pełnego planu — widoczne są tylko statystyki powyżej.
+                  </p>
+                )}
+              </div>
+            )}
+
             <p className="text-xs text-muted-foreground">
-              Widoczne są wyłącznie zbiorcze statystyki (objętość, liczba treningów i serii) — szczegóły treningów
-              innych osób pozostają prywatne.
+              Domyślnie widoczne są tylko zbiorcze statystyki. Pełny plan treningowy pokazuje się wyłącznie
+              wtedy, gdy dana osoba wyraziła na to zgodę w swoim profilu — Twoją zgodę ustawisz w zakładce Profil.
             </p>
           </div>
         )}
