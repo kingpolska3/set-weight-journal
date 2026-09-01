@@ -4,13 +4,15 @@ export type SetEntry = {
   note?: string;
   warmup?: boolean;
   restSec?: number;
+  /** Podpowiedzi z poprzedniego treningu (tylko podświetlenie w polach). */
+  prevReps?: number;
+  prevWeight?: number;
 };
 
 export type Exercise = {
   id: string;
   name: string;
   sets: SetEntry[];
-  photo?: string; // data URL
 };
 
 export type Session = {
@@ -18,9 +20,13 @@ export type Session = {
   exercises: Exercise[];
   note?: string;
   photo?: string;
+  /** Dzień oznaczony jako „Bez treningu”. */
+  rest?: boolean;
   /** Stoper treningu – ISO timestampy startu i końca. */
   startTime?: string;
   endTime?: string;
+  /** Zapisany czas trwania treningu w sekundach. */
+  durationSec?: number;
   /** ISO timestamp ostatniej zmiany – używany przy synchronizacji z chmurą. */
   updatedAt?: string;
 };
@@ -683,3 +689,113 @@ export const SEED_EXERCISES: { name: string; sets: SetEntry[] }[] = [
     ],
   },
 ];
+
+export type SummaryLine = { text: string; tone: "good" | "bad" | "info" };
+
+/** Inteligentne podsumowanie dnia – kilka konkretnych wniosków zamiast jednego zdania. */
+export function daySummaryInsights(
+  sessions: Session[],
+  date: string,
+  plan?: WeekPlan,
+): SummaryLine[] {
+  const p = plan ?? loadPlan();
+  const session = sessions.find((s) => s.date === date);
+  const s = daySummary(sessions, date, p);
+  const lines: SummaryLine[] = [];
+
+  if (session?.rest) {
+    return [{ text: "Dzień oznaczony jako „Bez treningu” – regeneracja też jest częścią planu.", tone: "info" }];
+  }
+  if (!session || session.exercises.length === 0) {
+    return [{ text: "Brak zapisanych ćwiczeń tego dnia.", tone: "info" }];
+  }
+
+  const empty = session.exercises.filter((e) => workingSets(e.sets).length === 0).length;
+
+  lines.push({
+    text: `${Math.round(s.volume)} kg objętości w ${s.sets} seriach roboczych (${s.exercises} ćwiczeń)${
+      s.pct === null ? "" : `, ${s.pct > 0 ? "+" : ""}${s.pct.toFixed(1)}% vs ostatni „${s.planName}”`
+    }.`,
+    tone: s.pct === null ? "info" : s.pct >= 0 ? "good" : "bad",
+  });
+
+  if (s.prevDate) {
+    const diff = s.volume - s.prevVolume;
+    lines.push({
+      text: `Względem ${shortDatePL(s.prevDate)}: ${diff >= 0 ? "+" : "−"}${Math.abs(
+        Math.round(diff),
+      )} kg objętości (poprzednio ${Math.round(s.prevVolume)} kg).`,
+      tone: diff >= 0 ? "good" : "bad",
+    });
+  } else {
+    lines.push({ text: `To pierwszy zapisany trening „${s.planName}” – będzie bazą do porównań.`, tone: "info" });
+  }
+
+  // Najlepsze i najsłabsze ćwiczenie dnia.
+  const changes = session.exercises
+    .map((ex) => {
+      const prev = previousExercise(sessions, date, ex.name);
+      if (!prev) return null;
+      const now = volume(ex.sets, ex.name);
+      const before = volume(prev.exercise.sets, ex.name);
+      if (before <= 0) return null;
+      return { name: ex.name, pct: ((now - before) / before) * 100 };
+    })
+    .filter((x): x is { name: string; pct: number } => Boolean(x))
+    .sort((a, b) => b.pct - a.pct);
+
+  const top = changes[0];
+  const worst = changes[changes.length - 1];
+  if (top && top.pct > 0.5) {
+    lines.push({ text: `Największy skok: ${top.name} (+${top.pct.toFixed(1)}%).`, tone: "good" });
+  }
+  if (worst && worst !== top && worst.pct < -0.5) {
+    lines.push({
+      text: `Największy spadek: ${worst.name} (${worst.pct.toFixed(1)}%) – sprawdź ciężar, sen i przerwy.`,
+      tone: "bad",
+    });
+  }
+
+  const prNames = session.exercises
+    .filter((ex) => prFlags(sessions, date, ex).any)
+    .map((ex) => ex.name)
+    .filter(Boolean);
+  if (prNames.length > 0) {
+    lines.push({
+      text: `Rekordy (${prNames.length}): ${prNames.slice(0, 3).join(", ")}${prNames.length > 3 ? "…" : ""}.`,
+      tone: "good",
+    });
+  }
+  if (s.improved > 0) {
+    lines.push({
+      text: `${s.improved} z ${s.exercises} ćwiczeń powyżej poprzedniego wyniku.`,
+      tone: "good",
+    });
+  }
+
+  const dur = session.durationSec ??
+    (session.startTime && session.endTime
+      ? Math.round((new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / 1000)
+      : 0);
+  if (dur > 0) {
+    const mins = Math.max(1, Math.round(dur / 60));
+    lines.push({
+      text: `Czas treningu: ${mins} min – ${Math.round(s.volume / mins)} kg objętości na minutę.`,
+      tone: "info",
+    });
+  }
+
+  if (empty > 0) {
+    lines.push({ text: `${empty} ćwiczeń bez serii roboczych – uzupełnij dane, żeby progres był policzalny.`, tone: "info" });
+  }
+
+  const gap = s.prevDate ? daysBetween(s.prevDate, date) : 0;
+  if (gap >= 10) {
+    lines.push({
+      text: `Od ostatniego takiego treningu minęło ${gap} dni – zacznij od lżejszej serii wprowadzającej.`,
+      tone: "info",
+    });
+  }
+
+  return lines;
+}

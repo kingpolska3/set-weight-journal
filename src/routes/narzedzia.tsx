@@ -9,12 +9,25 @@ import {
   Palette,
   Plus,
   Share2,
+  Timer,
   Trash2,
   Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppNav } from "@/components/AppNav";
 import { exportSessionsToPdf } from "@/lib/pdf-export";
+import {
+  DEFAULT_REST,
+  SOUNDS,
+  ensureNotifyPermission,
+  formatRest,
+  loadRest,
+  playSound,
+  saveRest,
+  vibrate,
+  type RestSettings,
+  type SoundKey,
+} from "@/lib/rest-settings";
 import { ACCENTS, loadTheme, saveTheme, type AccentKey, type ThemeSettings } from "@/lib/theme";
 import {
   downloadFile,
@@ -56,11 +69,13 @@ function ToolsPage() {
   const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [theme, setTheme] = useState<ThemeSettings>({ mode: "dark", accent: "amber" });
+  const [rest, setRest] = useState<RestSettings>(DEFAULT_REST);
 
   useEffect(() => {
     setTemplates(loadTemplates());
     setSessions(loadSessions());
     setTheme(loadTheme());
+    setRest(loadRest());
     setLoaded(true);
   }, []);
 
@@ -117,6 +132,11 @@ function ToolsPage() {
       JSON.stringify({ sessions: loadSessions(), templates }, null, 2),
       "application/json",
     );
+
+  const updateRest = (next: RestSettings) => {
+    setRest(next);
+    saveRest(next);
+  };
 
   const updateTheme = (next: ThemeSettings) => {
     setTheme(next);
@@ -321,6 +341,116 @@ function ToolsPage() {
             </label>
           </div>
         </div>
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="flex items-center gap-2">
+            <Timer className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-semibold text-foreground">Przerwa między seriami</h2>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Timer przy ćwiczeniu odlicza tę przerwę. Po jej upływie dostajesz sygnał, że czas na
+            kolejną serię.
+          </p>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            {[60, 90, 120, 150, 180, 240].map((sec) => (
+              <button
+                key={sec}
+                onClick={() => updateRest({ ...rest, seconds: sec })}
+                className={`rounded-xl border px-3 py-2 text-xs font-medium ${
+                  rest.seconds === sec
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-foreground"
+                }`}
+              >
+                {formatRest(sec)}
+              </button>
+            ))}
+          </div>
+          <label className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+            Własna długość (sek.)
+            <input
+              type="number"
+              min={10}
+              max={900}
+              step={5}
+              value={rest.seconds}
+              onChange={(e) =>
+                updateRest({
+                  ...rest,
+                  seconds: Math.min(900, Math.max(10, Number(e.target.value) || 10)),
+                })
+              }
+              className="w-24 rounded-lg border border-input bg-secondary px-2 py-1.5 text-center text-sm tabular-nums text-foreground outline-none focus:border-primary"
+            />
+          </label>
+
+          <p className="mt-4 text-xs text-muted-foreground">Dźwięk końca przerwy</p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            {(Object.keys(SOUNDS) as SoundKey[]).map((key) => (
+              <div
+                key={key}
+                className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs ${
+                  rest.sound === key ? "border-primary text-foreground" : "border-border text-muted-foreground"
+                }`}
+              >
+                <button
+                  onClick={() => updateRest({ ...rest, sound: key, soundOn: true })}
+                  className="flex-1 text-left"
+                >
+                  {SOUNDS[key].label}
+                </button>
+                <button
+                  onClick={() => playSound(key)}
+                  className="rounded-lg border border-border px-2 py-1 text-[11px] text-primary"
+                >
+                  Posłuchaj
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-3 space-y-2">
+            <label className="flex items-center gap-2 text-xs text-foreground">
+              <input
+                type="checkbox"
+                checked={rest.soundOn}
+                onChange={(e) => updateRest({ ...rest, soundOn: e.target.checked })}
+                className="h-4 w-4 accent-[var(--primary)]"
+              />
+              Odtwarzaj dźwięk
+            </label>
+            <label className="flex items-center gap-2 text-xs text-foreground">
+              <input
+                type="checkbox"
+                checked={rest.vibrate}
+                onChange={(e) => {
+                  updateRest({ ...rest, vibrate: e.target.checked });
+                  if (e.target.checked) vibrate([200]);
+                }}
+                className="h-4 w-4 accent-[var(--primary)]"
+              />
+              Wibracje (telefon)
+            </label>
+            <label className="flex items-center gap-2 text-xs text-foreground">
+              <input
+                type="checkbox"
+                checked={rest.notify}
+                onChange={(e) => {
+                  const on = e.target.checked;
+                  updateRest({ ...rest, notify: on });
+                  if (on) {
+                    void ensureNotifyPermission().then((ok) => {
+                      if (!ok) toast.error("Powiadomienia są zablokowane w przeglądarce");
+                    });
+                  }
+                }}
+                className="h-4 w-4 accent-[var(--primary)]"
+              />
+              Powiadomienie systemowe
+            </label>
+          </div>
+        </div>
+
         <div className="rounded-2xl border border-border bg-card p-4">
           <div className="flex items-center gap-2">
             <Palette className="h-4 w-4 text-primary" />

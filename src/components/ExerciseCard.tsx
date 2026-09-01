@@ -1,9 +1,8 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowDown,
   ArrowUp,
-  Camera,
   ChevronDown,
   Copy,
   Lightbulb,
@@ -22,7 +21,6 @@ import {
   bestInWindow,
   computeProgress,
   exerciseHistory,
-  fileToCompressedDataUrl,
   nextSessionSuggestions,
   prFlags,
   shortDatePL,
@@ -78,8 +76,6 @@ export function ExerciseCard({
   canMoveUp,
   canMoveDown,
 }: Props) {
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<number[]>([]);
 
@@ -100,11 +96,6 @@ export function ExerciseCard({
 
   const update = (patch: Partial<Exercise>) => onChange({ ...exercise, ...patch });
 
-  const clearPhoto = () => {
-    const { photo: _photo, ...rest } = exercise;
-    onChange(rest);
-  };
-
   type SetPatch = {
     [K in keyof Exercise["sets"][number]]?: Exercise["sets"][number][K] | undefined;
   };
@@ -120,16 +111,6 @@ export function ExerciseCard({
     update({ sets });
   };
 
-
-  const handlePhoto = async (file?: File) => {
-    if (!file) return;
-    setBusy(true);
-    try {
-      update({ photo: await fileToCompressedDataUrl(file) });
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const lastSets = history.filter((h) => h.date < date).slice(-1)[0]?.sets ?? [];
   const copyPicked = () => {
@@ -216,8 +197,13 @@ export function ExerciseCard({
                 inputMode="numeric"
                 value={set.reps || ""}
                 onChange={(e) => updateSet(i, { reps: Number(e.target.value) })}
-                placeholder="powt."
-                className="w-14 rounded-lg border border-input bg-secondary px-2 py-2 text-center text-sm tabular-nums outline-none focus:border-primary"
+                placeholder={set.prevReps ? String(set.prevReps) : "powt."}
+                title={set.prevReps ? `Ostatnio: ${set.prevReps} powtórzeń` : undefined}
+                className={`w-14 rounded-lg border bg-secondary px-2 py-2 text-center text-sm tabular-nums outline-none focus:border-primary ${
+                  set.prevReps && !set.reps
+                    ? "border-primary/60 placeholder:font-semibold placeholder:text-primary"
+                    : "border-input"
+                }`}
               />
               <span className="text-sm text-muted-foreground">x</span>
               <input
@@ -226,8 +212,13 @@ export function ExerciseCard({
                 step="0.5"
                 value={set.weight || ""}
                 onChange={(e) => updateSet(i, { weight: Number(e.target.value) })}
-                placeholder="kg"
-                className="w-16 rounded-lg border border-input bg-secondary px-2 py-2 text-center text-sm tabular-nums outline-none focus:border-primary"
+                placeholder={set.prevWeight ? String(set.prevWeight) : "kg"}
+                title={set.prevWeight ? `Ostatnio: ${set.prevWeight} kg` : undefined}
+                className={`w-16 rounded-lg border bg-secondary px-2 py-2 text-center text-sm tabular-nums outline-none focus:border-primary ${
+                  set.prevWeight && !set.weight
+                    ? "border-primary/60 placeholder:font-semibold placeholder:text-primary"
+                    : "border-input"
+                }`}
               />
               <button
                 onClick={() => update({ sets: exercise.sets.filter((_, si) => si !== i) })}
@@ -414,43 +405,6 @@ export function ExerciseCard({
         </div>
       ) : null}
 
-      <div className="mt-3">
-        {exercise.photo ? (
-          <div className="relative overflow-hidden rounded-xl border border-border">
-            <img
-              src={exercise.photo}
-              alt={`Zdjęcie do ćwiczenia ${exercise.name}`}
-              loading="lazy"
-              className="max-h-72 w-full object-cover"
-            />
-            <button
-              onClick={clearPhoto}
-              aria-label="Usuń zdjęcie"
-              className="absolute right-2 top-2 rounded-full bg-background/80 p-1.5 text-foreground backdrop-blur"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => fileRef.current?.click()}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border py-4 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-          >
-            <Camera className="h-4 w-4" />
-            {busy ? "Wczytywanie…" : "Dodaj zdjęcie z galerii"}
-          </button>
-        )}
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            void handlePhoto(e.target.files?.[0]);
-            e.target.value = "";
-          }}
-        />
-      </div>
     </article>
   );
 }

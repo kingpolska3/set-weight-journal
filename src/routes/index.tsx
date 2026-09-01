@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Ban,
   CalendarDays,
   Camera,
   Dumbbell,
@@ -22,8 +23,8 @@ import { ExerciseCard } from "@/components/ExerciseCard";
 import {
   DAY_NAMES,
   DEFAULT_DAY_PLAN,
-  SEED_EXERCISES,
   daySummary,
+  daySummaryInsights,
   fileToCompressedDataUrl,
   formatDatePL,
   loadPlan,
@@ -71,28 +72,10 @@ function Index() {
   const { user } = useAuth();
 
   useEffect(() => {
-    const stored = loadSessions();
-    // Link „udostępnij pusty dziennik” (/?nowy=1) startuje bez przykładowych treningów.
+    // Nowa osoba zaczyna z pustym dziennikiem – brak przykładowych treningów.
     const cleanStart = new URLSearchParams(window.location.search).get("nowy") === "1";
-    if (cleanStart) {
-      window.history.replaceState(null, "", window.location.pathname);
-      setSessions(stored);
-      setPlan(loadPlan());
-      setLoaded(true);
-      return;
-    }
-    if (stored.length === 0) {
-      const seed: Session[] = [
-        {
-          date: todayISO(),
-          exercises: SEED_EXERCISES.map((e) => ({ id: uid(), ...e })),
-        },
-      ];
-      setSessions(seed);
-      saveSessions(seed);
-    } else {
-      setSessions(stored);
-    }
+    if (cleanStart) window.history.replaceState(null, "", window.location.pathname);
+    setSessions(loadSessions());
     setPlan(loadPlan());
     setLoaded(true);
   }, []);
@@ -181,16 +164,32 @@ function Index() {
     const ended = { ...session, endTime: new Date().toISOString() };
     setSession(ended);
     toast.success(
-      `Trening zakończony – czas ${formatDuration(
+      `Pomiar zatrzymany – ${formatDuration(
         new Date(ended.endTime).getTime() - new Date(session.startTime).getTime(),
-      )}`,
+      )}. Możesz zapisać ten czas.`,
     );
+  };
+
+  const saveWorkoutTime = () => {
+    if (!session.startTime || !session.endTime) return;
+    const secs = Math.round(
+      (new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / 1000,
+    );
+    setSession({ ...session, durationSec: secs });
+    toast.success(`Zapisano czas treningu: ${formatDuration(secs * 1000)}`);
+  };
+
+  const toggleRestDay = () => {
+    const next = { ...session, rest: !session.rest };
+    setSession(next);
+    toast.success(next.rest ? "Dzień oznaczony jako „Bez treningu”" : "Dzień znów jest treningowy");
   };
 
   const resetWorkoutTimer = () => {
     const next = { ...session };
     delete next.startTime;
     delete next.endTime;
+    delete next.durationSec;
     setSession(next);
   };
 
@@ -224,13 +223,21 @@ function Index() {
       return;
     }
     setSession({
+      ...session,
       date,
       exercises: prev.exercises.map((e) => ({
         id: uid(),
         name: e.name,
-        sets: e.sets.map((s) => ({ ...s })),
+        sets: e.sets.map((s) => ({
+          reps: 0,
+          weight: 0,
+          ...(s.warmup ? { warmup: true } : {}),
+          prevReps: s.reps,
+          prevWeight: s.weight,
+        })),
       })),
     });
+    toast.success("Skopiowano układ – w polach widać wyniki z poprzedniego razu");
   };
 
   const saveAsTemplate = () => {
@@ -254,6 +261,10 @@ function Index() {
   };
 
   const summary = useMemo(() => daySummary(sessions, date, plan), [sessions, date, plan]);
+  const insights = useMemo(
+    () => daySummaryInsights(sessions, date, plan),
+    [sessions, date, plan],
+  );
 
   return (
     <main className="min-h-screen bg-background pb-24">
@@ -273,30 +284,6 @@ function Index() {
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">{formatDatePL(date)}</p>
 
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2">
-              <CalendarDays className="h-4 w-4 text-primary" />
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="bg-transparent text-sm text-foreground outline-none"
-              />
-            </label>
-            <button
-              onClick={copyLastSame}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground transition-colors hover:border-primary"
-            >
-              <Copy className="h-4 w-4" /> Skopiuj poprzedni
-            </button>
-            <button
-              onClick={saveAsTemplate}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground transition-colors hover:border-primary"
-            >
-              <Save className="h-4 w-4" /> Zapisz szablon
-            </button>
-          </div>
-
           <div className="mt-3 flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5">
             <Timer className={`h-4 w-4 ${running ? "text-primary" : "text-muted-foreground"}`} />
             <div className="min-w-0">
@@ -304,6 +291,11 @@ function Index() {
               <p className="font-mono text-lg font-semibold tabular-nums text-foreground">
                 {formatDuration(elapsedMs)}
               </p>
+              {session.durationSec !== undefined ? (
+                <p className="text-[11px] text-success">
+                  zapisany czas: {formatDuration(session.durationSec * 1000)}
+                </p>
+              ) : null}
             </div>
             <div className="ml-auto flex items-center gap-2">
               {running ? (
@@ -321,6 +313,14 @@ function Index() {
                   <Play className="h-3.5 w-3.5" /> {session.endTime ? "Nowy pomiar" : "Start"}
                 </button>
               )}
+              {session.endTime && session.durationSec === undefined ? (
+                <button
+                  onClick={saveWorkoutTime}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-primary px-3 py-2 text-xs font-semibold text-primary"
+                >
+                  <Save className="h-3.5 w-3.5" /> Zapisz czas
+                </button>
+              ) : null}
               {session.startTime ? (
                 <button
                   onClick={resetWorkoutTimer}
@@ -364,12 +364,53 @@ function Index() {
               }
             />
           </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2">
+              <CalendarDays className="h-4 w-4 text-primary" />
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="bg-transparent text-sm text-foreground outline-none"
+              />
+            </label>
+            <button
+              onClick={copyLastSame}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground transition-colors hover:border-primary"
+            >
+              <Copy className="h-4 w-4" /> Skopiuj poprzedni
+            </button>
+            <button
+              onClick={saveAsTemplate}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground transition-colors hover:border-primary"
+            >
+              <Save className="h-4 w-4" /> Zapisz szablon
+            </button>
+            <button
+              onClick={toggleRestDay}
+              className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm transition-colors ${
+                session.rest
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border bg-card text-foreground hover:border-primary"
+              }`}
+            >
+              <Ban className="h-4 w-4" /> {session.rest ? "Dzień bez treningu" : "Bez treningu"}
+            </button>
+          </div>
         </div>
       </header>
 
       <section className="mx-auto max-w-2xl px-4 py-6">
         <h2 className="sr-only">Ćwiczenia dnia</h2>
-        <div className="space-y-4">
+        {session.rest ? (
+          <div className="mb-4 flex items-center gap-2 rounded-2xl border border-primary/40 bg-card p-4 text-sm text-foreground">
+            <Ban className="h-4 w-4 shrink-0 text-primary" />
+            Ten dzień jest oznaczony jako <strong>bez treningu</strong>. Odznacz przycisk „Dzień bez
+            treningu”, żeby wrócić do zapisywania ćwiczeń.
+          </div>
+        ) : null}
+        <div className={session.rest ? "hidden" : "space-y-4"}>
           {session.exercises.map((ex, i) => (
             <ExerciseCard
               key={ex.id}
@@ -409,7 +450,7 @@ function Index() {
 
         <button
           onClick={addExercise}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+          className={`${session.rest ? "hidden " : ""}mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90`}
         >
           <Plus className="h-4 w-4" /> Dodaj ćwiczenie
         </button>
@@ -466,25 +507,22 @@ function Index() {
           <h2 className="flex items-center gap-1.5 text-sm font-semibold text-primary">
             <Trophy className="h-4 w-4" /> Podsumowanie dnia
           </h2>
-          <p className="mt-2 text-sm leading-relaxed text-foreground">
-            {summary.exercises === 0
-              ? "Brak zapisanych ćwiczeń tego dnia."
-              : `Dzisiaj ${
-                  summary.pct === null
-                    ? "brak porównania"
-                    : `${summary.pct > 0 ? "+" : ""}${summary.pct.toFixed(1)}%`
-                }, ${Math.round(summary.volume)} kg objętości, ${summary.prCount} PR, ${
-                  summary.improved
-                } ćwiczeń powyżej poprzedniego wyniku, ${summary.sets} serii roboczych w ${
-                  summary.exercises
-                } ćwiczeniach.`}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {summary.prevDate
-              ? `Porównanie z ostatnim treningiem „${summary.planName}” (${formatDatePL(summary.prevDate)}) – ${Math.round(summary.prevVolume)} kg.`
-              : `Brak wcześniejszego treningu „${summary.planName}” do porównania.`}
-          </p>
-
+          <ul className="mt-2 space-y-1.5">
+            {insights.map((line, i) => (
+              <li
+                key={i}
+                className={`text-sm leading-snug ${
+                  line.tone === "good"
+                    ? "text-success"
+                    : line.tone === "bad"
+                      ? "text-danger"
+                      : "text-foreground"
+                }`}
+              >
+                {line.text}
+              </li>
+            ))}
+          </ul>
         </div>
 
         <div className="mt-6 rounded-2xl border border-border bg-card p-4">
