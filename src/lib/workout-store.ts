@@ -4,13 +4,15 @@ export type SetEntry = {
   note?: string;
   warmup?: boolean;
   restSec?: number;
+  /** Podpowiedzi z poprzedniego treningu (tylko podświetlenie w polach). */
+  prevReps?: number;
+  prevWeight?: number;
 };
 
 export type Exercise = {
   id: string;
   name: string;
   sets: SetEntry[];
-  photo?: string; // data URL
 };
 
 export type Session = {
@@ -18,9 +20,13 @@ export type Session = {
   exercises: Exercise[];
   note?: string;
   photo?: string;
+  /** Dzień oznaczony jako „Bez treningu”. */
+  rest?: boolean;
   /** Stoper treningu – ISO timestampy startu i końca. */
   startTime?: string;
   endTime?: string;
+  /** Zapisany czas trwania treningu w sekundach. */
+  durationSec?: number;
   /** ISO timestamp ostatniej zmiany – używany przy synchronizacji z chmurą. */
   updatedAt?: string;
 };
