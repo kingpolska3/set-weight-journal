@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Ban,
   CalendarDays,
   Camera,
   Dumbbell,
@@ -22,8 +23,8 @@ import { ExerciseCard } from "@/components/ExerciseCard";
 import {
   DAY_NAMES,
   DEFAULT_DAY_PLAN,
-  SEED_EXERCISES,
   daySummary,
+  daySummaryInsights,
   fileToCompressedDataUrl,
   formatDatePL,
   loadPlan,
@@ -71,28 +72,10 @@ function Index() {
   const { user } = useAuth();
 
   useEffect(() => {
-    const stored = loadSessions();
-    // Link „udostępnij pusty dziennik” (/?nowy=1) startuje bez przykładowych treningów.
+    // Nowa osoba zaczyna z pustym dziennikiem – brak przykładowych treningów.
     const cleanStart = new URLSearchParams(window.location.search).get("nowy") === "1";
-    if (cleanStart) {
-      window.history.replaceState(null, "", window.location.pathname);
-      setSessions(stored);
-      setPlan(loadPlan());
-      setLoaded(true);
-      return;
-    }
-    if (stored.length === 0) {
-      const seed: Session[] = [
-        {
-          date: todayISO(),
-          exercises: SEED_EXERCISES.map((e) => ({ id: uid(), ...e })),
-        },
-      ];
-      setSessions(seed);
-      saveSessions(seed);
-    } else {
-      setSessions(stored);
-    }
+    if (cleanStart) window.history.replaceState(null, "", window.location.pathname);
+    setSessions(loadSessions());
     setPlan(loadPlan());
     setLoaded(true);
   }, []);
@@ -181,16 +164,32 @@ function Index() {
     const ended = { ...session, endTime: new Date().toISOString() };
     setSession(ended);
     toast.success(
-      `Trening zakończony – czas ${formatDuration(
+      `Pomiar zatrzymany – ${formatDuration(
         new Date(ended.endTime).getTime() - new Date(session.startTime).getTime(),
-      )}`,
+      )}. Możesz zapisać ten czas.`,
     );
+  };
+
+  const saveWorkoutTime = () => {
+    if (!session.startTime || !session.endTime) return;
+    const secs = Math.round(
+      (new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / 1000,
+    );
+    setSession({ ...session, durationSec: secs });
+    toast.success(`Zapisano czas treningu: ${formatDuration(secs * 1000)}`);
+  };
+
+  const toggleRestDay = () => {
+    const next = { ...session, rest: !session.rest };
+    setSession(next);
+    toast.success(next.rest ? "Dzień oznaczony jako „Bez treningu”" : "Dzień znów jest treningowy");
   };
 
   const resetWorkoutTimer = () => {
     const next = { ...session };
     delete next.startTime;
     delete next.endTime;
+    delete next.durationSec;
     setSession(next);
   };
 
@@ -224,13 +223,21 @@ function Index() {
       return;
     }
     setSession({
+      ...session,
       date,
       exercises: prev.exercises.map((e) => ({
         id: uid(),
         name: e.name,
-        sets: e.sets.map((s) => ({ ...s })),
+        sets: e.sets.map((s) => ({
+          reps: 0,
+          weight: 0,
+          ...(s.warmup ? { warmup: true } : {}),
+          prevReps: s.reps,
+          prevWeight: s.weight,
+        })),
       })),
     });
+    toast.success("Skopiowano układ – w polach widać wyniki z poprzedniego razu");
   };
 
   const saveAsTemplate = () => {
