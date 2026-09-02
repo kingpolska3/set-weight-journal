@@ -712,7 +712,23 @@ export function daySummaryInsights(
   const lines: SummaryLine[] = [];
 
   if (session?.rest) {
-    return [{ text: "Dzień oznaczony jako „Bez treningu” – regeneracja też jest częścią planu.", tone: "info" }];
+    return [
+      { text: "Dzień oznaczony jako „Bez treningu” – regeneracja też jest częścią planu.", tone: "info" },
+      { text: "Takie dni nie są porównywane i nie psują statystyk progresu.", tone: "info" },
+    ];
+  }
+  if (session?.deload) {
+    const vol = sessionVolume(session);
+    return [
+      {
+        text: `Deload – trening na ok. 50% dla regeneracji (${Math.round(vol)} kg objętości, ${
+          session.exercises.length
+        } ćwiczeń).`,
+        tone: "info",
+      },
+      { text: "Dzień deloadowy nie jest porównywany z poprzednimi treningami – bez progresu i bez presji.", tone: "info" },
+      { text: "Trzymaj ciężary ok. 50% i kończ serie z dużym zapasem – to buduje regenerację przed kolejnym cyklem.", tone: "info" },
+    ];
   }
   if (!session || session.exercises.length === 0) {
     return [{ text: "Brak zapisanych ćwiczeń tego dnia.", tone: "info" }];
