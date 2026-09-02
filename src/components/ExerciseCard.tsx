@@ -180,7 +180,7 @@ export function ExerciseCard({
       <div className="mt-3 space-y-2">
         {exercise.sets.map((set, i) => (
           <div key={i} className="rounded-xl border border-transparent px-0 py-0">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => updateSet(i, { warmup: !set.warmup })}
                 title={set.warmup ? "Seria rozgrzewkowa" : "Seria robocza"}
@@ -220,10 +220,11 @@ export function ExerciseCard({
                     : "border-input"
                 }`}
               />
+              <RestTimer compact onSave={(secVal) => updateSet(i, { restSec: secVal })} />
               <button
                 onClick={() => update({ sets: exercise.sets.filter((_, si) => si !== i) })}
                 aria-label="Usuń serię"
-                className="rounded-md p-1 text-muted-foreground hover:text-danger"
+                className="ml-auto rounded-md p-1 text-muted-foreground hover:text-danger"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -258,12 +259,6 @@ export function ExerciseCard({
           >
             <Plus className="h-3.5 w-3.5" /> Rozgrzewkowa
           </button>
-          <RestTimer
-            onSave={(secVal) => {
-              const last = exercise.sets.length - 1;
-              if (last >= 0) updateSet(last, { restSec: secVal });
-            }}
-          />
         </div>
       </div>
 

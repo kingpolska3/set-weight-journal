@@ -49,11 +49,10 @@ export async function syncNow(userId: string): Promise<{ pulled: number; pushed:
   for (const row of rows) {
     const payload = row.data as unknown as Partial<Session>;
     const cloudSession: Session = {
+      ...payload,
       date: row.date,
       exercises: payload.exercises ?? [],
       updatedAt: payload.updatedAt ?? row.updated_at,
-      ...(payload.note === undefined ? {} : { note: payload.note }),
-      ...(payload.photo === undefined ? {} : { photo: payload.photo }),
     };
     cloudStamp.set(row.date, stamp(cloudSession));
     const localSession = merged.get(row.date);

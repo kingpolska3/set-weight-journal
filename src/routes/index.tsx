@@ -180,9 +180,19 @@ function Index() {
   };
 
   const toggleRestDay = () => {
-    const next = { ...session, rest: !session.rest };
+    const next = { ...session, rest: !session.rest, deload: false };
     setSession(next);
     toast.success(next.rest ? "Dzień oznaczony jako „Bez treningu”" : "Dzień znów jest treningowy");
+  };
+
+  const toggleDeloadDay = () => {
+    const next = { ...session, deload: !session.deload, rest: false };
+    setSession(next);
+    toast.success(
+      next.deload
+        ? "Dzień oznaczony jako Deload – trening na ok. 50%"
+        : "Deload wyłączony – normalny trening",
+    );
   };
 
   const resetWorkoutTimer = () => {
@@ -338,29 +348,37 @@ function Index() {
               label="Objętość"
               value={`${Math.round(summary.volume)} kg`}
               sub={
-                summary.prevDate
-                  ? `${summary.volume - summary.prevVolume >= 0 ? "+" : "−"}${Math.abs(
-                      Math.round(summary.volume - summary.prevVolume),
-                    )} kg vs ostatni „${summary.planName}”`
-                  : "brak porównania"
+                noProgress
+                  ? session.rest
+                    ? "dzień bez treningu"
+                    : "deload – bez porównania"
+                  : summary.prevDate
+                    ? `${summary.volume - summary.prevVolume >= 0 ? "+" : "−"}${Math.abs(
+                        Math.round(summary.volume - summary.prevVolume),
+                      )} kg vs ostatni „${summary.planName}”`
+                    : "brak porównania"
               }
               subTone={
-                summary.prevDate
-                  ? summary.volume - summary.prevVolume >= 0
+                noProgress || !summary.prevDate
+                  ? ""
+                  : summary.volume - summary.prevVolume >= 0
                     ? "text-success"
                     : "text-danger"
-                  : ""
               }
             />
             <Stat
               label="Progres dnia"
               value={
-                summary.pct === null
+                noProgress || summary.pct === null
                   ? "—"
                   : `${summary.pct > 0 ? "+" : ""}${summary.pct.toFixed(1)}%`
               }
               tone={
-                summary.pct === null ? "" : summary.pct >= 0 ? "text-success" : "text-danger"
+                noProgress || summary.pct === null
+                  ? ""
+                  : summary.pct >= 0
+                    ? "text-success"
+                    : "text-danger"
               }
             />
           </div>
@@ -397,6 +415,16 @@ function Index() {
             >
               <Ban className="h-4 w-4" /> {session.rest ? "Dzień bez treningu" : "Bez treningu"}
             </button>
+            <button
+              onClick={toggleDeloadDay}
+              className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm transition-colors ${
+                session.deload
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border bg-card text-foreground hover:border-primary"
+              }`}
+            >
+              <BatteryCharging className="h-4 w-4" /> {session.deload ? "Deload (50%)" : "Deload"}
+            </button>
           </div>
         </div>
       </header>
@@ -408,6 +436,16 @@ function Index() {
             <Ban className="h-4 w-4 shrink-0 text-primary" />
             Ten dzień jest oznaczony jako <strong>bez treningu</strong>. Odznacz przycisk „Dzień bez
             treningu”, żeby wrócić do zapisywania ćwiczeń.
+          </div>
+        ) : null}
+        {session.deload && !session.rest ? (
+          <div className="mb-4 flex items-start gap-2 rounded-2xl border border-primary/40 bg-primary/5 p-4 text-sm text-foreground">
+            <BatteryCharging className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <span>
+              Dzień <strong>deload</strong> – trenuj na ok. <strong>50%</strong> zwykłego obciążenia
+              dla regeneracji. Ten dzień nie jest porównywany z poprzednimi treningami i nie liczy
+              się do progresu.
+            </span>
           </div>
         ) : null}
         <div className={session.rest ? "hidden" : "space-y-4"}>

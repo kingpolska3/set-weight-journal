@@ -22,6 +22,8 @@ export type Session = {
   photo?: string;
   /** Dzień oznaczony jako „Bez treningu”. */
   rest?: boolean;
+  /** Dzień oznaczony jako „Deload” – trening na ok. 50% dla regeneracji. */
+  deload?: boolean;
   /** Stoper treningu – ISO timestampy startu i końca. */
   startTime?: string;
   endTime?: string;
@@ -526,7 +528,12 @@ export function previousSameTypeSession(
   return (
     sessions
       .filter(
-        (s) => s.date < date && planForDate(s.date, p) === target && sessionVolume(s) > 0,
+        (s) =>
+          s.date < date &&
+          !s.rest &&
+          !s.deload &&
+          planForDate(s.date, p) === target &&
+          sessionVolume(s) > 0,
       )
       .sort((a, b) => (a.date < b.date ? 1 : -1))[0] ?? null
   );
@@ -548,7 +555,8 @@ export function daySummary(sessions: Session[], date: string, plan?: WeekPlan): 
     const flags = prFlags(sessions, date, ex);
     if (flags.any) prCount++;
   }
-  const prevSession = previousSameTypeSession(sessions, date, p);
+  const noCompare = Boolean(session?.rest || session?.deload);
+  const prevSession = noCompare ? null : previousSameTypeSession(sessions, date, p);
   const prevVol = prevSession ? sessionVolume(prevSession) : 0;
   return {
     volume: vol,
@@ -704,7 +712,23 @@ export function daySummaryInsights(
   const lines: SummaryLine[] = [];
 
   if (session?.rest) {
-    return [{ text: "Dzień oznaczony jako „Bez treningu” – regeneracja też jest częścią planu.", tone: "info" }];
+    return [
+      { text: "Dzień oznaczony jako „Bez treningu” – regeneracja też jest częścią planu.", tone: "info" },
+      { text: "Takie dni nie są porównywane i nie psują statystyk progresu.", tone: "info" },
+    ];
+  }
+  if (session?.deload) {
+    const vol = sessionVolume(session);
+    return [
+      {
+        text: `Deload – trening na ok. 50% dla regeneracji (${Math.round(vol)} kg objętości, ${
+          session.exercises.length
+        } ćwiczeń).`,
+        tone: "info",
+      },
+      { text: "Dzień deloadowy nie jest porównywany z poprzednimi treningami – bez progresu i bez presji.", tone: "info" },
+      { text: "Trzymaj ciężary ok. 50% i kończ serie z dużym zapasem – to buduje regenerację przed kolejnym cyklem.", tone: "info" },
+    ];
   }
   if (!session || session.exercises.length === 0) {
     return [{ text: "Brak zapisanych ćwiczeń tego dnia.", tone: "info" }];
