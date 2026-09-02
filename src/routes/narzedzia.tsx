@@ -312,113 +312,171 @@ function ToolsPage() {
             </label>
           </div>
         </div>
-        <div className="rounded-2xl border border-border bg-card p-4">
-          <div className="flex items-center gap-2">
-            <Timer className="h-4 w-4 text-primary" />
-            <h2 className="text-sm font-semibold text-foreground">Przerwa między seriami</h2>
+        <div className="overflow-hidden rounded-2xl border border-border bg-card">
+          <div className="flex items-center gap-3 border-b border-border bg-secondary/50 px-4 py-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15">
+              <Timer className="h-4.5 w-4.5 text-primary" />
+            </span>
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">Przerwa między seriami</h2>
+              <p className="text-xs text-muted-foreground">
+                Timer przy każdej serii odlicza ten czas i daje znać, że pora na kolejną.
+              </p>
+            </div>
+            <span className="ml-auto rounded-xl bg-primary px-3 py-1.5 font-mono text-sm font-bold tabular-nums text-primary-foreground">
+              {formatRest(rest.seconds)}
+            </span>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Timer przy ćwiczeniu odlicza tę przerwę. Po jej upływie dostajesz sygnał, że czas na
-            kolejną serię.
-          </p>
 
-          <div className="mt-3 flex flex-wrap gap-2">
-            {[60, 90, 120, 150, 180, 240].map((sec) => (
-              <button
-                key={sec}
-                onClick={() => updateRest({ ...rest, seconds: sec })}
-                className={`rounded-xl border px-3 py-2 text-xs font-medium ${
-                  rest.seconds === sec
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border text-foreground"
-                }`}
-              >
-                {formatRest(sec)}
-              </button>
-            ))}
-          </div>
-          <label className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-            Własna długość (sek.)
-            <input
-              type="number"
-              min={10}
-              max={900}
-              step={5}
-              value={rest.seconds}
-              onChange={(e) =>
-                updateRest({
-                  ...rest,
-                  seconds: Math.min(900, Math.max(10, Number(e.target.value) || 10)),
-                })
-              }
-              className="w-24 rounded-lg border border-input bg-secondary px-2 py-1.5 text-center text-sm tabular-nums text-foreground outline-none focus:border-primary"
-            />
-          </label>
+          <div className="space-y-5 p-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Długość przerwy
+              </p>
+              <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
+                {[60, 90, 120, 150, 180, 240].map((sec) => (
+                  <button
+                    key={sec}
+                    onClick={() => updateRest({ ...rest, seconds: sec })}
+                    className={`rounded-xl border py-2 text-xs font-semibold tabular-nums transition-colors ${
+                      rest.seconds === sec
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-foreground hover:border-primary/60"
+                    }`}
+                  >
+                    {formatRest(sec)}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 flex items-center gap-3">
+                <input
+                  type="range"
+                  min={15}
+                  max={600}
+                  step={5}
+                  value={rest.seconds}
+                  onChange={(e) => updateRest({ ...rest, seconds: Number(e.target.value) })}
+                  aria-label="Długość przerwy"
+                  className="h-1.5 flex-1 accent-[var(--primary)]"
+                />
+                <input
+                  type="number"
+                  min={10}
+                  max={900}
+                  step={5}
+                  value={rest.seconds}
+                  onChange={(e) =>
+                    updateRest({
+                      ...rest,
+                      seconds: Math.min(900, Math.max(10, Number(e.target.value) || 10)),
+                    })
+                  }
+                  aria-label="Długość przerwy w sekundach"
+                  className="w-20 rounded-lg border border-input bg-secondary px-2 py-1.5 text-center text-sm tabular-nums text-foreground outline-none focus:border-primary"
+                />
+                <span className="text-xs text-muted-foreground">sek.</span>
+              </div>
+            </div>
 
-          <p className="mt-4 text-xs text-muted-foreground">Dźwięk końca przerwy</p>
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            {(Object.keys(SOUNDS) as SoundKey[]).map((key) => (
-              <div
-                key={key}
-                className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs ${
-                  rest.sound === key ? "border-primary text-foreground" : "border-border text-muted-foreground"
-                }`}
-              >
+            <div>
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Dźwięk końca przerwy
+                </p>
+                <label className="flex items-center gap-2 text-xs text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={rest.soundOn}
+                    onChange={(e) => updateRest({ ...rest, soundOn: e.target.checked })}
+                    className="h-4 w-4 accent-[var(--primary)]"
+                  />
+                  włączony
+                </label>
+              </div>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {(Object.keys(SOUNDS) as SoundKey[]).map((key) => (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      updateRest({ ...rest, sound: key, soundOn: true });
+                      playSound(key, rest.volume);
+                    }}
+                    className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs transition-colors ${
+                      rest.sound === key
+                        ? "border-primary bg-primary/10 text-foreground"
+                        : "border-border text-muted-foreground hover:border-primary/60"
+                    }`}
+                  >
+                    <span
+                      className={`flex h-5 w-5 items-center justify-center rounded-full border ${
+                        rest.sound === key ? "border-primary bg-primary" : "border-border"
+                      }`}
+                    >
+                      {rest.sound === key ? (
+                        <Check className="h-3 w-3 text-primary-foreground" />
+                      ) : null}
+                    </span>
+                    <span className="font-medium">{SOUNDS[key].label}</span>
+                    <Volume2 className="ml-auto h-3.5 w-3.5 text-primary" />
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-3 flex items-center gap-3">
+                <Volume2 className="h-4 w-4 text-muted-foreground" />
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(rest.volume * 100)}
+                  onChange={(e) => updateRest({ ...rest, volume: Number(e.target.value) / 100 })}
+                  aria-label="Głośność sygnału"
+                  className="h-1.5 flex-1 accent-[var(--primary)]"
+                />
+                <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">
+                  {Math.round(rest.volume * 100)}%
+                </span>
                 <button
-                  onClick={() => updateRest({ ...rest, sound: key, soundOn: true })}
-                  className="flex-1 text-left"
+                  onClick={() => playSound(rest.sound, rest.volume)}
+                  className="rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-medium text-primary hover:border-primary"
                 >
-                  {SOUNDS[key].label}
-                </button>
-                <button
-                  onClick={() => playSound(key)}
-                  className="rounded-lg border border-border px-2 py-1 text-[11px] text-primary"
-                >
-                  Posłuchaj
+                  Testuj
                 </button>
               </div>
-            ))}
-          </div>
+            </div>
 
-          <div className="mt-3 space-y-2">
-            <label className="flex items-center gap-2 text-xs text-foreground">
-              <input
-                type="checkbox"
-                checked={rest.soundOn}
-                onChange={(e) => updateRest({ ...rest, soundOn: e.target.checked })}
-                className="h-4 w-4 accent-[var(--primary)]"
-              />
-              Odtwarzaj dźwięk
-            </label>
-            <label className="flex items-center gap-2 text-xs text-foreground">
-              <input
-                type="checkbox"
-                checked={rest.vibrate}
-                onChange={(e) => {
-                  updateRest({ ...rest, vibrate: e.target.checked });
-                  if (e.target.checked) vibrate([200]);
-                }}
-                className="h-4 w-4 accent-[var(--primary)]"
-              />
-              Wibracje (telefon)
-            </label>
-            <label className="flex items-center gap-2 text-xs text-foreground">
-              <input
-                type="checkbox"
-                checked={rest.notify}
-                onChange={(e) => {
-                  const on = e.target.checked;
-                  updateRest({ ...rest, notify: on });
-                  if (on) {
-                    void ensureNotifyPermission().then((ok) => {
-                      if (!ok) toast.error("Powiadomienia są zablokowane w przeglądarce");
-                    });
-                  }
-                }}
-                className="h-4 w-4 accent-[var(--primary)]"
-              />
-              Powiadomienie systemowe
-            </label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className="flex items-center gap-2 rounded-xl border border-border px-3 py-2.5 text-xs text-foreground">
+                <input
+                  type="checkbox"
+                  checked={rest.vibrate}
+                  onChange={(e) => {
+                    updateRest({ ...rest, vibrate: e.target.checked });
+                    if (e.target.checked) vibrate([200]);
+                  }}
+                  className="h-4 w-4 accent-[var(--primary)]"
+                />
+                Wibracje (telefon)
+              </label>
+              <label className="flex items-center gap-2 rounded-xl border border-border px-3 py-2.5 text-xs text-foreground">
+                <input
+                  type="checkbox"
+                  checked={rest.notify}
+                  onChange={(e) => {
+                    const on = e.target.checked;
+                    updateRest({ ...rest, notify: on });
+                    if (on) {
+                      void ensureNotifyPermission().then((ok) => {
+                        if (!ok) toast.error("Powiadomienia są zablokowane w przeglądarce");
+                      });
+                    }
+                  }}
+                  className="h-4 w-4 accent-[var(--primary)]"
+                />
+                Powiadomienie systemowe
+              </label>
+            </div>
           </div>
         </div>
 
