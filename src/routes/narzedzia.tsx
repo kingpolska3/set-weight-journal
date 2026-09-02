@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
+  Check,
   ChevronDown,
   ChevronRight,
   Download,
@@ -10,6 +11,7 @@ import {
   Timer,
   Trash2,
   Upload,
+  Volume2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppNav } from "@/components/AppNav";
