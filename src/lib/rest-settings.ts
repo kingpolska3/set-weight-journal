@@ -1,10 +1,12 @@
-export type SoundKey = "beep" | "chime" | "bell" | "marimba" | "alarm";
+export type SoundKey = "beep" | "chime" | "bell" | "marimba" | "alarm" | "arcade";
 
 export type RestSettings = {
   /** Długość przerwy w sekundach. */
   seconds: number;
   sound: SoundKey;
   soundOn: boolean;
+  /** Głośność sygnału 0–1. */
+  volume: number;
   vibrate: boolean;
   notify: boolean;
 };
@@ -16,12 +18,14 @@ export const SOUNDS: Record<SoundKey, { label: string; notes: [number, number][]
   bell: { label: "Gong", notes: [[392, 0.6], [0, 0.05], [392, 0.9]] },
   marimba: { label: "Marimba", notes: [[587, 0.16], [740, 0.16], [880, 0.16], [1175, 0.5]] },
   alarm: { label: "Alarm", notes: [[1046, 0.15], [784, 0.15], [1046, 0.15], [784, 0.15], [1046, 0.15], [784, 0.4]] },
+  arcade: { label: "Arcade", notes: [[659, 0.12], [880, 0.12], [1175, 0.12], [1568, 0.35], [0, 0.08], [1175, 0.35]] },
 };
 
 export const DEFAULT_REST: RestSettings = {
   seconds: 120,
   sound: "chime",
   soundOn: true,
+  volume: 0.6,
   vibrate: true,
   notify: true,
 };
@@ -42,6 +46,10 @@ export function loadRest(): RestSettings {
           ? Math.round(parsed.seconds)
           : DEFAULT_REST.seconds,
       sound: parsed.sound && parsed.sound in SOUNDS ? parsed.sound : DEFAULT_REST.sound,
+      volume:
+        typeof parsed.volume === "number" && parsed.volume >= 0 && parsed.volume <= 1
+          ? parsed.volume
+          : DEFAULT_REST.volume,
     };
   } catch {
     return { ...DEFAULT_REST };
@@ -60,7 +68,7 @@ export function saveRest(settings: RestSettings) {
 type AudioCtor = typeof AudioContext;
 
 /** Odtwarza krótką melodyjkę końca przerwy (Web Audio – bez plików). */
-export function playSound(key: SoundKey) {
+export function playSound(key: SoundKey, volume = 0.6) {
   if (typeof window === "undefined") return;
   const Ctor: AudioCtor | undefined =
     window.AudioContext ?? (window as unknown as { webkitAudioContext?: AudioCtor }).webkitAudioContext;
@@ -75,7 +83,7 @@ export function playSound(key: SoundKey) {
         osc.type = key === "alarm" ? "square" : key === "bell" ? "triangle" : "sine";
         osc.frequency.value = freq;
         gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.45 * volume), t + 0.02);
         gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
         osc.connect(gain).connect(ctx.destination);
         osc.start(t);
