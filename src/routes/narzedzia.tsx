@@ -6,9 +6,7 @@ import {
   Download,
   FileDown,
   LayoutGrid,
-  Palette,
   Plus,
-  Share2,
   Timer,
   Trash2,
   Upload,
@@ -28,7 +26,6 @@ import {
   type RestSettings,
   type SoundKey,
 } from "@/lib/rest-settings";
-import { ACCENTS, loadTheme, saveTheme, type AccentKey, type ThemeSettings } from "@/lib/theme";
 import {
   downloadFile,
   loadPlan,
@@ -68,13 +65,11 @@ function ToolsPage() {
   const [name, setName] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState<Record<string, boolean>>({});
-  const [theme, setTheme] = useState<ThemeSettings>({ mode: "dark", accent: "amber" });
   const [rest, setRest] = useState<RestSettings>(DEFAULT_REST);
 
   useEffect(() => {
     setTemplates(loadTemplates());
     setSessions(loadSessions());
-    setTheme(loadTheme());
     setRest(loadRest());
     setLoaded(true);
   }, []);
@@ -136,30 +131,6 @@ function ToolsPage() {
   const updateRest = (next: RestSettings) => {
     setRest(next);
     saveRest(next);
-  };
-
-  const updateTheme = (next: ThemeSettings) => {
-    setTheme(next);
-    saveTheme(next);
-  };
-
-  const sharePage = async () => {
-    const url = `${window.location.origin}/?nowy=1`;
-    const shareData = {
-      title: "Dziennik treningowy",
-      text: "Zacznij zapisywać swoje treningi – pusty dziennik na start.",
-      url,
-    };
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-        return;
-      }
-      await navigator.clipboard.writeText(url);
-      toast.success("Skopiowano link do pustego dziennika");
-    } catch {
-      toast.error("Nie udało się udostępnić linku");
-    }
   };
 
   const exportPDF = () => exportSessionsToPdf(loadSessions(), loadPlan());
@@ -451,63 +422,6 @@ function ToolsPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-4">
-          <div className="flex items-center gap-2">
-            <Palette className="h-4 w-4 text-primary" />
-            <h2 className="text-sm font-semibold text-foreground">Wygląd aplikacji</h2>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Motyw</p>
-          <div className="mt-2 flex gap-2">
-            {(["dark", "light"] as const).map((mode) => (
-              <button
-                key={mode}
-                onClick={() => updateTheme({ ...theme, mode })}
-                className={`flex-1 rounded-xl border px-3 py-2 text-xs font-medium ${
-                  theme.mode === mode
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border text-foreground"
-                }`}
-              >
-                {mode === "dark" ? "Ciemny" : "Jasny"}
-              </button>
-            ))}
-          </div>
-          <p className="mt-3 text-xs text-muted-foreground">Kolor akcentu</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {(Object.keys(ACCENTS) as AccentKey[]).map((key) => (
-              <button
-                key={key}
-                onClick={() => updateTheme({ ...theme, accent: key })}
-                aria-label={ACCENTS[key].label}
-                className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs ${
-                  theme.accent === key ? "border-primary text-foreground" : "border-border text-muted-foreground"
-                }`}
-              >
-                <span
-                  className="h-3.5 w-3.5 rounded-full"
-                  style={{ backgroundColor: ACCENTS[key].swatch }}
-                />
-                {ACCENTS[key].label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-border bg-card p-4">
-          <div className="flex items-center gap-2">
-            <Share2 className="h-4 w-4 text-primary" />
-            <h2 className="text-sm font-semibold text-foreground">Udostępnij stronę znajomemu</h2>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Link otwiera pusty dziennik – bez Twoich treningów – żeby znajomy mógł zacząć od zera.
-          </p>
-          <button
-            onClick={() => void sharePage()}
-            className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
-          >
-            <Share2 className="h-3.5 w-3.5" /> Udostępnij pusty dziennik
-          </button>
-        </div>
       </section>
       <AppNav />
     </main>
