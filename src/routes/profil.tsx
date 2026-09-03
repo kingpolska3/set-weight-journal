@@ -1,12 +1,33 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { CloudUpload, Eye, LogOut, RefreshCw, Trash2, User } from "lucide-react";
+import {
+  Check,
+  CloudUpload,
+  Copy,
+  Eye,
+  LogOut,
+  Palette,
+  RefreshCw,
+  Share2,
+  Trash2,
+  User,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { AppNav } from "@/components/AppNav";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/hooks/useAuth";
 import { syncNow } from "@/lib/cloud-sync";
+import {
+  ACCENTS,
+  DEFAULT_THEME,
+  applyTheme,
+  loadTheme,
+  saveTheme,
+  type AccentKey,
+  type ThemeSettings,
+} from "@/lib/theme";
 
 export const Route = createFileRoute("/profil")({
   head: () => ({
@@ -15,12 +36,12 @@ export const Route = createFileRoute("/profil")({
       {
         name: "description",
         content:
-          "Zaloguj się przez Google, synchronizuj treningi między telefonem i komputerem, eksportuj PDF lub usuń konto.",
+          "Zaloguj się przez Google, synchronizuj treningi między telefonem i komputerem, personalizuj wygląd i zarządzaj prywatnością.",
       },
       { property: "og:title", content: "Profil i synchronizacja treningów" },
       {
         property: "og:description",
-        content: "Logowanie Google, synchronizacja w chmurze, eksport PDF i usuwanie konta (RODO).",
+        content: "Logowanie Google, synchronizacja w chmurze, motyw aplikacji i usuwanie konta (RODO).",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -34,9 +55,23 @@ function ProfilePage() {
   const [busy, setBusy] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
+  const [usernameState, setUsernameState] = useState<"idle" | "checking" | "free" | "taken" | "invalid">(
+    "idle",
+  );
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [shareFull, setShareFull] = useState(false);
   const [online, setOnline] = useState(true);
+  const [theme, setTheme] = useState<ThemeSettings>(DEFAULT_THEME);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteEmail, setDeleteEmail] = useState("");
+  const [shareUrl, setShareUrl] = useState("");
+
+  useEffect(() => {
+    const t = loadTheme();
+    setTheme(t);
+    applyTheme(t);
+    setShareUrl(window.location.origin);
+  }, []);
 
   useEffect(() => {
     const update = () => setOnline(navigator.onLine);
@@ -63,6 +98,31 @@ function ProfilePage() {
     })();
   }, [user]);
 
+  // Sprawdzanie dostępności nazwy użytkownika na żywo (z opóźnieniem).
+  useEffect(() => {
+    const value = username.trim().toLowerCase();
+    if (!user || value === "") {
+      setUsernameState("idle");
+      return;
+    }
+    if (!/^[a-z0-9._-]{3,20}$/.test(value)) {
+      setUsernameState("invalid");
+      return;
+    }
+    setUsernameState("checking");
+    const t = window.setTimeout(() => {
+      void (async () => {
+        const { data, error } = await supabase.rpc("username_available", { u: value });
+        if (error) {
+          setUsernameState("idle");
+          return;
+        }
+        setUsernameState(data ? "free" : "taken");
+      })();
+    }, 450);
+    return () => window.clearTimeout(t);
+  }, [username, user]);
+
   const runSync = useCallback(
     async (silent = false) => {
       if (!user) return;
@@ -84,6 +144,11 @@ function ProfilePage() {
     if (user) void runSync(true);
   }, [user, runSync]);
 
+  const updateTheme = (next: ThemeSettings) => {
+    setTheme(next);
+    saveTheme(next);
+  };
+
   const signIn = async () => {
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
@@ -103,6 +168,14 @@ function ProfilePage() {
 
   const saveProfile = async () => {
     if (!user) return;
+    if (usernameState === "taken" || usernameState === "invalid") {
+      toast.error(
+        usernameState === "taken"
+          ? "Ta nazwa użytkownika jest zajęta"
+          : "Nazwa użytkownika: 3–20 znaków (litery, cyfry, . _ -)",
+      );
+      return;
+    }
     const { error } = await supabase.from("profiles").upsert(
       {
         id: user.id,
@@ -142,9 +215,29 @@ function ProfilePage() {
     toast.success(value ? "Pełny plan jest teraz widoczny w VS" : "Udostępnianie planu wyłączone");
   };
 
+  const sharePage = async () => {
+    const data = {
+      title: "Dziennik treningowy",
+      text: "Zapisuj treningi, śledź progres i porównuj wyniki ze znajomymi.",
+      url: shareUrl,
+    };
+    const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void> };
+    if (nav.share) {
+      try {
+        await nav.share(data);
+        return;
+      } catch {
+        /* anulowano */
+      }
+    }
+    await navigator.clipboard.writeText(shareUrl);
+    toast.success("Link skopiowany do schowka");
+  };
+
   const deleteAccount = async () => {
     if (!user) return;
-    if (!window.confirm("Na pewno usunąć konto i wszystkie dane w chmurze? Tej operacji nie da się cofnąć.")) {
+    if (deleteEmail.trim().toLowerCase() !== (user.email ?? "").toLowerCase()) {
+      toast.error("Wpisany e-mail nie zgadza się z adresem konta");
       return;
     }
     const { error } = await supabase.rpc("delete_my_account");
@@ -171,24 +264,24 @@ function ProfilePage() {
           </span>
         </header>
 
-        {loading ? (
-          <p className="text-sm text-muted-foreground">Ładowanie…</p>
-        ) : !user ? (
-          <div className="rounded-xl border border-border bg-card p-5">
-            <h2 className="text-base font-semibold text-foreground">Zaloguj się kontem Google</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Treningi zapisują się lokalnie zawsze. Po zalogowaniu synchronizują się automatycznie, więc
-              zobaczysz je na telefonie i komputerze.
-            </p>
-            <button
-              onClick={signIn}
-              className="mt-4 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
-            >
-              Kontynuuj z Google
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-4">
+        <div className="space-y-4">
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Ładowanie…</p>
+          ) : !user ? (
+            <div className="rounded-xl border border-border bg-card p-5">
+              <h2 className="text-base font-semibold text-foreground">Zaloguj się kontem Google</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Treningi zapisują się lokalnie zawsze. Po zalogowaniu synchronizują się automatycznie, więc
+                zobaczysz je na telefonie i komputerze.
+              </p>
+              <button
+                onClick={signIn}
+                className="mt-4 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
+              >
+                Kontynuuj z Google
+              </button>
+            </div>
+          ) : (
             <div className="rounded-xl border border-border bg-card p-4">
               <p className="text-xs text-muted-foreground">Zalogowany jako</p>
               <p className="text-sm font-semibold text-foreground">{user.email}</p>
@@ -205,60 +298,162 @@ function ProfilePage() {
                 <label className="text-xs text-muted-foreground" htmlFor="username">
                   Nazwa użytkownika (unikalna, opcjonalnie)
                 </label>
-                <input
-                  id="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
-                />
+                <div className="relative">
+                  <input
+                    id="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="np. kingpolska"
+                    className={`w-full rounded-lg border bg-background px-3 py-2 pr-9 text-sm text-foreground ${
+                      usernameState === "free"
+                        ? "border-success"
+                        : usernameState === "taken" || usernameState === "invalid"
+                          ? "border-destructive"
+                          : "border-input"
+                    }`}
+                  />
+                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                    {usernameState === "checking" ? (
+                      <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
+                    ) : usernameState === "free" ? (
+                      <Check className="h-4 w-4 text-success" />
+                    ) : usernameState === "taken" || usernameState === "invalid" ? (
+                      <X className="h-4 w-4 text-destructive" />
+                    ) : null}
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  {usernameState === "free"
+                    ? "Nazwa jest wolna — możesz ją zapisać."
+                    : usernameState === "taken"
+                      ? "Ta nazwa jest już zajęta."
+                      : usernameState === "invalid"
+                        ? "3–20 znaków: małe litery, cyfry oraz . _ -"
+                        : "Po nazwie użytkownika znajomi znajdą Cię w zakładce VS."}
+                </p>
                 <button
-                  onClick={saveProfile}
-                  className="mt-1 rounded-lg bg-secondary px-3 py-2 text-sm font-medium text-secondary-foreground"
+                  onClick={() => void saveProfile()}
+                  className="mt-1 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
                 >
                   Zapisz profil
                 </button>
               </div>
             </div>
+          )}
 
-            <div className="rounded-xl border border-border bg-card p-4">
-              <div className="flex items-center gap-2">
-                <CloudUpload className="h-4 w-4 text-primary" />
-                <h2 className="text-sm font-semibold text-foreground">Synchronizacja</h2>
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="flex items-center gap-2">
+              <Palette className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-semibold text-foreground">Wygląd aplikacji</h2>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">Motyw i kolor akcentu zapisują się na tym urządzeniu.</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {(["dark", "light"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => updateTheme({ ...theme, mode })}
+                  className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                    theme.mode === mode
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-foreground hover:border-primary"
+                  }`}
+                >
+                  {mode === "dark" ? "Ciemny" : "Jasny"}
+                </button>
+              ))}
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {(Object.keys(ACCENTS) as AccentKey[]).map((key) => (
+                <button
+                  key={key}
+                  onClick={() => updateTheme({ ...theme, accent: key })}
+                  aria-label={ACCENTS[key].label}
+                  className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                    theme.accent === key
+                      ? "border-primary text-primary"
+                      : "border-border text-muted-foreground hover:border-primary"
+                  }`}
+                >
+                  <span
+                    className="h-4 w-4 rounded-full"
+                    style={{ backgroundColor: ACCENTS[key].swatch }}
+                    aria-hidden
+                  />
+                  {ACCENTS[key].label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {user ? (
+            <>
+              <div className="rounded-xl border border-border bg-card p-4">
+                <div className="flex items-center gap-2">
+                  <CloudUpload className="h-4 w-4 text-primary" />
+                  <h2 className="text-sm font-semibold text-foreground">Synchronizacja</h2>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {lastSync
+                    ? `Ostatnia synchronizacja: ${lastSync}`
+                    : "Synchronizacja uruchamia się automatycznie."}
+                </p>
+                <button
+                  disabled={busy || !online}
+                  onClick={() => void runSync()}
+                  className="mt-3 inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} />
+                  Synchronizuj teraz
+                </button>
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {lastSync ? `Ostatnia synchronizacja: ${lastSync}` : "Synchronizacja uruchamia się automatycznie."}
-              </p>
+
+              <div className="rounded-xl border border-border bg-card p-4">
+                <div className="flex items-center gap-2">
+                  <Eye className="h-4 w-4 text-primary" />
+                  <h2 className="text-sm font-semibold text-foreground">Prywatność w zakładce VS</h2>
+                </div>
+                <label className="mt-3 flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={shareFull}
+                    onChange={(e) => void toggleShare(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-[var(--primary)]"
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    Zgadzam się, żeby osoby, które mnie wyszukają, widziały{" "}
+                    <span className="font-semibold text-foreground">cały mój plan treningowy</span> (ćwiczenia,
+                    serie, ciężary, notatki), a nie tylko zbiorcze statystyki (objętość, liczba treningów i serii).
+                    Zgodę możesz cofnąć w każdej chwili.
+                  </span>
+                </label>
+              </div>
+            </>
+          ) : null}
+
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="flex items-center gap-2">
+              <Share2 className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-semibold text-foreground">Udostępnij stronę znajomemu</h2>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Wyślij link — znajomy założy własny dziennik i porównacie się w zakładce VS.
+            </p>
+            <div className="mt-3 flex gap-2">
+              <input
+                readOnly
+                value={shareUrl}
+                className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-xs text-muted-foreground"
+              />
               <button
-                disabled={busy || !online}
-                onClick={() => void runSync()}
-                className="mt-3 inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+                onClick={() => void sharePage()}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
               >
-                <RefreshCw className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} />
-                Synchronizuj teraz
+                <Copy className="h-4 w-4" /> Udostępnij
               </button>
             </div>
+          </div>
 
-            <div className="rounded-xl border border-border bg-card p-4">
-              <div className="flex items-center gap-2">
-                <Eye className="h-4 w-4 text-primary" />
-                <h2 className="text-sm font-semibold text-foreground">Prywatność w zakładce VS</h2>
-              </div>
-              <label className="mt-3 flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={shareFull}
-                  onChange={(e) => void toggleShare(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 accent-[var(--primary)]"
-                />
-                <span className="text-xs text-muted-foreground">
-                  Zgadzam się, żeby osoby, które mnie wyszukają, widziały{" "}
-                  <span className="font-semibold text-foreground">cały mój plan treningowy</span> (ćwiczenia,
-                  serie, ciężary, notatki), a nie tylko zbiorcze statystyki (objętość, liczba treningów i serii).
-                  Zgodę możesz cofnąć w każdej chwili.
-                </span>
-              </label>
-            </div>
-
+          {user ? (
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => void signOut()}
@@ -266,15 +461,50 @@ function ProfilePage() {
               >
                 <LogOut className="h-4 w-4" /> Wyloguj się
               </button>
-              <button
-                onClick={() => void deleteAccount()}
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-destructive/40 px-3 py-2 text-sm font-medium text-destructive"
-              >
-                <Trash2 className="h-4 w-4" /> Usuń konto i dane (RODO)
-              </button>
+
+              {confirmDelete ? (
+                <div className="rounded-xl border border-destructive/40 bg-card p-4">
+                  <p className="text-sm font-semibold text-destructive">Usuwanie konta jest nieodwracalne</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Aby potwierdzić, wpisz adres e-mail swojego konta:{" "}
+                    <span className="font-semibold text-foreground">{user.email}</span>
+                  </p>
+                  <input
+                    value={deleteEmail}
+                    onChange={(e) => setDeleteEmail(e.target.value)}
+                    placeholder="twój@email.com"
+                    className="mt-3 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
+                  />
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={() => {
+                        setConfirmDelete(false);
+                        setDeleteEmail("");
+                      }}
+                      className="flex-1 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground"
+                    >
+                      Anuluj
+                    </button>
+                    <button
+                      disabled={deleteEmail.trim().toLowerCase() !== (user.email ?? "").toLowerCase()}
+                      onClick={() => void deleteAccount()}
+                      className="flex-1 rounded-lg bg-destructive px-3 py-2 text-sm font-semibold text-destructive-foreground disabled:opacity-40"
+                    >
+                      Usuń konto
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-destructive/40 px-3 py-2 text-sm font-medium text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" /> Usuń konto i dane (RODO)
+                </button>
+              )}
             </div>
-          </div>
-        )}
+          ) : null}
+        </div>
       </div>
       <AppNav />
     </div>
