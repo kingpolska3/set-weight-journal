@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Ban,
+  BatteryCharging,
   CalendarDays,
   Camera,
   Dumbbell,
@@ -271,6 +272,7 @@ function Index() {
   };
 
   const summary = useMemo(() => daySummary(sessions, date, plan), [sessions, date, plan]);
+  const noProgress = Boolean(session.rest || session.deload);
   const insights = useMemo(
     () => daySummaryInsights(sessions, date, plan),
     [sessions, date, plan],
