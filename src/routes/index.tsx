@@ -272,6 +272,7 @@ function Index() {
   };
 
   const summary = useMemo(() => daySummary(sessions, date, plan), [sessions, date, plan]);
+  const noProgress = Boolean(session.rest || session.deload);
   const insights = useMemo(
     () => daySummaryInsights(sessions, date, plan),
     [sessions, date, plan],
