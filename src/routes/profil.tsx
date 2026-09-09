@@ -19,6 +19,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/hooks/useAuth";
 import { syncNow } from "@/lib/cloud-sync";
+import { MuscleMap } from "@/components/MuscleMap";
+import { loadSessions, type Session } from "@/lib/workout-store";
 import {
   ACCENTS,
   DEFAULT_THEME,
@@ -65,12 +67,14 @@ function ProfilePage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteEmail, setDeleteEmail] = useState("");
   const [shareUrl, setShareUrl] = useState("");
+  const [sessions, setSessions] = useState<Session[]>([]);
 
   useEffect(() => {
     const t = loadTheme();
     setTheme(t);
     applyTheme(t);
     setShareUrl(window.location.origin);
+    setSessions(loadSessions());
   }, []);
 
   useEffect(() => {
@@ -265,6 +269,8 @@ function ProfilePage() {
         </header>
 
         <div className="space-y-4">
+          <MuscleMap sessions={sessions} />
+
           {loading ? (
             <p className="text-sm text-muted-foreground">Ładowanie…</p>
           ) : !user ? (
