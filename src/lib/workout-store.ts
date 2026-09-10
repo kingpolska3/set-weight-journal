@@ -42,6 +42,36 @@ export type Template = {
 const KEY = "trening-dziennik-v1";
 const TEMPLATE_KEY = "trening-szablony-v1";
 
+/** Jednorazowe czyszczenie danych – nowy, pusty start aplikacji. */
+const FRESH_KEY = "trening-czysty-start-v1";
+export const CLOUD_WIPE_PENDING = "trening-czysty-start-chmura";
+
+export const EXAMPLE_TEMPLATE: Template = {
+  id: "przyklad",
+  name: "Przykładowy szablon (możesz usunąć)",
+  exercises: [
+    { name: "Wyciskanie sztangi na ławce płaskiej", sets: [{ reps: 0, weight: 0 }, { reps: 0, weight: 0 }, { reps: 0, weight: 0 }] },
+    { name: "Wiosłowanie sztangą", sets: [{ reps: 0, weight: 0 }, { reps: 0, weight: 0 }, { reps: 0, weight: 0 }] },
+  ],
+};
+
+/**
+ * Czyści historię i szablony przy pierwszym uruchomieniu nowej wersji,
+ * zostawiając jeden przykładowy szablon do usunięcia.
+ */
+export function ensureFreshStart() {
+  if (typeof window === "undefined") return;
+  try {
+    if (window.localStorage.getItem(FRESH_KEY)) return;
+    window.localStorage.setItem(KEY, "[]");
+    window.localStorage.setItem(TEMPLATE_KEY, JSON.stringify([EXAMPLE_TEMPLATE]));
+    window.localStorage.setItem(CLOUD_WIPE_PENDING, "1");
+    window.localStorage.setItem(FRESH_KEY, new Date().toISOString());
+  } catch {
+    /* brak dostępu do pamięci */
+  }
+}
+
 const PLAN_KEY = "trening-rozklad-v1";
 
 export type WeekPlan = Record<number, string>;
