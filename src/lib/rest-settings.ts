@@ -9,6 +9,8 @@ export type RestSettings = {
   volume: number;
   vibrate: boolean;
   notify: boolean;
+  /** Automatyczny start przerwy po uzupełnieniu serii. */
+  autoStart: boolean;
 };
 
 export const SOUNDS: Record<SoundKey, { label: string; notes: [number, number][] }> = {
@@ -28,6 +30,7 @@ export const DEFAULT_REST: RestSettings = {
   volume: 0.6,
   vibrate: true,
   notify: true,
+  autoStart: false,
 };
 
 const KEY = "trening-przerwa-v1";
