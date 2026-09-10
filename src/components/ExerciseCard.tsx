@@ -78,6 +78,12 @@ export function ExerciseCard({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<number[]>([]);
+  const [restSignal, setRestSignal] = useState<Record<number, number>>({});
+
+  const bumpRest = (i: number, s: { reps: number; weight: number }) => {
+    if (!s.reps || !s.weight) return;
+    setRestSignal((prev) => ({ ...prev, [i]: (prev[i] ?? 0) + 1 }));
+  };
 
   const progress = computeProgress(sessions, date, exercise);
   const history = useMemo(
