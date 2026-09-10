@@ -36,9 +36,14 @@ export function ExerciseChart({
 
   if (data.length < 2) {
     return (
-      <p className="text-[11px] text-muted-foreground">
-        Wykres pojawi się po co najmniej 2 zapisach tego ćwiczenia.
-      </p>
+      <div className="flex h-32 flex-col items-center justify-center rounded-xl border border-dashed border-border text-center">
+        <p className="text-xs font-medium text-muted-foreground">
+          Tutaj pojawią się Twoje postępy
+        </p>
+        <p className="mt-1 text-[11px] text-muted-foreground/70">
+          Zapisz to ćwiczenie co najmniej dwa razy.
+        </p>
+      </div>
     );
   }
 

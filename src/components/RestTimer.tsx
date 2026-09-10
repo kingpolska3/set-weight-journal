@@ -14,9 +14,12 @@ import {
 export function RestTimer({
   onSave,
   compact = false,
+  autoSignal = 0,
 }: {
   onSave?: (sec: number) => void;
   compact?: boolean;
+  /** Rośnie po uzupełnieniu serii – startuje przerwę, jeśli włączono autostart. */
+  autoSignal?: number;
 }) {
   const [settings, setSettings] = useState<RestSettings>(DEFAULT_REST);
   const [sec, setSec] = useState(0);
@@ -63,6 +66,17 @@ export function RestTimer({
     setSec(0);
     setRunning(true);
   };
+
+  useEffect(() => {
+    if (!autoSignal) return;
+    if (!loadRest().autoStart) return;
+    setSettings(loadRest());
+    firedRef.current = false;
+    setDone(false);
+    setSec(0);
+    setRunning(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSignal]);
 
   if (!running && !done) {
     return (

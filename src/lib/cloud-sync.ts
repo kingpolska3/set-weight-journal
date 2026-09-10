@@ -111,6 +111,14 @@ async function syncPlan(userId: string) {
   }
 }
 
+/** Usuwa wszystkie treningi użytkownika z chmury (czysty start). */
+export async function wipeCloudWorkouts(userId: string) {
+  const { error } = await supabase.from("workout_days").delete().eq("user_id", userId);
+  if (error) throw error;
+  saveSessions([]);
+  emit();
+}
+
 export async function pushPlan(userId: string, plan: WeekPlan) {
   await supabase.from("user_settings").upsert(
     {
