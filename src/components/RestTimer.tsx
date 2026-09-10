@@ -67,6 +67,17 @@ export function RestTimer({
     setRunning(true);
   };
 
+  useEffect(() => {
+    if (!autoSignal) return;
+    if (!loadRest().autoStart) return;
+    setSettings(loadRest());
+    firedRef.current = false;
+    setDone(false);
+    setSec(0);
+    setRunning(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSignal]);
+
   if (!running && !done) {
     return (
       <button
