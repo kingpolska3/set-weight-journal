@@ -5,6 +5,7 @@ import {
   BatteryCharging,
   CalendarDays,
   Camera,
+  CheckCircle2,
   Dumbbell,
   Pencil,
   Play,
@@ -197,6 +198,39 @@ function Index() {
     );
     setSession({ ...session, durationSec: secs });
     toast.success(`Zapisano czas treningu: ${formatDuration(secs * 1000)}`);
+  };
+
+  /** Zakończenie treningu: stop stopera + automatyczny zapis czasu. */
+  const finishWorkout = () => {
+    setConfirmFinish(false);
+    const end = new Date().toISOString();
+    const next: Session = { ...session };
+    if (session.startTime) {
+      next.endTime = session.endTime ?? end;
+      next.durationSec = Math.round(
+        (new Date(next.endTime).getTime() - new Date(session.startTime).getTime()) / 1000,
+      );
+    }
+    setSession(next);
+    if (user) void syncNow(user.id).catch(() => undefined);
+    toast.success(
+      next.durationSec !== undefined
+        ? `Trening zakończony i zapisany – czas ${formatDuration(next.durationSec * 1000)}`
+        : "Trening zakończony i zapisany",
+    );
+  };
+
+  /** Pierwszy trening: włącza stoper i dodaje pierwsze ćwiczenie. */
+  const firstWorkout = () => {
+    setNow(Date.now());
+    const next: Session = {
+      ...session,
+      startTime: new Date().toISOString(),
+      exercises: [{ id: uid(), name: "", sets: [{ reps: 0, weight: 0 }] }],
+    };
+    delete next.endTime;
+    setSession(next);
+    toast.success("Powodzenia! Stoper włączony");
   };
 
   const toggleRestDay = () => {
@@ -507,12 +541,74 @@ function Index() {
           ))}
         </div>
 
-        <button
-          onClick={addExercise}
-          className={`${session.rest ? "hidden " : ""}mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90`}
-        >
-          <Plus className="h-4 w-4" /> Dodaj ćwiczenie
-        </button>
+        {!session.rest && session.exercises.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-border bg-card/60 p-8 text-center">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15">
+              <Dumbbell className="h-7 w-7 text-primary" />
+            </span>
+            <h3 className="mt-4 text-lg font-bold text-foreground">
+              Zacznij zapisywać swoje treningi
+            </h3>
+            <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+              Dodaj ćwiczenia, serie i ciężary — statystyki, rekordy i wykresy pojawią się same.
+            </p>
+            <button
+              onClick={firstWorkout}
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-4 text-base font-bold text-primary-foreground shadow-lg shadow-primary/20 transition-opacity hover:opacity-90 sm:w-auto"
+            >
+              <Play className="h-5 w-5" /> Rozpocznij pierwszy trening
+            </button>
+            <div className="mt-5 grid grid-cols-3 gap-2 text-left">
+              <Stat label="Objętość" value="0 kg" />
+              <Stat label="Treningi" value="0" />
+              <Stat label="Rekordy" value="0" />
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={addExercise}
+            className={`${session.rest ? "hidden " : ""}mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90`}
+          >
+            <Plus className="h-4 w-4" /> Dodaj ćwiczenie
+          </button>
+        )}
+
+        {!session.rest && session.exercises.length > 0 ? (
+          <div className="mt-4 rounded-2xl border border-primary/40 bg-card p-4">
+            {confirmFinish ? (
+              <div>
+                <p className="text-sm font-semibold text-foreground">Zakończyć trening?</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Zapiszemy czas treningu{" "}
+                  {session.startTime ? `(${formatDuration(elapsedMs)})` : "(stoper nie był włączony)"}{" "}
+                  i zamkniemy dzień.
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    onClick={finishWorkout}
+                    className="flex-1 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground"
+                  >
+                    Tak, zakończ
+                  </button>
+                  <button
+                    onClick={() => setConfirmFinish(false)}
+                    className="rounded-xl border border-border px-4 py-3 text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    Anuluj
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmFinish(true)}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-base font-bold text-primary-foreground transition-opacity hover:opacity-90"
+              >
+                <CheckCircle2 className="h-5 w-5" /> Zakończ trening
+              </button>
+            )}
+          </div>
+        ) : null}
+
 
         <div className="mt-6 rounded-2xl border border-border bg-card p-4">
           <h2 className="text-sm font-semibold text-foreground">Notatka do treningu</h2>
