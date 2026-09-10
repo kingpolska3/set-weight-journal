@@ -19,12 +19,20 @@ import {
 import { toast } from "sonner";
 import { AppNav } from "@/components/AppNav";
 import { useAuth } from "@/hooks/useAuth";
-import { WORKOUTS_UPDATED, pushPlan, stampSession, syncNow } from "@/lib/cloud-sync";
+import {
+  WORKOUTS_UPDATED,
+  pushPlan,
+  stampSession,
+  syncNow,
+  wipeCloudWorkouts,
+} from "@/lib/cloud-sync";
 import { ExerciseCard } from "@/components/ExerciseCard";
 import {
+  CLOUD_WIPE_PENDING,
   DAY_NAMES,
   DEFAULT_DAY_PLAN,
   daySummary,
+  ensureFreshStart,
   daySummaryInsights,
   fileToCompressedDataUrl,
   formatDatePL,
@@ -76,6 +84,7 @@ function Index() {
     // Nowa osoba zaczyna z pustym dziennikiem – brak przykładowych treningów.
     const cleanStart = new URLSearchParams(window.location.search).get("nowy") === "1";
     if (cleanStart) window.history.replaceState(null, "", window.location.pathname);
+    ensureFreshStart();
     setSessions(loadSessions());
     setPlan(loadPlan());
     setLoaded(true);
@@ -91,7 +100,17 @@ function Index() {
     let cancelled = false;
     const run = () => {
       if (typeof navigator !== "undefined" && !navigator.onLine) return;
-      void syncNow(user.id).catch(() => undefined);
+      void (async () => {
+        try {
+          if (window.localStorage.getItem(CLOUD_WIPE_PENDING)) {
+            await wipeCloudWorkouts(user.id);
+            window.localStorage.removeItem(CLOUD_WIPE_PENDING);
+          }
+          await syncNow(user.id);
+        } catch {
+          /* offline lub brak dostępu */
+        }
+      })();
     };
     const onUpdated = () => {
       if (!cancelled) setSessions(loadSessions());
