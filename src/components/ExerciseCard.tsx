@@ -140,7 +140,7 @@ export function ExerciseCard({
         <input
           value={exercise.name}
           onChange={(e) => update({ name: e.target.value })}
-          placeholder="Nazwa ćwiczenia"
+          placeholder="Dodaj ćwiczenie…"
           maxLength={80}
           className="min-w-0 flex-1 rounded-lg bg-transparent px-1 py-1 text-base font-semibold text-foreground outline-none focus:bg-secondary"
         />
@@ -203,7 +203,8 @@ export function ExerciseCard({
                 inputMode="numeric"
                 value={set.reps || ""}
                 onChange={(e) => updateSet(i, { reps: Number(e.target.value) })}
-                placeholder={set.prevReps ? String(set.prevReps) : "powt."}
+                onBlur={(e) => bumpRest(i, { reps: Number(e.target.value), weight: set.weight })}
+                placeholder={set.prevReps ? String(set.prevReps) : "—"}
                 title={set.prevReps ? `Ostatnio: ${set.prevReps} powtórzeń` : undefined}
                 className={`w-14 rounded-lg border bg-secondary px-2 py-2 text-center text-sm tabular-nums outline-none focus:border-primary ${
                   set.prevReps && !set.reps
@@ -218,7 +219,8 @@ export function ExerciseCard({
                 step="0.5"
                 value={set.weight || ""}
                 onChange={(e) => updateSet(i, { weight: Number(e.target.value) })}
-                placeholder={set.prevWeight ? String(set.prevWeight) : "kg"}
+                onBlur={(e) => bumpRest(i, { reps: set.reps, weight: Number(e.target.value) })}
+                placeholder={set.prevWeight ? String(set.prevWeight) : "—"}
                 title={set.prevWeight ? `Ostatnio: ${set.prevWeight} kg` : undefined}
                 className={`w-16 rounded-lg border bg-secondary px-2 py-2 text-center text-sm tabular-nums outline-none focus:border-primary ${
                   set.prevWeight && !set.weight
@@ -226,7 +228,11 @@ export function ExerciseCard({
                     : "border-input"
                 }`}
               />
-              <RestTimer compact onSave={(secVal) => updateSet(i, { restSec: secVal })} />
+              <RestTimer
+                compact
+                autoSignal={restSignal[i] ?? 0}
+                onSave={(secVal) => updateSet(i, { restSec: secVal })}
+              />
               <button
                 onClick={() => update({ sets: exercise.sets.filter((_, si) => si !== i) })}
                 aria-label="Usuń serię"
@@ -299,12 +305,6 @@ export function ExerciseCard({
         </span>
       </div>
 
-      {best30.date || best60.date ? (
-        <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-muted-foreground">
-          <BestBox title="Najlepsze 30 dni" best={best30} cur={{ v: volume(exercise.sets, exercise.name), e: e1rm }} />
-          <BestBox title="Najlepsze 60 dni" best={best60} cur={{ v: volume(exercise.sets, exercise.name), e: e1rm }} />
-        </div>
-      ) : null}
 
       {suggestions.length > 0 ? (
         <div className="mt-3 space-y-1.5 rounded-xl border border-border bg-secondary/50 p-3">
@@ -338,6 +338,21 @@ export function ExerciseCard({
 
       {open ? (
         <div className="mt-2 space-y-3 rounded-xl border border-border p-3">
+          {best30.date || best60.date ? (
+            <div className="grid grid-cols-2 gap-2 text-[11px] text-muted-foreground">
+              <BestBox
+                title="Najlepsze 30 dni"
+                best={best30}
+                cur={{ v: volume(exercise.sets, exercise.name), e: e1rm }}
+              />
+              <BestBox
+                title="Najlepsze 60 dni"
+                best={best60}
+                cur={{ v: volume(exercise.sets, exercise.name), e: e1rm }}
+              />
+            </div>
+          ) : null}
+
           <ExerciseChart history={history} />
 
           {lastSets.length > 0 ? (
