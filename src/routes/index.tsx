@@ -79,6 +79,7 @@ function Index() {
   const [editPlan, setEditPlan] = useState(false);
   const photoRef = useRef<HTMLInputElement>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [confirmFinish, setConfirmFinish] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
