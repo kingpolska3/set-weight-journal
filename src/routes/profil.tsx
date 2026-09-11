@@ -426,10 +426,13 @@ function ProfilePage() {
                     className="mt-0.5 h-4 w-4 accent-[var(--primary)]"
                   />
                   <span className="text-xs text-muted-foreground">
-                    Zgadzam się, żeby osoby, które mnie wyszukają, widziały{" "}
-                    <span className="font-semibold text-foreground">cały mój plan treningowy</span> (ćwiczenia,
-                    serie, ciężary, notatki), a nie tylko zbiorcze statystyki (objętość, liczba treningów i serii).
-                    Zgodę możesz cofnąć w każdej chwili.
+                    Zgadzam się, żeby{" "}
+                    <span className="font-semibold text-foreground">
+                      każda zalogowana osoba, która mnie wyszuka
+                    </span>
+                    , widziała <span className="font-semibold text-foreground">wszystkie moje treningi</span> —
+                    ćwiczenia, serie, ciężary, czasy przerw, notatki i zdjęcia — a nie tylko zbiorcze statystyki
+                    (objętość, liczba treningów i serii). Po wyłączeniu tej zgody dostęp znika natychmiast.
                   </span>
                 </label>
               </div>
