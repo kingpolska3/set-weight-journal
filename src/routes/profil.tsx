@@ -19,8 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/hooks/useAuth";
 import { syncNow } from "@/lib/cloud-sync";
-import { MuscleMap } from "@/components/MuscleMap";
-import { loadSessions, type Session } from "@/lib/workout-store";
+import { daysBetween, loadSessions, sessionVolume, todayISO, type Session } from "@/lib/workout-store";
 import {
   ACCENTS,
   DEFAULT_THEME,
@@ -68,6 +67,13 @@ function ProfilePage() {
   const [deleteEmail, setDeleteEmail] = useState("");
   const [shareUrl, setShareUrl] = useState("");
   const [sessions, setSessions] = useState<Session[]>([]);
+
+  const trainingSessions = sessions.filter(
+    (session) => !session.rest && session.exercises.some((exercise) => exercise.sets.length > 0),
+  );
+  const firstTrainingDate = [...trainingSessions].sort((a, b) => a.date.localeCompare(b.date))[0]?.date;
+  const trainingDays = firstTrainingDate ? Math.max(1, daysBetween(firstTrainingDate, todayISO()) + 1) : 0;
+  const totalVolume = Math.round(trainingSessions.reduce((sum, session) => sum + sessionVolume(session), 0));
 
   useEffect(() => {
     const t = loadTheme();
@@ -269,7 +275,16 @@ function ProfilePage() {
         </header>
 
         <div className="space-y-4">
-          <MuscleMap sessions={sessions} />
+          <section className="rounded-xl border border-primary/40 bg-card p-4" aria-labelledby="account-stats">
+            <p id="account-stats" className="text-xs font-semibold uppercase tracking-wide text-primary">
+              Statystyki konta
+            </p>
+            <p className="mt-2 text-sm font-semibold leading-relaxed text-foreground sm:text-base">
+              Trenujesz od {trainingDays} dni <span className="text-muted-foreground">•</span>{" "}
+              {trainingSessions.length} treningów <span className="text-muted-foreground">•</span>{" "}
+              {totalVolume.toLocaleString("pl-PL")} kg łącznej objętości
+            </p>
+          </section>
 
           {loading ? (
             <p className="text-sm text-muted-foreground">Ładowanie…</p>

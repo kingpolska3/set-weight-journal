@@ -448,6 +448,21 @@ function ToolsPage() {
               </div>
             </div>
 
+            <label className="flex items-start gap-3 rounded-xl border border-primary/40 bg-primary/5 px-3 py-3 text-foreground">
+              <input
+                type="checkbox"
+                checked={rest.autoStart}
+                onChange={(e) => updateRest({ ...rest, autoStart: e.target.checked })}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--primary)]"
+              />
+              <span>
+                <span className="block text-xs font-semibold">Automatycznie startuj przerwę</span>
+                <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">
+                  Timer danej serii ruszy po uzupełnieniu powtórzeń i ciężaru.
+                </span>
+              </span>
+            </label>
+
             <div className="grid gap-2 sm:grid-cols-2">
               <label className="flex items-center gap-2 rounded-xl border border-border px-3 py-2.5 text-xs text-foreground">
                 <input
