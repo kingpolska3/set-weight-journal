@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as HistoriaRouteImport } from './routes/historia'
 import { Route as NarzedziaRouteImport } from './routes/narzedzia'
+import { Route as PlanyRouteImport } from './routes/plany'
 import { Route as ProfilRouteImport } from './routes/profil'
 import { Route as VsRouteImport } from './routes/vs'
 
@@ -30,6 +31,11 @@ const NarzedziaRoute = NarzedziaRouteImport.update({
   path: '/narzedzia',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlanyRoute = PlanyRouteImport.update({
+  id: '/plany',
+  path: '/plany',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProfilRoute = ProfilRouteImport.update({
   id: '/profil',
   path: '/profil',
@@ -45,6 +51,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/historia': typeof HistoriaRoute
   '/narzedzia': typeof NarzedziaRoute
+  '/plany': typeof PlanyRoute
   '/profil': typeof ProfilRoute
   '/vs': typeof VsRoute
 }
@@ -52,6 +59,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/historia': typeof HistoriaRoute
   '/narzedzia': typeof NarzedziaRoute
+  '/plany': typeof PlanyRoute
   '/profil': typeof ProfilRoute
   '/vs': typeof VsRoute
 }
@@ -60,21 +68,24 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/historia': typeof HistoriaRoute
   '/narzedzia': typeof NarzedziaRoute
+  '/plany': typeof PlanyRoute
   '/profil': typeof ProfilRoute
   '/vs': typeof VsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/historia' | '/narzedzia' | '/profil' | '/vs'
+  fullPaths: '/' | '/historia' | '/narzedzia' | '/plany' | '/profil' | '/vs'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/historia' | '/narzedzia' | '/profil' | '/vs'
-  id: '__root__' | '/' | '/historia' | '/narzedzia' | '/profil' | '/vs'
+  to: '/' | '/historia' | '/narzedzia' | '/plany' | '/profil' | '/vs'
+  id:
+    '__root__' | '/' | '/historia' | '/narzedzia' | '/plany' | '/profil' | '/vs'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   HistoriaRoute: typeof HistoriaRoute
   NarzedziaRoute: typeof NarzedziaRoute
+  PlanyRoute: typeof PlanyRoute
   ProfilRoute: typeof ProfilRoute
   VsRoute: typeof VsRoute
 }
@@ -102,6 +113,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NarzedziaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/plany': {
+      id: '/plany'
+      path: '/plany'
+      fullPath: '/plany'
+      preLoaderRoute: typeof PlanyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profil': {
       id: '/profil'
       path: '/profil'
@@ -123,6 +141,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   HistoriaRoute: HistoriaRoute,
   NarzedziaRoute: NarzedziaRoute,
+  PlanyRoute: PlanyRoute,
   ProfilRoute: ProfilRoute,
   VsRoute: VsRoute,
 }
