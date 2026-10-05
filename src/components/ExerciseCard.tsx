@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { ExerciseChart } from "@/components/ExerciseChart";
 import { RestTimer } from "@/components/RestTimer";
+import { ATLAS_NAMES } from "@/lib/exercise-atlas";
 import {
   best1RM,
   bestInWindow,
@@ -85,6 +86,10 @@ export function ExerciseCard({
     setRestSignal((prev) => ({ ...prev, [i]: (prev[i] ?? 0) + 1 }));
   };
 
+  const knownNames = useMemo(() => {
+    const own = sessions.flatMap((s) => s.exercises.map((x) => x.name.trim())).filter(Boolean);
+    return Array.from(new Set([...own, ...ATLAS_NAMES])).filter((n) => n !== exercise.name.trim());
+  }, [sessions, exercise.name]);
   const progress = computeProgress(sessions, date, exercise);
   const history = useMemo(
     () => exerciseHistory(sessions, exercise.name),
@@ -138,12 +143,18 @@ export function ExerciseCard({
           {index + 1}
         </span>
         <input
+          list={`ex-names-${index}`}
           value={exercise.name}
           onChange={(e) => update({ name: e.target.value })}
           placeholder="Dodaj ćwiczenie…"
           maxLength={80}
           className="min-w-0 flex-1 rounded-lg bg-transparent px-1 py-1 text-base font-semibold text-foreground outline-none focus:bg-secondary"
         />
+        <datalist id={`ex-names-${index}`}>
+          {knownNames.map((n) => (
+            <option key={n} value={n} />
+          ))}
+        </datalist>
         <div className="flex shrink-0 items-center gap-0.5">
           <button
             onClick={onMoveUp}

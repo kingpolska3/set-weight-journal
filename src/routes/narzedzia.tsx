@@ -1,7 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { ExerciseAtlas } from "@/components/ExerciseAtlas";
 import {
   Check,
+  ClipboardList,
   ChevronDown,
   ChevronRight,
   Download,
@@ -176,6 +178,13 @@ function ToolsPage() {
       </header>
 
       <section className="mx-auto max-w-2xl space-y-6 px-4 py-6">
+        <Link
+          to="/plany"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3 text-sm font-semibold text-primary-foreground"
+        >
+          <ClipboardList className="h-4 w-4" /> Tworzenie planów treningowych
+        </Link>
+        <ExerciseAtlas />
         <div className="rounded-2xl border border-border bg-card p-4">
           <h2 className="text-sm font-semibold text-foreground">Nowy szablon</h2>
           <input
