@@ -48,7 +48,7 @@ export function ExerciseAtlas() {
         ))}
       </div>
       <ul className="mt-3 space-y-2">
-        {current.exercises.map((x) => {
+        {(current?.exercises ?? []).map((x) => {
           const open = openEx === x.name;
           return (
             <li key={x.name} className="rounded-xl border border-border">
