@@ -13,6 +13,7 @@ import {
   loadSessions,
   workingSets,
   type Session,
+  formatRepsOrTime,
 } from "@/lib/workout-store";
 
 const searchSchema = z.object({

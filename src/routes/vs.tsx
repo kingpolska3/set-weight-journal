@@ -24,6 +24,7 @@ import {
   topWeight,
   workingSets,
   type Session,
+  formatRepsOrTime,
 } from "@/lib/workout-store";
 
 export const Route = createFileRoute("/vs")({

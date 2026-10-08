@@ -5,6 +5,7 @@ import {
   workingSets,
   type Session,
   type WeekPlan,
+  formatRepsOrTime,
 } from "./workout-store";
 
 function esc(text: string): string {
