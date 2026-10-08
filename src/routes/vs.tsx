@@ -531,7 +531,7 @@ function VsPage() {
                               <li key={i} className="text-xs text-muted-foreground">
                                 {i + 1}. {ex.name} —{" "}
                                 {workingSets(ex.sets)
-                                  .map((set) => `${set.reps}×${set.weight}kg`)
+                                  .map((set) => `${formatRepsOrTime(set)}×${set.weight}kg`)
                                   .join(", ")}
                               </li>
                             ))}

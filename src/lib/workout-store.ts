@@ -4,6 +4,9 @@ export type SetEntry = {
   note?: string;
   warmup?: boolean;
   restSec?: number;
+  /** Seria na czas (np. deska, spacer farmera) – wtedy reps = 0. */
+  timeSec?: number;
+  prevTimeSec?: number;
   /** Podpowiedzi z poprzedniego treningu (tylko podświetlenie w polach). */
   prevReps?: number;
   prevWeight?: number;
@@ -852,4 +855,30 @@ export function daySummaryInsights(
   }
 
   return lines;
+}
+
+/** Rozpoznaje powtórzenia lub czas: "12", "40s", "40 sek", "1:20", "1min 20s". */
+export function parseRepsOrTime(raw: string): { reps: number; timeSec?: number } {
+  const t = raw.trim().toLowerCase().replace(",", ".");
+  if (!t) return { reps: 0 };
+  const colon = t.match(/^(\d+):(\d{1,2})$/);
+  if (colon) return { reps: 0, timeSec: Number(colon[1]) * 60 + Number(colon[2]) };
+  const min = t.match(/(\d+(?:\.\d+)?)\s*(?:m|min|mins|minut[ay]?|minutes?)(?![a-z])/);
+  const sec = t.match(/(\d+)\s*(?:s|sek|sec|sekund[ay]?|seconds?)(?![a-z])/);
+  if (min || sec) {
+    const total = Math.round((min ? Number(min[1]) * 60 : 0) + (sec ? Number(sec[1]) : 0));
+    return { reps: 0, timeSec: total };
+  }
+  const n = parseInt(t, 10);
+  return { reps: Number.isFinite(n) && n > 0 ? n : 0 };
+}
+
+export function formatTime(sec: number): string {
+  if (sec < 60) return `${sec} s`;
+  return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
+}
+
+/** Tekst powtórzeń/czasu do historii i podsumowań. */
+export function formatRepsOrTime(s: { reps: number; timeSec?: number }): string {
+  return s.timeSec ? formatTime(s.timeSec) : String(s.reps || 0);
 }
