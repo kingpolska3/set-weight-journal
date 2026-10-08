@@ -298,6 +298,7 @@ function Index() {
           weight: 0,
           ...(s.warmup ? { warmup: true } : {}),
           prevReps: s.reps,
+          ...(s.timeSec ? { prevTimeSec: s.timeSec } : {}),
           prevWeight: s.weight,
         })),
       })),

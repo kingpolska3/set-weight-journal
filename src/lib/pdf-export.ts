@@ -5,6 +5,7 @@ import {
   workingSets,
   type Session,
   type WeekPlan,
+  formatRepsOrTime,
 } from "./workout-store";
 
 function esc(text: string): string {
@@ -27,7 +28,7 @@ export function exportSessionsToPdf(sessions: Session[], plan: WeekPlan, title =
           const sets = ex.sets
             .map(
               (set, si) =>
-                `${set.warmup ? "R" : si + 1}. ${set.reps}×${set.weight} kg${set.note ? ` (${esc(set.note)})` : ""}`,
+                `${set.warmup ? "R" : si + 1}. ${formatRepsOrTime(set)}×${set.weight} kg${set.note ? ` (${esc(set.note)})` : ""}`,
             )
             .join("<br/>");
           return `<tr><td class="num">${i + 1}</td><td>${esc(ex.name || "—")}</td><td>${sets}</td><td class="num">${workingSets(
