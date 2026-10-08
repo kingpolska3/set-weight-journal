@@ -209,19 +209,10 @@ export function ExerciseCard({
               >
                 {set.warmup ? "W-up" : `${i + 1}`}
               </button>
-              <input
-                type="number"
-                inputMode="numeric"
-                value={set.reps || ""}
-                onChange={(e) => updateSet(i, { reps: Number(e.target.value) })}
-                onBlur={(e) => bumpRest(i, { reps: Number(e.target.value), weight: set.weight })}
-                placeholder={set.prevReps ? String(set.prevReps) : "—"}
-                title={set.prevReps ? `Ostatnio: ${set.prevReps} powtórzeń` : undefined}
-                className={`w-14 rounded-lg border bg-secondary px-2 py-2 text-center text-sm tabular-nums outline-none focus:border-primary ${
-                  set.prevReps && !set.reps
-                    ? "border-primary/60 placeholder:font-semibold placeholder:text-primary"
-                    : "border-input"
-                }`}
+              <RepsInput
+                set={set}
+                onChange={(p) => updateSet(i, { reps: p.reps, timeSec: p.timeSec })}
+                onDone={(p) => bumpRest(i, { reps: p.reps || p.timeSec || 0, weight: set.weight })}
               />
               <span className="text-sm text-muted-foreground">x</span>
               <input
