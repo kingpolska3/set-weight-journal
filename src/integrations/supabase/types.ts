@@ -14,6 +14,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      plan_shares: {
+        Row: {
+          can_edit: boolean
+          created_at: string
+          plan_id: string
+          user_id: string
+        }
+        Insert: {
+          can_edit?: boolean
+          created_at?: string
+          plan_id: string
+          user_id: string
+        }
+        Update: {
+          can_edit?: boolean
+          created_at?: string
+          plan_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_shares_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "trainer_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -41,6 +70,36 @@ export type Database = {
           share_full?: boolean
           updated_at?: string
           username?: string | null
+        }
+        Relationships: []
+      }
+      trainer_plans: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          link_access: string
+          link_token: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          id?: string
+          link_access?: string
+          link_token?: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          link_access?: string
+          link_token?: string
+          owner_id?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -91,7 +150,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_plan_link: { Args: { _token: string }; Returns: string }
       delete_my_account: { Args: never; Returns: undefined }
+      list_plan_shares: {
+        Args: { _plan: string }
+        Returns: {
+          can_edit: boolean
+          display_name: string
+          user_id: string
+          username: string
+        }[]
+      }
+      plan_access: { Args: { _plan: string; _user: string }; Returns: string }
       public_stats: {
         Args: { days?: number; target: string }
         Returns: {
@@ -111,6 +181,10 @@ export type Database = {
           id: string
           username: string
         }[]
+      }
+      share_plan: {
+        Args: { _can_edit: boolean; _ident: string; _plan: string }
+        Returns: string
       }
       username_available: { Args: { u: string }; Returns: boolean }
     }
