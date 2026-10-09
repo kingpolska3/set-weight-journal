@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowDown,
@@ -19,6 +19,9 @@ import { RestTimer } from "@/components/RestTimer";
 import { ATLAS_NAMES } from "@/lib/exercise-atlas";
 import {
   best1RM,
+  formatRepsOrTime,
+  formatTime,
+  parseRepsOrTime,
   bestInWindow,
   computeProgress,
   exerciseHistory,
@@ -375,7 +378,7 @@ export function ExerciseCard({
                         : "bg-secondary text-muted-foreground"
                     }`}
                   >
-                    {s.reps}×{s.weight}kg
+                    {formatRepsOrTime(s)}×{s.weight}kg
                   </button>
                 ))}
                 <button
@@ -457,5 +460,47 @@ function BestBox({
         {diff.toFixed(1)}% obj. vs best
       </p>
     </div>
+  );
+}
+
+function RepsInput({
+  set,
+  onChange,
+  onDone,
+}: {
+  set: Exercise["sets"][number];
+  onChange: (p: { reps: number; timeSec?: number }) => void;
+  onDone: (p: { reps: number; timeSec?: number }) => void;
+}) {
+  const display = set.timeSec ? formatTime(set.timeSec) : set.reps ? String(set.reps) : "";
+  const [draft, setDraft] = useState(display);
+  const [focused, setFocused] = useState(false);
+  useEffect(() => {
+    if (!focused) setDraft(display);
+  }, [display, focused]);
+  const prev = set.prevTimeSec ? formatTime(set.prevTimeSec) : set.prevReps ? String(set.prevReps) : "";
+  const empty = !set.reps && !set.timeSec;
+  return (
+    <input
+      type="text"
+      value={draft}
+      onFocus={() => setFocused(true)}
+      onChange={(e) => {
+        setDraft(e.target.value);
+        onChange(parseRepsOrTime(e.target.value));
+      }}
+      onBlur={(e) => {
+        setFocused(false);
+        const p = parseRepsOrTime(e.target.value);
+        setDraft(p.timeSec ? formatTime(p.timeSec) : p.reps ? String(p.reps) : "");
+        onDone(p);
+      }}
+      placeholder={prev || "—"}
+      title="Powtórzenia lub czas (np. 12, 40s, 1:20, 1min 20s)"
+      aria-label="Powtórzenia / Czas"
+      className={`w-16 rounded-lg border bg-secondary px-2 py-2 text-center text-sm tabular-nums outline-none focus:border-primary ${
+        prev && empty ? "border-primary/60 placeholder:font-semibold placeholder:text-primary" : "border-input"
+      } ${set.timeSec ? "text-primary" : ""}`}
+    />
   );
 }
