@@ -19,6 +19,7 @@ import { RestTimer } from "@/components/RestTimer";
 import { ATLAS_NAMES } from "@/lib/exercise-atlas";
 import {
   best1RM,
+  formatRepsOrTime,
   formatTime,
   parseRepsOrTime,
   bestInWindow,
@@ -377,7 +378,7 @@ export function ExerciseCard({
                         : "bg-secondary text-muted-foreground"
                     }`}
                   >
-                    {s.reps}×{s.weight}kg
+                    {formatRepsOrTime(s)}×{s.weight}kg
                   </button>
                 ))}
                 <button
