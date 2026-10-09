@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowDown,
@@ -19,6 +19,8 @@ import { RestTimer } from "@/components/RestTimer";
 import { ATLAS_NAMES } from "@/lib/exercise-atlas";
 import {
   best1RM,
+  formatTime,
+  parseRepsOrTime,
   bestInWindow,
   computeProgress,
   exerciseHistory,
