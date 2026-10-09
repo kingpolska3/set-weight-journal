@@ -43,7 +43,7 @@ import {
 
 export const Route = createFileRoute("/plany")({
   validateSearch: (s: Record<string, unknown>): { plan?: string } =>
-    typeof s.plan === "string" ? { plan: s.plan } : {},
+    typeof s["plan"] === "string" ? { plan: s["plan"] } : {},
   head: () => ({
     meta: [
       { title: "Tworzenie planów treningowych dla podopiecznych" },
