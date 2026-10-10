@@ -421,13 +421,53 @@ function ClientEditor({ row, onChange, onRemove, onShare }: { row: PlanRow; onCh
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
-        <input
-          readOnly={readOnly}
-          value={client.goal}
-          onChange={(e) => onChange({ ...client, goal: e.target.value })}
-          placeholder="Cel (np. redukcja, siła, masa)…"
-          className="mt-2 w-full rounded-lg border border-input bg-secondary px-3 py-2 text-sm outline-none focus:border-primary"
-        />
+        <div className="mt-3 space-y-3">
+          <div className="rounded-xl border border-border p-3">
+            <p className="text-sm font-semibold text-foreground">Wybór dostępnych dni treningowych w tygodniu</p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {WEEK_DAYS.map((d) => {
+                const on = (client.trainingDays ?? []).includes(d);
+                return (
+                  <button
+                    key={d}
+                    disabled={readOnly}
+                    onClick={() =>
+                      onChange({
+                        ...client,
+                        trainingDays: on
+                          ? (client.trainingDays ?? []).filter((x) => x !== d)
+                          : WEEK_DAYS.filter((x) => x === d || (client.trainingDays ?? []).includes(x)),
+                      })
+                    }
+                    className={`rounded-lg px-3 py-1.5 text-xs font-medium ${on ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+                  >
+                    {d}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1.5 text-[11px] text-muted-foreground">
+              {(client.trainingDays ?? []).length} dni w tygodniu
+            </p>
+          </div>
+          <IntakeField
+            title="Cel współpracy"
+            question="Jaki jest główny cel?"
+            value={client.goal}
+            readOnly={readOnly}
+            onChange={(v) => onChange({ ...client, goal: v })}
+          />
+          {INTAKE_FIELDS.map((f) => (
+            <IntakeField
+              key={f.key}
+              title={f.title}
+              question={f.question}
+              value={client.intake?.[f.key] ?? ""}
+              readOnly={readOnly}
+              onChange={(v) => onChange({ ...client, intake: { ...(client.intake ?? {}), [f.key]: v } })}
+            />
+          ))}
+        </div>
       </div>
 
       {client.days.map((d) => {

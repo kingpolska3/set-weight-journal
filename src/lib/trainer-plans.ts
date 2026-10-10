@@ -3,7 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 export type PlanSet = { reps: string; weight: string; warmup?: boolean };
 export type PlanExercise = { id: string; name: string; sets: PlanSet[]; note: string };
 export type PlanDay = { id: string; name: string; exercises: PlanExercise[] };
-export type Client = { id: string; name: string; goal: string; days: PlanDay[] };
+export type Client = {
+  id: string;
+  name: string;
+  goal: string;
+  days: PlanDay[];
+  trainingDays?: string[];
+  intake?: Record<string, string>;
+};
 export type Access = "owner" | "edit" | "view" | "local";
 export type LinkAccess = "none" | "view" | "edit";
 
