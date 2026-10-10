@@ -578,3 +578,46 @@ function ClientEditor({ row, onChange, onRemove, onShare }: { row: PlanRow; onCh
     </div>
   );
 }
+
+const WEEK_DAYS = ["Pon", "Wt", "Śr", "Czw", "Pt", "Sob", "Nd"];
+
+const INTAKE_FIELDS = [
+  { key: "injuries", title: "Urazy i kontuzje", question: "Jakieś urazy, kontuzje lub operacje?" },
+  { key: "joints", title: "Stawy (joint by joint)", question: "Czy coś działo się w okolicy stawów/których?" },
+  { key: "pain", title: "Aktualne dolegliwości bólowe", question: "Obecnie dolegliwości bólowe?" },
+  { key: "surgeries", title: "Operacje i blizny", question: "Przebyte jakieś operacje/jaka blizna?" },
+  { key: "chronic", title: "Choroby przewlekłe", question: "Posiada jakieś choroby przewlekłe?" },
+  { key: "meds", title: "Przyjmowane leki", question: "Przyjmowane jakieś leki na stałe?" },
+  { key: "doctor", title: "Opieka lekarska", question: "Pod stałą opieką lekarza?" },
+  { key: "priority", title: "Priorytet partii ciała", question: "Jaka partia ciała ma być priorytetem w treningu?" },
+];
+
+function IntakeField({
+  title,
+  question,
+  value,
+  readOnly,
+  onChange,
+}: {
+  title: string;
+  question: string;
+  value: string;
+  readOnly: boolean;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <label className="block rounded-xl border border-border p-3">
+      <span className="block text-sm font-semibold text-foreground">{title}</span>
+      <span className="block text-xs text-muted-foreground">{question}</span>
+      <textarea
+        readOnly={readOnly}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={2}
+        maxLength={1000}
+        placeholder="—"
+        className="mt-2 w-full resize-y rounded-lg border border-input bg-secondary px-3 py-2 text-sm outline-none focus:border-primary"
+      />
+    </label>
+  );
+}
