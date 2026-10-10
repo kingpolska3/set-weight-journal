@@ -173,9 +173,21 @@ const calves = (): AtlasCategory => ({
   ],
 });
 
-export const ATLAS: Record<"m" | "k", AtlasCategory[]> = {
+import { ATLAS_DATA } from "./atlas-data";
+
+const withData = (c: AtlasCategory): AtlasCategory => {
+  const d = ATLAS_DATA[c.key];
+  return d ? { ...c, groups: d.groups, exercises: d.groups.flatMap((g) => g.exercises), note: d.note } : c;
+};
+
+const RAW_ATLAS: Record<"m" | "k", AtlasCategory[]> = {
   m: [chest(), back(), shoulders(), biceps(), triceps(), forearms(), abs(), quads(), hams(), glutes(), calves()],
   k: [glutes(), quads(), hams(), abs(), back(), shoulders(), chest(), biceps(), triceps(), calves()],
+};
+
+export const ATLAS: Record<"m" | "k", AtlasCategory[]> = {
+  m: RAW_ATLAS.m.map(withData),
+  k: RAW_ATLAS.k.map(withData),
 };
 
 export const ATLAS_NAMES: string[] = Array.from(
