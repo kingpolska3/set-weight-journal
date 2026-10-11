@@ -61,6 +61,8 @@ export const Route = createFileRoute("/")({
           "Zapisuj codzienne treningi: serie, powtórzenia, ciężary i zdjęcia. Estymowany 1RM, rekordy i inteligentne podpowiedzi progresji.",
       },
       { property: "og:title", content: "Dziennik treningowy — serie, ciężary i progres" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       {
         property: "og:description",
         content:

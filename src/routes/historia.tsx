@@ -32,6 +32,8 @@ export const Route = createFileRoute("/historia")({
           "Przeglądaj wszystkie treningi danego ćwiczenia, wykresy objętości, estymowanego 1RM i maksymalnego ciężaru.",
       },
       { property: "og:title", content: "Historia ćwiczeń — analiza progresu" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       {
         property: "og:description",
         content: "Filtruj historię ruchu, porównuj objętość, 1RM i rekordy w czasie.",

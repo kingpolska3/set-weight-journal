@@ -19,14 +19,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/hooks/useAuth";
 import { syncNow } from "@/lib/cloud-sync";
-import { daysBetween, loadSessions, sessionVolume, todayISO, type Session } from "@/lib/workout-store";
+import { loadPlan, loadSessions, type Session, type WeekPlan, DEFAULT_DAY_PLAN } from "@/lib/workout-store";
+import { accountStats } from "@/lib/account-stats";
+import { Button } from "@/components/ui/button";
 import {
-  ACCENTS,
   DEFAULT_THEME,
   applyTheme,
   loadTheme,
   saveTheme,
-  type AccentKey,
   type ThemeSettings,
 } from "@/lib/theme";
 
@@ -67,13 +67,8 @@ function ProfilePage() {
   const [deleteEmail, setDeleteEmail] = useState("");
   const [shareUrl, setShareUrl] = useState("");
   const [sessions, setSessions] = useState<Session[]>([]);
-
-  const trainingSessions = sessions.filter(
-    (session) => !session.rest && session.exercises.some((exercise) => exercise.sets.length > 0),
-  );
-  const firstTrainingDate = [...trainingSessions].sort((a, b) => a.date.localeCompare(b.date))[0]?.date;
-  const trainingDays = firstTrainingDate ? Math.max(1, daysBetween(firstTrainingDate, todayISO()) + 1) : 0;
-  const totalVolume = Math.round(trainingSessions.reduce((sum, session) => sum + sessionVolume(session), 0));
+  const [weekPlan, setWeekPlan] = useState<WeekPlan>(DEFAULT_DAY_PLAN);
+  const stats = accountStats(sessions, weekPlan);
 
   useEffect(() => {
     const t = loadTheme();
@@ -81,6 +76,7 @@ function ProfilePage() {
     applyTheme(t);
     setShareUrl(window.location.origin);
     setSessions(loadSessions());
+    setWeekPlan(loadPlan());
   }, []);
 
   useEffect(() => {
@@ -139,6 +135,8 @@ function ProfilePage() {
       setBusy(true);
       try {
         const res = await syncNow(user.id);
+        setSessions(loadSessions());
+        setWeekPlan(loadPlan());
         setLastSync(new Date().toLocaleTimeString("pl-PL"));
         if (!silent) toast.success(`Zsynchronizowano (pobrano ${res.pulled}, wysłano ${res.pushed})`);
       } catch {
@@ -275,15 +273,22 @@ function ProfilePage() {
         </header>
 
         <div className="space-y-4">
-          <section className="rounded-xl border border-primary/40 bg-card p-4" aria-labelledby="account-stats">
+          <section aria-labelledby="account-stats">
             <p id="account-stats" className="text-xs font-semibold uppercase tracking-wide text-primary">
               Statystyki konta
             </p>
-            <p className="mt-2 text-sm font-semibold leading-relaxed text-foreground sm:text-base">
-              Trenujesz od {trainingDays} dni <span className="text-muted-foreground">•</span>{" "}
-              {trainingSessions.length} treningów <span className="text-muted-foreground">•</span>{" "}
-              {totalVolume.toLocaleString("pl-PL")} kg łącznej objętości
-            </p>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              {[
+                { label: "Trenujesz od", value: stats.days.toLocaleString("pl-PL"), unit: "dni" },
+                { label: "Zapisane treningi", value: stats.workouts.toLocaleString("pl-PL"), unit: "treningów" },
+                { label: "Łączna objętość", value: stats.volume.toLocaleString("pl-PL"), unit: "kg" },
+                { label: "Streak zgodnie z planem", value: stats.streak.toLocaleString("pl-PL"), unit: "treningów z rzędu" },
+              ].map((stat) => <div key={stat.label} className="min-w-0 rounded-lg border border-border bg-card p-4">
+                <p className="text-xs text-muted-foreground">{stat.label}</p>
+                <p className="mt-2 break-words text-xl font-bold tabular-nums text-foreground">{stat.value}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{stat.unit}</p>
+              </div>)}
+            </div>
           </section>
 
           {loading ? (
@@ -383,26 +388,14 @@ function ProfilePage() {
                 </button>
               ))}
             </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {(Object.keys(ACCENTS) as AccentKey[]).map((key) => (
-                <button
-                  key={key}
-                  onClick={() => updateTheme({ ...theme, accent: key })}
-                  aria-label={ACCENTS[key].label}
-                  className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                    theme.accent === key
-                      ? "border-primary text-primary"
-                      : "border-border text-muted-foreground hover:border-primary"
-                  }`}
-                >
-                  <span
-                    className="h-4 w-4 rounded-full"
-                    style={{ backgroundColor: ACCENTS[key].swatch }}
-                    aria-hidden
-                  />
-                  {ACCENTS[key].label}
-                </button>
-              ))}
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <label htmlFor="accent-color" className="flex items-center gap-3 text-sm">
+                <input id="accent-color" type="color" aria-label="Kolor akcentu" value={theme.customColor ?? "#f2b01e"}
+                  onChange={(e) => updateTheme({ ...theme, customColor: e.target.value })}
+                  className="h-11 w-11 cursor-pointer rounded-full border border-border bg-transparent p-1" />
+                <span>Kolor akcentu <span className="block text-xs text-muted-foreground">{theme.customColor ?? "Domyślny"}</span></span>
+              </label>
+              <Button variant="ghost" size="sm" onClick={() => updateTheme({ ...theme, accent: DEFAULT_THEME.accent, customColor: undefined })}>Przywróć</Button>
             </div>
           </div>
 
