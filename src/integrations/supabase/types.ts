@@ -73,6 +73,29 @@ export type Database = {
         }
         Relationships: []
       }
+      trainer_client_private: {
+        Row: {
+          data: Json
+          plan_id: string
+        }
+        Insert: {
+          data?: Json
+          plan_id: string
+        }
+        Update: {
+          data?: Json
+          plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trainer_client_private_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: true
+            referencedRelation: "trainer_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trainer_plans: {
         Row: {
           created_at: string

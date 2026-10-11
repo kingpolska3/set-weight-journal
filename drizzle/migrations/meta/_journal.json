@@ -8,6 +8,13 @@
       "when": 1791621350652,
       "tag": "0000_fix_trainer_plans_owner_read",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791719165543,
+      "tag": "0001_protect_trainer_client_intake",
+      "breakpoints": true
     }
   ]
 }

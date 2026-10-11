@@ -54,6 +54,8 @@ export const Route = createFileRoute("/narzedzia")({
           "Twórz szablony treningów, startuj trening jednym kliknięciem i eksportuj dane do CSV lub JSON.",
       },
       { property: "og:title", content: "Narzędzia treningowe — szablony i backup" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       {
         property: "og:description",
         content: "Szablony treningów, szybki start dnia oraz eksport i import kopii zapasowej.",

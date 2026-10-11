@@ -11,7 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Eye, EyeOff, Search, Send, Star, Swords, Trophy } from "lucide-react";
+import { Eye, EyeOff, Search, Star, Swords, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { AppNav } from "@/components/AppNav";
 import { supabase } from "@/integrations/supabase/client";
@@ -238,26 +238,6 @@ function VsPage() {
     );
   }, []);
 
-  const invite = async () => {
-    const url = window.location.origin;
-    const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void> };
-    const payload = {
-      title: "Zmierzmy się w dzienniku treningowym",
-      text: "Załóż konto, dodaj swoje treningi i porównajmy się w zakładce VS.",
-      url,
-    };
-    if (nav.share) {
-      try {
-        await nav.share(payload);
-        return;
-      } catch {
-        /* anulowano */
-      }
-    }
-    await navigator.clipboard.writeText(`${payload.text} ${url}`);
-    toast.success("Zaproszenie skopiowane do schowka");
-  };
-
   const chartData = useMemo(() => {
     if (!theirs) return [];
     const map = new Map<string, { date: string; ja: number | null; rywal: number | null }>();
@@ -297,12 +277,6 @@ function VsPage() {
         <header className="mb-5 flex items-center gap-2">
           <Swords className="h-5 w-5 text-primary" />
           <h1 className="text-xl font-bold text-foreground">VS</h1>
-          <button
-            onClick={() => void invite()}
-            className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:border-primary"
-          >
-            <Send className="h-3.5 w-3.5" /> Zaproś do porównania
-          </button>
         </header>
 
         {loading ? (

@@ -35,7 +35,7 @@ export const ACCENTS: Record<AccentKey, { label: string; color: string; foregrou
   },
 };
 
-export type ThemeSettings = { mode: ThemeMode; accent: AccentKey };
+export type ThemeSettings = { mode: ThemeMode; accent: AccentKey; customColor?: string };
 
 const KEY = "trening-motyw-v1";
 
@@ -50,6 +50,7 @@ export function loadTheme(): ThemeSettings {
     return {
       mode: parsed.mode === "light" ? "light" : "dark",
       accent: parsed.accent && parsed.accent in ACCENTS ? parsed.accent : DEFAULT_THEME.accent,
+      customColor: /^#[0-9a-f]{6}$/i.test(parsed.customColor ?? "") ? parsed.customColor : undefined,
     };
   } catch {
     return { ...DEFAULT_THEME };
@@ -62,10 +63,18 @@ export function applyTheme(theme: ThemeSettings) {
   root.classList.toggle("light", theme.mode === "light");
   root.classList.toggle("dark", theme.mode === "dark");
   const accent = ACCENTS[theme.accent] ?? ACCENTS.amber;
-  root.style.setProperty("--primary", accent.color);
-  root.style.setProperty("--primary-foreground", accent.foreground);
-  root.style.setProperty("--ring", accent.color);
-  root.style.setProperty("--chart-1", accent.color);
+  const custom = /^#[0-9a-f]{6}$/i.test(theme.customColor ?? "") ? theme.customColor : undefined;
+  const color = custom ?? accent.color;
+  let foreground = accent.foreground;
+  if (custom) {
+    const rgb = [1, 3, 5].map((offset) => parseInt(custom.slice(offset, offset + 2), 16) / 255).map((v) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+    const luminance = (rgb[0] ?? 0) * 0.2126 + (rgb[1] ?? 0) * 0.7152 + (rgb[2] ?? 0) * 0.0722;
+    foreground = luminance > 0.179 ? "oklch(0.16 0 0)" : "oklch(0.98 0 0)";
+  }
+  root.style.setProperty("--primary", color);
+  root.style.setProperty("--primary-foreground", foreground);
+  root.style.setProperty("--ring", color);
+  root.style.setProperty("--chart-1", color);
 }
 
 export function saveTheme(theme: ThemeSettings) {

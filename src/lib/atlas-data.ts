@@ -2024,7 +2024,7 @@ export const ATLAS_DATA: Record<string, { groups: AtlasGroup[]; note: string }> 
     ]
    }
   ],
-  "note": "Podział według części pośladków (orientacyjny):Pośladkowy wielki (główna masa) → hip thrust, glute bridge, squats, RDL, deadlift\nPośladkowy średni i mały (boki / górna część) → hip abduction, lateral walks, clamshell, fire hydrant, side-lying raises\nJednostronne → single-leg hip thrust, Bulgarian split squat, step-ups, single-leg RDL\nAktywacja / izolacja → donkey kick, frog pump, kickbacks"
+  "note": "Podział według części pośladków (orientacyjny):\nPośladkowy wielki (główna masa) → hip thrust, glute bridge, squats, RDL, deadlift\nPośladkowy średni i mały (boki / górna część) → hip abduction, lateral walks, clamshell, fire hydrant, side-lying raises\nJednostronne → single-leg hip thrust, Bulgarian split squat, step-ups, single-leg RDL\nAktywacja / izolacja → donkey kick, frog pump, kickbacks"
  },
  "lydki": {
   "groups": [
