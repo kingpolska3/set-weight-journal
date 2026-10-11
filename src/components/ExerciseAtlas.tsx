@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { BookOpen, ChevronDown, Info } from "lucide-react";
 import { ATLAS, type AtlasExercise } from "@/lib/exercise-atlas";
+import { Button } from "@/components/ui/button";
 
 export function ExerciseAtlas() {
+  const [expanded, setExpanded] = useState(false);
   const [gender, setGender] = useState<"m" | "k">("m");
   const [cat, setCat] = useState(0);
   const [openEx, setOpenEx] = useState<string | null>(null);
@@ -36,9 +38,11 @@ export function ExerciseAtlas() {
 
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
-      <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
-        <BookOpen className="h-4 w-4 text-primary" /> Atlas ćwiczeń
-      </h2>
+      <Button variant="ghost" onClick={() => setExpanded(!expanded)} aria-expanded={expanded} className="h-auto w-full justify-between p-0 text-base font-semibold">
+        <span className="flex items-center gap-2"><BookOpen className="h-4 w-4 text-primary" /> Atlas ćwiczeń</span>
+        <ChevronDown className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
+      </Button>
+      {expanded ? <>
       <div className="mt-3 grid grid-cols-2 gap-2">
         {(["m", "k"] as const).map((g) => (
           <button
@@ -90,6 +94,7 @@ export function ExerciseAtlas() {
           <p className="whitespace-pre-line">{current.note}</p>
         </div>
       ) : null}
+      </> : null}
     </div>
   );
 }
