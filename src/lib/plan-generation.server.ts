@@ -1,4 +1,3 @@
-import { createResponsesCall } from "./ai/responses.server";
 import { generatedPlanSchema } from "./plan-generation-schema";
 import { Output } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";

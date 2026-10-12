@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type PlanSet = { reps: string; weight: string; warmup?: boolean };
 export type PlanExercise = { id: string; name: string; sets: PlanSet[]; note: string };
-export type PlanDay = { id: string; name: string; exercises: PlanExercise[] };
+export type PlanDay = { id: string; name: string; exercises: PlanExercise[]; weekday?: string };
 export type Client = {
   id: string;
   name: string;
@@ -35,14 +35,18 @@ const db = supabase as unknown as Loose;
 export const LOCAL_KEY = "trainer-plans-v1";
 
 export async function fetchPlans(userId: string): Promise<PlanRow[]> {
-  const [{ data: plans, error }, { data: shares }] = await Promise.all([
+  const [{ data: plans, error }, { data: shares }, { data: privateRows, error: privateError }] = await Promise.all([
     db.from("trainer_plans").select("id, owner_id, data, link_token, link_access").order("created_at"),
     db.from("plan_shares").select("plan_id, can_edit").eq("user_id", userId),
+    supabase.from("trainer_client_private").select("plan_id,data"),
   ]);
   if (error) throw error;
+  if (privateError) throw privateError;
+  const intake = new Map((privateRows ?? []).map((p) => [p.plan_id, p.data as unknown as Partial<Client>]));
   const sh = new Map<string, boolean>((shares ?? []).map((s: { plan_id: string; can_edit: boolean }) => [s.plan_id, s.can_edit]));
   return (plans ?? []).map((p: Omit<PlanRow, "access">) => ({
     ...p,
+    data: p.owner_id === userId ? { ...p.data, ...intake.get(p.id) } : { ...p.data, goal: "" },
     access: p.owner_id === userId ? "owner" : sh.get(p.id) ? "edit" : "view",
   }));
 }

@@ -35,7 +35,7 @@ export const ACCENTS: Record<AccentKey, { label: string; color: string; foregrou
   },
 };
 
-export type ThemeSettings = { mode: ThemeMode; accent: AccentKey; customColor?: string };
+export type ThemeSettings = { mode: ThemeMode; accent: AccentKey; customColor?: string | undefined };
 
 const KEY = "trening-motyw-v1";
 
