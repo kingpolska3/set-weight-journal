@@ -58,7 +58,7 @@ export async function createPlan(userId: string, data: Client): Promise<PlanRow>
     .select("id, owner_id, data, link_token, link_access")
     .single();
   if (error) throw error;
-  return { ...row, access: "owner" };
+  return { ...row, data, access: "owner" };
 }
 
 export async function savePlanData(id: string, data: Client) {
