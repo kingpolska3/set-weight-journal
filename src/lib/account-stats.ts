@@ -9,6 +9,7 @@ export function accountStats(sessions: Session[], plan: WeekPlan, today = todayI
   const first = training.map((s) => s.date).sort()[0];
   const dates = new Set(training.map((s) => s.date));
   let streak = 0;
+  let streakStart: string | undefined;
   if (first) {
     const cursor = new Date(today + "T12:00:00");
     // Today remains open until the day ends; planned rest days never reset a streak.
@@ -19,9 +20,9 @@ export function accountStats(sessions: Session[], plan: WeekPlan, today = todayI
       const label = (plan[cursor.getDay()] ?? "").trim();
       const scheduled = label !== "" && !/^(bez treningu|odpoczynek|wolne|rest)$/i.test(label);
       if (scheduled && !dates.has(iso)) break;
-      if (dates.has(iso)) streak++;
+      if (dates.has(iso)) { streak++; streakStart = iso; }
       cursor.setDate(cursor.getDate() - 1);
     }
   }
-  return { days: first ? daysBetween(first, today) + 1 : 0, workouts: dates.size, volume: Math.round(training.reduce((sum, s) => sum + sessionVolume(s), 0)), streak };
+  return { days: first ? daysBetween(first, today) + 1 : 0, workouts: dates.size, volume: Math.round(training.reduce((sum, s) => sum + sessionVolume(s), 0)), streak, streakDays: streakStart ? daysBetween(streakStart, today) + 1 : 0 };
 }

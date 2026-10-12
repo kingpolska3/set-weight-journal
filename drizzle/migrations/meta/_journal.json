@@ -15,6 +15,13 @@
       "when": 1791719165543,
       "tag": "0001_protect_trainer_client_intake",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791787485690,
+      "tag": "0002_enforce_safe_shared_plan_payload",
+      "breakpoints": true
     }
   ]
 }

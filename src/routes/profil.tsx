@@ -22,6 +22,7 @@ import { syncNow } from "@/lib/cloud-sync";
 import { loadPlan, loadSessions, type Session, type WeekPlan, DEFAULT_DAY_PLAN } from "@/lib/workout-store";
 import { accountStats } from "@/lib/account-stats";
 import { Button } from "@/components/ui/button";
+import { AccentColorWheel } from "@/components/AccentColorWheel";
 import {
   DEFAULT_THEME,
   applyTheme,
@@ -282,7 +283,7 @@ function ProfilePage() {
                 { label: "Trenujesz od", value: stats.days.toLocaleString("pl-PL"), unit: "dni" },
                 { label: "Zapisane treningi", value: stats.workouts.toLocaleString("pl-PL"), unit: "treningów" },
                 { label: "Łączna objętość", value: stats.volume.toLocaleString("pl-PL"), unit: "kg" },
-                { label: "Streak zgodnie z planem", value: stats.streak.toLocaleString("pl-PL"), unit: "treningów z rzędu" },
+                { label: "Streak zgodnie z planem", value: stats.streakDays.toLocaleString("pl-PL"), unit: "dni regularności" },
               ].map((stat) => <div key={stat.label} className="min-w-0 rounded-lg border border-border bg-card p-4">
                 <p className="text-xs text-muted-foreground">{stat.label}</p>
                 <p className="mt-2 break-words text-xl font-bold tabular-nums text-foreground">{stat.value}</p>
@@ -388,15 +389,8 @@ function ProfilePage() {
                 </button>
               ))}
             </div>
-            <div className="mt-4 flex items-center justify-between gap-3">
-              <label htmlFor="accent-color" className="flex items-center gap-3 text-sm">
-                <input id="accent-color" type="color" aria-label="Kolor akcentu" value={theme.customColor ?? "#f2b01e"}
-                  onChange={(e) => updateTheme({ ...theme, customColor: e.target.value })}
-                  className="h-11 w-11 cursor-pointer rounded-full border border-border bg-transparent p-1" />
-                <span>Kolor akcentu <span className="block text-xs text-muted-foreground">{theme.customColor ?? "Domyślny"}</span></span>
-              </label>
-              <Button variant="ghost" size="sm" onClick={() => updateTheme({ ...theme, accent: DEFAULT_THEME.accent, customColor: undefined })}>Przywróć</Button>
-            </div>
+            <AccentColorWheel theme={theme} onChange={(customColor) => updateTheme({ ...theme, customColor })} />
+            <Button variant="ghost" size="sm" className="mt-2" onClick={() => updateTheme({ ...theme, accent: DEFAULT_THEME.accent, customColor: undefined })}>Przywróć</Button>
           </div>
 
           {user ? (

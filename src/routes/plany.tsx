@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppNav } from "@/components/AppNav";
+import { ClientIntake } from "@/components/ClientIntake";
+import { PlanGenerator } from "@/components/PlanGenerator";
 import { ExerciseAtlas } from "@/components/ExerciseAtlas";
 import { useAuth } from "@/hooks/useAuth";
 import { ATLAS_NAMES } from "@/lib/exercise-atlas";
@@ -238,6 +240,7 @@ function PlansPage() {
 
         {active ? (
           <ClientEditor
+            key={active.id}
             row={active}
             onChange={(d) => patchPlan(active, d)}
             onRemove={() => void removeActive()}
@@ -421,53 +424,8 @@ function ClientEditor({ row, onChange, onRemove, onShare }: { row: PlanRow; onCh
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
-        <div className="mt-3 space-y-3">
-          <div className="rounded-xl border border-border p-3">
-            <p className="text-sm font-semibold text-foreground">Wybór dostępnych dni treningowych w tygodniu</p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {WEEK_DAYS.map((d) => {
-                const on = (client.trainingDays ?? []).includes(d);
-                return (
-                  <button
-                    key={d}
-                    disabled={readOnly}
-                    onClick={() =>
-                      onChange({
-                        ...client,
-                        trainingDays: on
-                          ? (client.trainingDays ?? []).filter((x) => x !== d)
-                          : WEEK_DAYS.filter((x) => x === d || (client.trainingDays ?? []).includes(x)),
-                      })
-                    }
-                    className={`rounded-lg px-3 py-1.5 text-xs font-medium ${on ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
-                  >
-                    {d}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="mt-1.5 text-[11px] text-muted-foreground">
-              {(client.trainingDays ?? []).length} dni w tygodniu
-            </p>
-          </div>
-          <IntakeField
-            title="Cel współpracy"
-            question="Jaki jest główny cel?"
-            value={client.goal}
-            readOnly={readOnly}
-            onChange={(v) => onChange({ ...client, goal: v })}
-          />
-          {INTAKE_FIELDS.map((f) => (
-            <IntakeField
-              key={f.key}
-              title={f.title}
-              question={f.question}
-              value={client.intake?.[f.key] ?? ""}
-              readOnly={readOnly}
-              onChange={(v) => onChange({ ...client, intake: { ...(client.intake ?? {}), [f.key]: v } })}
-            />
-          ))}
-        </div>
+        {row.access === "owner" || row.access === "local" ? <ClientIntake client={client} onChange={onChange} /> : null}
+        {row.access === "owner" ? <PlanGenerator row={row} onChange={onChange} /> : row.access === "local" ? <p className="mt-3 text-xs text-muted-foreground">Zaloguj się w Profilu, aby generować plany z Lovable AI.</p> : null}
       </div>
 
       {client.days.map((d) => {
@@ -579,45 +537,3 @@ function ClientEditor({ row, onChange, onRemove, onShare }: { row: PlanRow; onCh
   );
 }
 
-const WEEK_DAYS = ["Pon", "Wt", "Śr", "Czw", "Pt", "Sob", "Nd"];
-
-const INTAKE_FIELDS = [
-  { key: "injuries", title: "Urazy i kontuzje", question: "Jakieś urazy, kontuzje lub operacje?" },
-  { key: "joints", title: "Stawy (joint by joint)", question: "Czy coś działo się w okolicy stawów/których?" },
-  { key: "pain", title: "Aktualne dolegliwości bólowe", question: "Obecnie dolegliwości bólowe?" },
-  { key: "surgeries", title: "Operacje i blizny", question: "Przebyte jakieś operacje/jaka blizna?" },
-  { key: "chronic", title: "Choroby przewlekłe", question: "Posiada jakieś choroby przewlekłe?" },
-  { key: "meds", title: "Przyjmowane leki", question: "Przyjmowane jakieś leki na stałe?" },
-  { key: "doctor", title: "Opieka lekarska", question: "Pod stałą opieką lekarza?" },
-  { key: "priority", title: "Priorytet partii ciała", question: "Jaka partia ciała ma być priorytetem w treningu?" },
-];
-
-function IntakeField({
-  title,
-  question,
-  value,
-  readOnly,
-  onChange,
-}: {
-  title: string;
-  question: string;
-  value: string;
-  readOnly: boolean;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <label className="block rounded-xl border border-border p-3">
-      <span className="block text-sm font-semibold text-foreground">{title}</span>
-      <span className="block text-xs text-muted-foreground">{question}</span>
-      <textarea
-        readOnly={readOnly}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        rows={2}
-        maxLength={1000}
-        placeholder="—"
-        className="mt-2 w-full resize-y rounded-lg border border-input bg-secondary px-3 py-2 text-sm outline-none focus:border-primary"
-      />
-    </label>
-  );
-}
