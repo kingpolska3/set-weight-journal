@@ -15,7 +15,7 @@ export function AccentColorWheel({ theme, onChange }: { theme: ThemeSettings; on
     let cancelled = false;
     void import("@jaames/iro").then(({ default: iro }) => {
       if (cancelled || !host.current) return;
-      const instance = new iro.ColorPicker(host.current, { width: 216, color: initial.current,
+      const instance = iro.ColorPicker(host.current, { width: 216, color: initial.current,
         layout: [{ component: iro.ui.Wheel }, { component: iro.ui.Slider, options: { sliderType: "value" } }] });
       instance.on("input:change", (selected: { hexString: string }) => change.current(selected.hexString));
       picker.current = instance;
