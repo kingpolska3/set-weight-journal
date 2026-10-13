@@ -915,7 +915,12 @@ export const ATLAS_DATA: Record<string, { groups: AtlasGroup[]; note: string }> 
       "name": "Cable Lying Extension",
       "desc": "Zapewnia stałe napięcie w pełnym zakresie ruchu, skutecznie izolując głowę długą tricepsa. Pomaga w budowaniu masy i definicji mięśnia, minimalizując obciążenie stawów.",
       "tips": "Połóż się na ławce, ustaw linkę na niskim bloczku i prostuj ramiona, prowadząc linę za głowę, kontrolując fazę negatywną."
-     }
+     },
+{
+  "name": "Cross-body cable triceps extension",
+  "desc": "Ćwiczenie izolujące triceps, w którym linka prowadzona jest w poprzek ciała. Silnie angażuje głowę długą i boczną tricepsa, poprawia definicję i stabilizację barku.",
+  "tips": "Ustaw wyciąg na wysokości klatki lub nieco wyżej. Łokieć trzymaj nieruchomo przy ciele, prostuj ramię w poprzek tułowia z pełnym skurczem na końcu ruchu. Nie bujaj tułowiem."
+}
     ]
    },
    {
