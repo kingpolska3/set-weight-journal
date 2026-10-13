@@ -80,13 +80,13 @@ const PLAN_KEY = "trening-rozklad-v1";
 export type WeekPlan = Record<number, string>;
 
 export const DEFAULT_DAY_PLAN: WeekPlan = {
-  0: "Brzuch",
-  1: "Ręce i barki",
-  2: "Nogi i brzuch",
-  3: "Klata i plecy",
-  4: "Ręce i barki",
-  5: "Nogi i brzuch",
-  6: "Klata i plecy",
+  0: "...",
+  1: "...",
+  2: "...",
+  3: "...",
+  4: "...",
+  5: "...",
+  6: "...",
 };
 
 /** Zapisany (edytowalny) rozkład tygodnia. */
