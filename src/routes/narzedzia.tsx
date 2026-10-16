@@ -44,6 +44,13 @@ import {
   type Template,
 } from "@/lib/workout-store";
 
+import {
+  activateReceivedPlan,
+  loadReceivedPlans,
+  removeReceivedPlan,
+  type ReceivedPlan,
+} from "@/lib/received-plans";
+
 export const Route = createFileRoute("/narzedzia")({
   head: () => ({
     meta: [
