@@ -101,6 +101,29 @@ function ToolsPage() {
     setName("");
   };
 
+  const startReceivedPlan = (plan: ReceivedPlan) => {
+    if (
+      !confirm(
+        `Aktywować plan „${plan.name}”?\n\nRozkład tygodnia zostanie nadpisany (dni bez treningu = Rest day), a ćwiczenia z dziś wstawią się do zakładki Trening, jeśli dziś jest dniem treningowym.`,
+      )
+    ) {
+      return;
+    }
+    const { todayFilled } = activateReceivedPlan(plan);
+    setTemplates(loadTemplates());
+    setSessions(loadSessions());
+    toast.success(
+      todayFilled
+        ? `Plan „${plan.name}” aktywny — ćwiczenia na dziś są w zakładce Trening`
+        : `Plan „${plan.name}” aktywny — sprawdź Rozkład tygodnia i szablony`,
+    );
+  };
+
+  const deleteReceived = (id: string) => {
+    setReceived(removeReceivedPlan(id));
+    toast.success("Usunięto otrzymany plan");
+  };
+  
   const createFromDay = (date: string) => {
     const s = sessions.find((x) => x.date === date);
     if (!s || s.exercises.length === 0) return;
