@@ -275,22 +275,16 @@ function ProfilePage() {
 
         <div className="space-y-4">
           <section aria-labelledby="account-stats">
-            <p id="account-stats" className="text-xs font-semibold uppercase tracking-wide text-primary">
-              Statystyki konta
-            </p>
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              {[
-                { label: "Trenujesz od", value: stats.days.toLocaleString("pl-PL"), unit: "dni" },
-                { label: "Zapisane treningi", value: stats.workouts.toLocaleString("pl-PL"), unit: "treningów" },
-                { label: "Łączna objętość", value: stats.volume.toLocaleString("pl-PL"), unit: "kg" },
-                { label: "Streak zgodnie z planem", value: stats.streakDays.toLocaleString("pl-PL"), unit: "dni regularności" },
-              ].map((stat) => <div key={stat.label} className="min-w-0 rounded-lg border border-border bg-card p-4">
-                <p className="text-xs text-muted-foreground">{stat.label}</p>
-                <p className="mt-2 break-words text-xl font-bold tabular-nums text-foreground">{stat.value}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{stat.unit}</p>
-              </div>)}
-            </div>
-          </section>
+  <p id="account-stats" ...>Statystyki konta</p>
+  <div className="mt-3 grid grid-cols-2 gap-3">
+    {[
+      { label: "Trenujesz od", value: stats.days..., unit: "dni" },
+      { label: "Zapisane treningi", value: stats.workouts..., unit: "treningów" },
+      { label: "Łączna objętość", value: stats.volume..., unit: "kg" },
+      { label: "Streak zgodnie z planem", value: stats.streakDays..., unit: "dni regularności" },
+    ].map(...)}
+  </div>
+</section>
 
           {loading ? (
             <p className="text-sm text-muted-foreground">Ładowanie…</p>
