@@ -42,6 +42,7 @@ import {
   type PlanSet,
   type ShareEntry,
 } from "@/lib/trainer-plans";
+import { clientToReceivedPlan, upsertReceivedPlan } from "@/lib/received-plans";
 
 export const Route = createFileRoute("/plany")({
   validateSearch: (s: Record<string, unknown>): { plan?: string } =>
