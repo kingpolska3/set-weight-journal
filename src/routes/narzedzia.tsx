@@ -81,10 +81,12 @@ function ToolsPage() {
   const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [rest, setRest] = useState<RestSettings>(DEFAULT_REST);
+  const [received, setReceived] = useState<ReceivedPlan[]>([]);
 
   useEffect(() => {
     setTemplates(loadTemplates());
     setSessions(loadSessions());
+    setReceived(loadReceivedPlans());
     setRest(loadRest());
     setLoaded(true);
   }, []);
