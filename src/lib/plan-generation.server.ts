@@ -61,7 +61,7 @@ Pamiętaj: to tylko szkic do oceny trenera. Bezpieczeństwo i indywidualne dosto
   try {
     const result = streamText({ model: provider.responses("openai/gpt-6-astra"), system: instructions,
       messages: [{ role: "user", content: JSON.stringify({ trainingDays: client.trainingDays, goal: client.goal, intake: client.intake }) }],
-      output: Output.object({ schema: generatedPlanSchema }), maxRetries: 0, abortSignal: request.signal,
+      output: Output.object({ schema: generatedPlanSchema }), maxRetries: 2, abortSignal: request.signal,
       providerOptions: { openai: { forceReasoning: true, reasoningEffort: "medium", reasoningSummary: "auto", store: false, include: ["reasoning.encrypted_content"] } } });
     const plan = await result.output;
     const selected = client.trainingDays ?? [];
