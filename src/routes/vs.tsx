@@ -142,18 +142,54 @@ function loadFavs(): Profile[] {
 function StatRow({ label, mine, theirs, unit }: { label: string; mine: number; theirs: number; unit?: string }) {
   const total = mine + theirs;
   const minePct = total > 0 ? (mine / total) * 100 : 50;
+  const diff = mine - theirs;
   const fmt = (n: number) => `${Math.round(n).toLocaleString("pl-PL")}${unit ? ` ${unit}` : ""}`;
+  const winner = mine > theirs ? "ty" : theirs > mine ? "rywal" : "remis";
+
   return (
-    <div className="py-2">
-      <div className="flex items-center justify-between gap-2 text-xs">
-        <span className={`font-semibold ${mine >= theirs ? "text-primary" : "text-foreground"}`}>{fmt(mine)}</span>
-        <span className="text-muted-foreground">{label}</span>
-        <span className={`font-semibold ${theirs > mine ? "text-primary" : "text-foreground"}`}>{fmt(theirs)}</span>
+    <div className="rounded-xl border border-border bg-card p-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <span
+          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+            winner === "ty"
+              ? "bg-primary/15 text-primary"
+              : winner === "rywal"
+                ? "bg-foreground/10 text-foreground"
+                : "bg-muted text-muted-foreground"
+          }`}
+        >
+          {winner === "ty" ? "Ty prowadzisz" : winner === "rywal" ? "Rywal prowadzi" : "Remis"}
+        </span>
       </div>
-      <div className="mt-1 flex h-2 overflow-hidden rounded-full bg-muted">
-        <div className="bg-primary" style={{ width: `${minePct}%` }} />
-        <div className="bg-foreground/30" style={{ width: `${100 - minePct}%` }} />
+
+      <div className="mt-2 flex items-end justify-between gap-3">
+        <div>
+          <p className="text-[10px] text-muted-foreground">Ty</p>
+          <p className={`text-lg font-bold tabular-nums ${mine >= theirs ? "text-primary" : "text-foreground"}`}>
+            {fmt(mine)}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] text-muted-foreground">Rywal</p>
+          <p className={`text-lg font-bold tabular-nums ${theirs > mine ? "text-primary" : "text-foreground"}`}>
+            {fmt(theirs)}
+          </p>
+        </div>
       </div>
+
+      <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-muted">
+        <div className="bg-primary transition-all" style={{ width: `${minePct}%` }} />
+        <div className="bg-foreground/25" style={{ width: `${100 - minePct}%` }} />
+      </div>
+
+      <p className="mt-1.5 text-[11px] text-muted-foreground">
+        Różnica:{" "}
+        <span className={diff >= 0 ? "text-primary" : "text-foreground"}>
+          {diff >= 0 ? "+" : ""}
+          {fmt(diff)}
+        </span>
+      </p>
     </div>
   );
 }
