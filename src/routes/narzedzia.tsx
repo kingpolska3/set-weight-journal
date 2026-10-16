@@ -51,6 +51,8 @@ import {
   type ReceivedPlan,
 } from "@/lib/received-plans";
 
+import { Inbox } from "lucide-react"; // obok innych ikon z lucide-react
+
 export const Route = createFileRoute("/narzedzia")({
   head: () => ({
     meta: [
