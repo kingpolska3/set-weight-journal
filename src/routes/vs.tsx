@@ -431,7 +431,12 @@ function VsPage() {
 
             {!rival ? (
               <p className="rounded-xl border border-border bg-card p-4 text-xs text-muted-foreground">
-                Wybierz osobę z wyników wyszukiwania, żeby zobaczyć porównanie.
+                <div className="rounded-xl border border-dashed border-border bg-card/50 p-6 text-center">
+  <p className="text-sm font-medium text-foreground">Wybierz rywala</p>
+  <p className="mt-1 text-xs text-muted-foreground">
+    Wyszukaj osobę albo kliknij kogoś z ulubionych, żeby zobaczyć porównanie.
+  </p>
+</div>
               </p>
             ) : !theirs ? (
               <p className="text-sm text-muted-foreground">Wczytywanie danych rywala…</p>
