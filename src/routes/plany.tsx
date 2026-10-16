@@ -99,37 +99,38 @@ function PlansPage() {
         }
                 let claimed: string | null = null;
         if (linkToken) {
-          claimed = await claimLink(linkToken);
-          if (!claimed) {
-            toast.error("Link do planu jest nieaktywny");
-          } else {
-            try {
-              const rowsAfter = await fetchPlans(user.id);
-              const claimedRow = rowsAfter.find((r) => r.id === claimed);
-              if (claimedRow) {
-                upsertReceivedPlan(
-                  clientToReceivedPlan(claimedRow.id, claimedRow.data, {
-                    token: linkToken,
-                    sourceLabel: "Link udostępnienia",
-                  }),
-                );
-                toast.success("Plan zapisany w Narzędziach → Otrzymane plany");
-                void navigate({ to: "/narzedzia", search: {}, replace: true });
-                if (cancelled) return;
-                setPlans(rowsAfter);
-                setReady(true);
-                return;
-              }
-            } catch (e) {
-              console.error(e);
-            }
-          }
-          void navigate({ to: "/plany", search: {}, replace: true });
-        }
-        const rows = await fetchPlans(user.id);
+  claimed = await claimLink(linkToken);
+  if (!claimed) {
+    toast.error("Link do planu jest nieaktywny");
+  } else {
+    // Plan trafia też do Narzędzia → Otrzymane plany treningowe
+    try {
+      const rowsAfter = await fetchPlans(user.id);
+      const claimedRow = rowsAfter.find((r) => r.id === claimed);
+      if (claimedRow) {
+        upsertReceivedPlan(
+          clientToReceivedPlan(claimedRow.id, claimedRow.data, {
+            token: linkToken,
+            sourceLabel: "Link udostępnienia",
+          }),
+        );
+        toast.success("Plan zapisany w Narzędziach → Otrzymane plany");
+        void navigate({ to: "/narzedzia", search: {}, replace: true });
         if (cancelled) return;
-        setPlans(rows);
-        if (claimed) setActiveId(claimed);
+        setPlans(rowsAfter);
+        setReady(true);
+        return;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+  void navigate({ to: "/plany", search: {}, replace: true });
+}
+const rows = await fetchPlans(user.id);
+if (cancelled) return;
+setPlans(rows);
+if (claimed) setActiveId(claimed);
       } catch (e) {
         toast.error("Nie udało się wczytać planów");
         console.error(e);
