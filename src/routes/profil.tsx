@@ -274,17 +274,47 @@ function ProfilePage() {
         </header>
 
         <div className="space-y-4">
-          <section aria-labelledby="account-stats">
-  <p id="account-stats" ...>Statystyki konta</p>
-  <div className="mt-3 grid grid-cols-2 gap-3">
-    {[
-      { label: "Trenujesz od", value: stats.days..., unit: "dni" },
-      { label: "Zapisane treningi", value: stats.workouts..., unit: "treningów" },
-      { label: "Łączna objętość", value: stats.volume..., unit: "kg" },
-      { label: "Streak zgodnie z planem", value: stats.streakDays..., unit: "dni regularności" },
-    ].map(...)}
-  </div>
-</section>
+                    <section aria-labelledby="account-stats">
+            <p id="account-stats" className="text-xs font-semibold uppercase tracking-wide text-primary">
+              Statystyki konta
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Na podstawie Twojej lokalnej historii treningów
+            </p>
+            {stats.workouts === 0 ? (
+              <div className="mt-3 rounded-lg border border-border bg-card p-5 text-center">
+                <p className="text-sm font-medium text-foreground">
+                  Zaloguj pierwszy trening, a tutaj pojawią się Twoje statystyki
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Dodaj ćwiczenia w zakładce Trening — statystyki policzą się automatycznie.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  {[
+                    { label: "Trenujesz od", value: stats.days.toLocaleString("pl-PL"), unit: "dni" },
+                    { label: "Zapisane treningi", value: stats.workouts.toLocaleString("pl-PL"), unit: "treningów" },
+                    { label: "Łączna objętość", value: stats.volume.toLocaleString("pl-PL"), unit: "kg" },
+                    { label: "Streak zgodnie z planem", value: stats.streakDays.toLocaleString("pl-PL"), unit: "dni regularności" },
+                  ].map((stat) => (
+                    <div key={stat.label} className="min-w-0 rounded-lg border border-border bg-card p-4">
+                      <p className="text-xs text-muted-foreground">{stat.label}</p>
+                      <p className="mt-2 break-words text-xl font-bold tabular-nums text-foreground">{stat.value}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{stat.unit}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+                  Średnia objętość na trening:{" "}
+                  <span className="font-semibold text-primary">
+                    {Math.round(stats.volume / stats.workouts).toLocaleString("pl-PL")} kg
+                  </span>
+                </div>
+              </>
+            )}
+          </section>
 
           {loading ? (
             <p className="text-sm text-muted-foreground">Ładowanie…</p>
