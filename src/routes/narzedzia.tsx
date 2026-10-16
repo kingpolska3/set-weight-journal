@@ -213,6 +213,61 @@ function ToolsPage() {
         </div>
       </header>
 
+              <section className="rounded-2xl border border-border bg-card p-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15">
+              <Inbox className="h-4.5 w-4.5 text-primary" />
+            </span>
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">Otrzymane plany treningowe</h2>
+              <p className="text-xs text-muted-foreground">
+                Plany udostępnione linkiem. Możesz je aktywować w Treningu i Rozkładzie tygodnia.
+              </p>
+            </div>
+          </div>
+
+          {received.length === 0 ? (
+            <p className="mt-3 rounded-xl border border-dashed border-border bg-secondary/30 p-4 text-center text-xs text-muted-foreground">
+              Brak otrzymanych planów. Gdy ktoś udostępni Ci link do planu i go otworzysz (będąc zalogowanym),
+              pojawi się tutaj.
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-3">
+              {received.map((plan) => (
+                <li key={plan.id} className="rounded-xl border border-border bg-secondary/20 p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-foreground">{plan.name}</p>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                        {plan.days.filter((d) => d.exercises.length > 0).length} dni z ćwiczeniami
+                        {plan.trainingDays?.length ? ` · ${plan.trainingDays.join(", ")}` : ""}
+                        {plan.receivedAt
+                          ? ` · ${new Date(plan.receivedAt).toLocaleDateString("pl-PL")}`
+                          : ""}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => deleteReceived(plan.id)}
+                      className="shrink-0 p-1.5 text-muted-foreground hover:text-destructive"
+                      aria-label="Usuń plan"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => startReceivedPlan(plan)}
+                    className="mt-3 w-full rounded-xl bg-primary py-2.5 text-xs font-semibold text-primary-foreground"
+                  >
+                    Zacznij trenować z tym planem
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
       <section className="mx-auto max-w-2xl space-y-6 px-4 py-6">
         <Link
           to="/plany"
