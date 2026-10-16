@@ -68,11 +68,13 @@ Pamiętaj: to tylko szkic do oceny trenera. Bezpieczeństwo i indywidualne dosto
     if (plan.days.length !== selected.length || plan.days.some((day, i) => day.weekday !== selected[i])) return { error: "Szkic nie odpowiada wybranym dniom. Plan nie został zmieniony." };
     if (plan.days.some((d) => d.exercises.length > 12 || d.exercises.some((e) => e.sets.length > 8))) return { error: "Szkic zawiera zbyt dużo ćwiczeń lub serii. Plan nie został zmieniony." };
     return { plan, runId: gateway.getRunId() };
-  } catch (error) {
+    } catch (error) {
     const status = typeof error === "object" && error && "statusCode" in error ? Number(error.statusCode) : 0;
     if (status === 402) return { error: "Brak środków na generowanie Lovable AI. Sprawdź dostępne środki w Lovable." };
     if (status === 403) return { error: "Generowanie jest zablokowane przez ustawienia dostępu Lovable AI. Poproś administratora o sprawdzenie uprawnień." };
     if (status === 429) return { error: "Zbyt wiele żądań generowania. Spróbuj później." };
-    return { error: "Nie udało się wygenerować poprawnego szkicu. Dotychczasowy plan pozostaje bez zmian." };
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("generateTrainingPlan error:", error);
+    return { error: `Nie udało się wygenerować poprawnego szkicu. Szczegóły: ${msg}` };
   }
 }
