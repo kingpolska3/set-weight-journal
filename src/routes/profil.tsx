@@ -274,7 +274,7 @@ function ProfilePage() {
         </header>
 
         <div className="space-y-4">
-                    <section aria-labelledby="account-stats">
+                          <section aria-labelledby="account-stats">
             <p id="account-stats" className="text-xs font-semibold uppercase tracking-wide text-primary">
               Statystyki konta
             </p>
@@ -314,7 +314,7 @@ function ProfilePage() {
                 </div>
               </>
             )}
-          </section>
+          </section>    
 
           {loading ? (
             <p className="text-sm text-muted-foreground">Ładowanie…</p>
