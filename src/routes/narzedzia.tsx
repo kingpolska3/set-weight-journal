@@ -493,40 +493,7 @@ function ToolsPage() {
             ))}
           </div>
 
-        <div className="rounded-2xl border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold text-foreground">Eksport i kopia zapasowa</h2>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button
-              onClick={exportCSV}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs text-foreground hover:border-primary"
-            >
-              <Download className="h-3.5 w-3.5" /> CSV
-            </button>
-            <button
-              onClick={exportPDF}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs text-foreground hover:border-primary"
-            >
-              <FileDown className="h-3.5 w-3.5" /> PDF
-            </button>
-            <button
-              onClick={exportJSON}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs text-foreground hover:border-primary"
-            >
-              <Download className="h-3.5 w-3.5" /> JSON (backup)
-            </button>
-            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs text-foreground hover:border-primary">
-              <Upload className="h-3.5 w-3.5" /> Wczytaj kopię
-              <input
-                type="file"
-                accept="application/json"
-                className="hidden"
-                onChange={(e) => {
-                  void importJSON(e.target.files?.[0]);
-                  e.target.value = "";
-                }}
-              />
-            </label>
-          </div>
+        
         </div>
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
           <div className="flex items-center gap-3 border-b border-border bg-secondary/50 px-4 py-3">
@@ -710,6 +677,41 @@ function ToolsPage() {
             </div>
           </div>
         </div>
+
+      <div className="rounded-2xl border border-border bg-card p-4">
+          <h2 className="text-sm font-semibold text-foreground">Eksport i kopia zapasowa</h2>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              onClick={exportCSV}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs text-foreground hover:border-primary"
+            >
+              <Download className="h-3.5 w-3.5" /> CSV
+            </button>
+            <button
+              onClick={exportPDF}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs text-foreground hover:border-primary"
+            >
+              <FileDown className="h-3.5 w-3.5" /> PDF
+            </button>
+            <button
+              onClick={exportJSON}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs text-foreground hover:border-primary"
+            >
+              <Download className="h-3.5 w-3.5" /> JSON (backup)
+            </button>
+            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs text-foreground hover:border-primary">
+              <Upload className="h-3.5 w-3.5" /> Wczytaj kopię
+              <input
+                type="file"
+                accept="application/json"
+                className="hidden"
+                onChange={(e) => {
+                  void importJSON(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+          </div>
 
       </section>
       <AppNav />
