@@ -39,8 +39,13 @@ export function syncTrainingDays(client: Client, selected: string[]): PlanDay[] 
 export function ClientIntake({ client, onChange }: { client: Client; onChange: (c: Client) => void }) {
   const [open, setOpen] = useState(true);
   return <section className="mt-4 border-t border-border pt-3">
-    <Button variant="ghost" className="w-full justify-between px-0" onClick={() => setOpen(!open)} aria-expanded={open}>
-      Dane podopiecznego <ChevronDown className={open ? "rotate-180" : ""} />
+    <Button 
+      variant="ghost" 
+      className="w-full justify-between px-0 hover:bg-transparent hover:text-foreground" 
+      onClick={() => setOpen(!open)} 
+      aria-expanded={open}
+    >
+      Dane podopiecznego <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
     </Button>
     {open ? <div className="mt-3 space-y-4">
       <div>
