@@ -84,6 +84,7 @@ function ToolsPage() {
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [rest, setRest] = useState<RestSettings>(DEFAULT_REST);
   const [received, setReceived] = useState<ReceivedPlan[]>([]);
+    const [previewId, setPreviewId] = useState<string | null>(null);
 
   useEffect(() => {
     setTemplates(loadTemplates());
@@ -124,6 +125,30 @@ function ToolsPage() {
   const deleteReceived = (id: string) => {
     setReceived(removeReceivedPlan(id));
     toast.success("Usunięto otrzymany plan");
+  };
+
+    const togglePreview = (id: string) => {
+    setPreviewId((cur) => (cur === id ? null : id));
+  };
+
+  const saveDayTemplate = (plan: ReceivedPlan, dayId: string) => {
+    const tpl = saveReceivedDayAsTemplate(plan, dayId);
+    if (!tpl) {
+      toast.error("Ten dzień nie ma ćwiczeń do zapisania");
+      return;
+    }
+    setTemplates(loadTemplates());
+    toast.success(`Zapisano szablon „${tpl.name}”`);
+  };
+
+  const saveAllTemplates = (plan: ReceivedPlan) => {
+    const n = saveAllReceivedDaysAsTemplates(plan);
+    if (!n) {
+      toast.error("Brak dni z ćwiczeniami");
+      return;
+    }
+    setTemplates(loadTemplates());
+    toast.success(`Zapisano ${n} szablon${n === 1 ? "" : n < 5 ? "y" : "ów"}`);
   };
   
   const createFromDay = (date: string) => {
@@ -234,38 +259,121 @@ function ToolsPage() {
               pojawi się tutaj.
             </p>
           ) : (
-            <ul className="mt-3 space-y-3">
-              {received.map((plan) => (
-                <li key={plan.id} className="rounded-xl border border-border bg-secondary/20 p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-foreground">{plan.name}</p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">
-                        {plan.days.filter((d) => d.exercises.length > 0).length} dni z ćwiczeniami
-                        {plan.trainingDays?.length ? ` · ${plan.trainingDays.join(", ")}` : ""}
-                        {plan.receivedAt
-                          ? ` · ${new Date(plan.receivedAt).toLocaleDateString("pl-PL")}`
-                          : ""}
-                      </p>
+                        <ul className="mt-3 space-y-3">
+              {received.map((plan) => {
+                const isOpen = previewId === plan.id;
+                const daysWithEx = plan.days.filter((d) => d.exercises.length > 0);
+                return (
+                  <li key={plan.id} className="rounded-xl border border-border bg-secondary/20 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-foreground">{plan.name}</p>
+                        <p className="mt-0.5 text-[11px] text-muted-foreground">
+                          {daysWithEx.length} dni z ćwiczeniami
+                          {plan.trainingDays?.length ? ` · ${plan.trainingDays.join(", ")}` : ""}
+                          {plan.receivedAt
+                            ? ` · ${new Date(plan.receivedAt).toLocaleDateString("pl-PL")}`
+                            : ""}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => deleteReceived(plan.id)}
+                        className="shrink-0 p-1.5 text-muted-foreground hover:text-destructive"
+                        aria-label="Usuń plan"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => togglePreview(plan.id)}
+                        className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-medium text-foreground hover:border-primary"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        {isOpen ? "Ukryj podgląd" : "Podgląd treningu"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => saveAllTemplates(plan)}
+                        className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-medium text-foreground hover:border-primary"
+                      >
+                        Zapisz dni jako szablony
+                      </button>
+                    </div>
+
+                    {isOpen ? (
+                      <div className="mt-3 space-y-3 border-t border-border pt-3">
+                        {plan.days.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">Brak dni w planie.</p>
+                        ) : (
+                          plan.days.map((day) => (
+                            <div key={day.id} className="rounded-lg border border-border bg-card p-3">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="min-w-0">
+                                  <p className="text-xs font-semibold text-primary">
+                                    {day.weekday ? `${day.weekday} · ` : ""}
+                                    {day.name}
+                                  </p>
+                                  <p className="text-[11px] text-muted-foreground">
+                                    {day.exercises.length} ćwiczeń
+                                  </p>
+                                </div>
+                                {day.exercises.length > 0 ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => saveDayTemplate(plan, day.id)}
+                                    className="shrink-0 rounded-lg bg-primary/15 px-2.5 py-1.5 text-[11px] font-semibold text-primary"
+                                  >
+                                    Zapisz jako szablon
+                                  </button>
+                                ) : null}
+                              </div>
+                              {day.exercises.length > 0 ? (
+                                <ol className="mt-2 space-y-1.5">
+                                  {day.exercises.map((ex, i) => (
+                                    <li key={ex.id || i} className="text-xs text-foreground">
+                                      <span className="font-medium">
+                                        {i + 1}. {ex.name}
+                                      </span>
+                                      <span className="text-muted-foreground">
+                                        {" "}
+                                        · {ex.sets.length} serii
+                                        {ex.sets.length
+                                          ? ` (${ex.sets
+                                              .map((s) =>
+                                                s.warmup ? `${s.reps} rozgrz.` : s.reps || "—",
+                                              )
+                                              .join(" / ")})`
+                                          : ""}
+                                      </span>
+                                      {ex.note ? (
+                                        <p className="mt-0.5 text-[11px] text-muted-foreground">{ex.note}</p>
+                                      ) : null}
+                                    </li>
+                                  ))}
+                                </ol>
+                              ) : (
+                                <p className="mt-1 text-[11px] text-muted-foreground">Brak ćwiczeń w tym dniu.</p>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    ) : null}
+
                     <button
                       type="button"
-                      onClick={() => deleteReceived(plan.id)}
-                      className="shrink-0 p-1.5 text-muted-foreground hover:text-destructive"
-                      aria-label="Usuń plan"
+                      onClick={() => startReceivedPlan(plan)}
+                      className="mt-3 w-full rounded-xl bg-primary py-2.5 text-xs font-semibold text-primary-foreground"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      Zacznij trenować z tym planem
                     </button>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => startReceivedPlan(plan)}
-                    className="mt-3 w-full rounded-xl bg-primary py-2.5 text-xs font-semibold text-primary-foreground"
-                  >
-                    Zacznij trenować z tym planem
-                  </button>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>
