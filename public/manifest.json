@@ -8,7 +8,7 @@
   "theme_color": "#10b981",
   "icons": [
     {
-      "src": "/ikona-dziennik-treningowy.png",
+      "src": "ikona-dziennik-treningowy.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
