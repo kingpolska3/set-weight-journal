@@ -18,7 +18,7 @@ export function ExerciseAtlas() {
       <li key={x.name} className="rounded-xl border border-border">
         <button
           onClick={() => setOpenEx(open ? null : x.name)}
-          className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm font-medium text-foreground"
+          className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm font-medium text-foreground hover:bg-secondary/40 rounded-xl transition-colors"
         >
           {x.name}
           <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
@@ -38,7 +38,12 @@ export function ExerciseAtlas() {
 
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
-      <Button variant="ghost" onClick={() => setExpanded(!expanded)} aria-expanded={expanded} className="h-auto w-full justify-between p-0 text-base font-semibold">
+      <Button 
+        variant="ghost" 
+        onClick={() => setExpanded(!expanded)} 
+        aria-expanded={expanded} 
+        className="h-auto w-full justify-between p-0 text-base font-semibold hover:bg-transparent hover:text-foreground"
+      >
         <span className="flex items-center gap-2"><BookOpen className="h-4 w-4 text-primary" /> Atlas ćwiczeń</span>
         <ChevronDown className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
       </Button>
