@@ -48,6 +48,8 @@ import {
   activateReceivedPlan,
   loadReceivedPlans,
   removeReceivedPlan,
+  saveAllReceivedDaysAsTemplates,
+  saveReceivedDayAsTemplate,
   type ReceivedPlan,
 } from "@/lib/received-plans";
 
