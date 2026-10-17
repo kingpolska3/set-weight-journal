@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { BarChart3, Dumbbell, LayoutGrid, Swords, User } from "lucide-react";
+import { InstallBanner } from "./InstallBanner";
 
 const items = [
   { to: "/historia", label: "Historia", icon: BarChart3 },
