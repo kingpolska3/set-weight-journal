@@ -97,40 +97,40 @@ function PlansPage() {
           for (const c of local) await createPlan(user.id, c);
           localStorage.removeItem(LOCAL_KEY);
         }
-                let claimed: string | null = null;
+        let claimed: string | null = null;
         if (linkToken) {
-  claimed = await claimLink(linkToken);
-  if (!claimed) {
-    toast.error("Link do planu jest nieaktywny");
-  } else {
-    // Plan trafia też do Narzędzia → Otrzymane plany treningowe
-    try {
-      const rowsAfter = await fetchPlans(user.id);
-      const claimedRow = rowsAfter.find((r) => r.id === claimed);
-      if (claimedRow) {
-        upsertReceivedPlan(
-          clientToReceivedPlan(claimedRow.id, claimedRow.data, {
-            token: linkToken,
-            sourceLabel: "Link udostępnienia",
-          }),
-        );
-        toast.success("Plan zapisany w Narzędziach → Otrzymane plany");
-        void navigate({ to: "/narzedzia", search: {}, replace: true });
+          claimed = await claimLink(linkToken);
+          if (!claimed) {
+            toast.error("Link do planu jest nieaktywny");
+          } else {
+            // Plan trafia też do Narzędzia → Otrzymane plany treningowe
+            try {
+              const rowsAfter = await fetchPlans(user.id);
+              const claimedRow = rowsAfter.find((r) => r.id === claimed);
+              if (claimedRow) {
+                upsertReceivedPlan(
+                  clientToReceivedPlan(claimedRow.id, claimedRow.data, {
+                    token: linkToken,
+                    sourceLabel: "Link udostępnienia",
+                  }),
+                );
+                toast.success("Plan zapisany w Narzędziach → Otrzymane plany");
+                void navigate({ to: "/narzedzia", search: {}, replace: true });
+                if (cancelled) return;
+                setPlans(rowsAfter);
+                setReady(true);
+                return;
+              }
+            } catch (e) {
+              console.error(e);
+            }
+          }
+          void navigate({ to: "/plany", search: {}, replace: true });
+        }
+        const rows = await fetchPlans(user.id);
         if (cancelled) return;
-        setPlans(rowsAfter);
-        setReady(true);
-        return;
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }
-  void navigate({ to: "/plany", search: {}, replace: true });
-}
-const rows = await fetchPlans(user.id);
-if (cancelled) return;
-setPlans(rows);
-if (claimed) setActiveId(claimed);
+        setPlans(rows);
+        if (claimed) setActiveId(claimed);
       } catch (e) {
         toast.error("Nie udało się wczytać planów");
         console.error(e);
@@ -371,7 +371,7 @@ function ShareDialog({ row, onClose, onLinkAccess }: { row: PlanRow; onClose: ()
           <div className="flex gap-2">
             <div className="grid flex-1 grid-cols-2 gap-1.5 text-xs">
               <button onClick={() => setCanEdit(false)} className={`rounded-lg py-1.5 ${!canEdit ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>Tylko podgląd</button>
-              <button onClick={() => setCanEdit(true)} className={`rounded-lg py-1.5 ${canEdit ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>Może edytować</button>
+              <button onClick={() => setCanEdit(true)} className={`rounded-lg py-1.5 {canEdit ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>Może edytować</button>
             </div>
             <button disabled={busy} onClick={() => void send()} className="rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground disabled:opacity-50">Udostępnij</button>
           </div>
@@ -525,8 +525,26 @@ function ClientEditor({ row, onChange, onRemove, onShare }: { row: PlanRow; onCh
                         ) : null}
                       </div>
                     </div>
-                    <div className="mt-2 flex items-center gap-2">
-                      <input readOnly={readOnly} value={ex.note} onChange={(e) => patchEx({ note: e.target.value })} placeholder="uwagi dla podopiecznego…" className="min-w-0 flex-1 bg-transparent text-xs text-muted-foreground outline-none" />
+                    {/* Dodane okienko Czas przerwy */}
+                    <div className="mt-2 flex items-center gap-3">
+                      <input
+                        readOnly={readOnly}
+                        value={ex.note || ""}
+                        onChange={(e) => patchEx({ note: e.target.value })}
+                        placeholder="uwagi dla podopiecznego…"
+                        className="min-w-0 flex-1 bg-transparent text-xs text-muted-foreground outline-none"
+                      />
+                      <div className="flex items-center gap-1.5 rounded-lg border border-border bg-secondary/40 px-2 py-1 text-xs">
+                        <Timer className="h-3 w-3 text-primary" />
+                        <span className="text-[11px] text-muted-foreground">Przerwa:</span>
+                        <input
+                          readOnly={readOnly}
+                          value={ex.rest || ""}
+                          onChange={(e) => patchEx({ rest: e.target.value })}
+                          placeholder="np. 90s / 2 min"
+                          className="w-20 bg-transparent text-right font-medium text-foreground outline-none placeholder:text-muted-foreground/50"
+                        />
+                      </div>
                       <span className="text-[10px] tabular-nums text-muted-foreground">tonaż roboczy {Math.round(tonnage)} kg</span>
                     </div>
                     {ex.sets.some((s) => parseRepsOrTime(s.reps).timeSec) ? (
@@ -539,7 +557,7 @@ function ClientEditor({ row, onChange, onRemove, onShare }: { row: PlanRow; onCh
               })}
               {!readOnly ? (
                 <button
-                  onClick={() => patchDay({ ...d, exercises: [...d.exercises, { id: uid(), name: "", sets: [{ reps: "", weight: "" }], note: "" }] })}
+                  onClick={() => patchDay({ ...d, exercises: [...d.exercises, { id: uid(), name: "", sets: [{ reps: "", weight: "" }], note: "", rest: "" }] })}
                   className="inline-flex items-center gap-1.5 text-xs font-medium text-primary"
                 >
                   <Plus className="h-3.5 w-3.5" /> Dodaj ćwiczenie
@@ -561,4 +579,3 @@ function ClientEditor({ row, onChange, onRemove, onShare }: { row: PlanRow; onCh
     </div>
   );
 }
-
