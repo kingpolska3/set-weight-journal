@@ -17,7 +17,6 @@ import {
 import { toast } from "sonner";
 import { AppNav } from "@/components/AppNav";
 import { ClientIntake } from "@/components/ClientIntake";
-import { PlanGenerator } from "@/components/PlanGenerator";
 import { ExerciseAtlas } from "@/components/ExerciseAtlas";
 import { useAuth } from "@/hooks/useAuth";
 import { ATLAS_NAMES } from "@/lib/exercise-atlas";
@@ -371,7 +370,7 @@ function ShareDialog({ row, onClose, onLinkAccess }: { row: PlanRow; onClose: ()
           <div className="flex gap-2">
             <div className="grid flex-1 grid-cols-2 gap-1.5 text-xs">
               <button onClick={() => setCanEdit(false)} className={`rounded-lg py-1.5 ${!canEdit ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>Tylko podgląd</button>
-              <button onClick={() => setCanEdit(true)} className={`rounded-lg py-1.5 {canEdit ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>Może edytować</button>
+              <button onClick={() => setCanEdit(true)} className={`rounded-lg py-1.5 ${canEdit ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>Może edytować</button>
             </div>
             <button disabled={busy} onClick={() => void send()} className="rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground disabled:opacity-50">Udostępnij</button>
           </div>
@@ -450,7 +449,6 @@ function ClientEditor({ row, onChange, onRemove, onShare }: { row: PlanRow; onCh
           </button>
         </div>
         {row.access === "owner" || row.access === "local" ? <ClientIntake client={client} onChange={onChange} /> : null}
-        {row.access === "owner" ? <PlanGenerator row={row} onChange={onChange} /> : row.access === "local" ? <p className="mt-3 text-xs text-muted-foreground">Zaloguj się w Profilu, aby generować plany z Lovable AI.</p> : null}
       </div>
 
       {client.days.map((d) => {
@@ -525,7 +523,7 @@ function ClientEditor({ row, onChange, onRemove, onShare }: { row: PlanRow; onCh
                         ) : null}
                       </div>
                     </div>
-                    {/* Dodane okienko Czas przerwy */}
+                    {/* Okienko Czas przerwy */}
                     <div className="mt-2 flex items-center gap-3">
                       <input
                         readOnly={readOnly}
