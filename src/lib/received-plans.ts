@@ -93,7 +93,7 @@ function planSetToEntry(s: PlanSet): SetEntry {
   return { reps, weight, warmup: !!s.warmup };
 }
 
-function dayToTemplate(day: PlanDay, planName: string): Template {
+export function dayToTemplate(day: PlanDay, planName: string): Template {
   return {
     id: uid(),
     name: `${planName} · ${day.name}`,
@@ -102,6 +102,28 @@ function dayToTemplate(day: PlanDay, planName: string): Template {
       sets: (ex.sets.length ? ex.sets : [{ reps: "8–12", weight: "", warmup: false }]).map(planSetToEntry),
     })),
   };
+}
+
+/** Zapisuje jeden dzień planu jako szablon w Narzędziach. */
+export function saveReceivedDayAsTemplate(plan: ReceivedPlan, dayId: string): Template | null {
+  const day = plan.days.find((d) => d.id === dayId);
+  if (!day || day.exercises.length === 0) return null;
+  const tpl = dayToTemplate(day, plan.name);
+  const templates = loadTemplates();
+  const without = templates.filter((t) => t.name !== tpl.name);
+  saveTemplates([tpl, ...without]);
+  return tpl;
+}
+
+/** Zapisuje wszystkie dni z ćwiczeniami jako osobne szablony. */
+export function saveAllReceivedDaysAsTemplates(plan: ReceivedPlan): number {
+  const days = plan.days.filter((d) => d.exercises.length > 0);
+  if (!days.length) return 0;
+  const prefix = `${plan.name} · `;
+  const kept = loadTemplates().filter((t) => !t.name.startsWith(prefix));
+  const fresh = days.map((d) => dayToTemplate(d, plan.name));
+  saveTemplates([...fresh, ...kept]);
+  return fresh.length;
 }
 
 /** Buduje rozkład tygodnia: dni z planu = nazwa dnia, pozostałe = "Rest day". */
