@@ -239,7 +239,7 @@ function ToolsPage() {
           <h1 className="mt-2 text-2xl font-bold text-foreground">Szablony i backup</h1>
         </div>
       </header>
-
+<div className="mx-auto max-w-2xl px-4 py-6 space-y-6">
               <section className="rounded-2xl border border-border bg-card p-4">
           <div className="flex items-center gap-3">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15">
