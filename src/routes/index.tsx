@@ -82,6 +82,7 @@ function Index() {
   const [plan, setPlan] = useState<WeekPlan>(() => loadPlan());
   const [editPlan, setEditPlan] = useState(false);
   const photoRef = useRef<HTMLInputElement>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
   const [now, setNow] = useState(() => Date.now());
   const [confirmFinish, setConfirmFinish] = useState(false);
   const { user } = useAuth();
@@ -326,6 +327,16 @@ function Index() {
     [sessions, date, plan],
   );
 
+  const handleOpenDatePicker = () => {
+    if (dateInputRef.current) {
+      if (typeof dateInputRef.current.showPicker === "function") {
+        dateInputRef.current.showPicker();
+      } else {
+        dateInputRef.current.click();
+      }
+    }
+  };
+
   return (
     <main className="min-h-screen bg-background pb-24">
       <header
@@ -421,22 +432,9 @@ function Index() {
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            {/* Przycisk wyboru daty w pełni aktywny na całej powierzchni */}
-            <div 
-              onClick={() => {
-                const input = document.getElementById("native-date-picker") as HTMLInputElement;
-                if (input) {
-                  try {
-                    if (typeof input.showPicker === "function") {
-                      input.showPicker();
-                    } else {
-                      input.click();
-                    }
-                  } catch {
-                    input.click();
-                  }
-                }
-              }}
+            {/* Przycisk wyboru daty aktywny w każdym punkcie dzięki bezpośredniej obsłudze onClick na kontenerze */}
+            <div
+              onClick={handleOpenDatePicker}
               className="relative inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm hover:border-primary cursor-pointer select-none"
             >
               <CalendarDays className="h-4 w-4 text-primary shrink-0" />
@@ -447,7 +445,7 @@ function Index() {
                 })()}
               </span>
               <input
-                id="native-date-picker"
+                ref={dateInputRef}
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
