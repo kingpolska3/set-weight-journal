@@ -82,6 +82,7 @@ function Index() {
   const [plan, setPlan] = useState<WeekPlan>(() => loadPlan());
   const [editPlan, setEditPlan] = useState(false);
   const photoRef = useRef<HTMLInputElement>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
   const [now, setNow] = useState(() => Date.now());
   const [confirmFinish, setConfirmFinish] = useState(false);
   const { user } = useAuth();
@@ -421,20 +422,36 @@ function Index() {
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            {/* Przycisk wyboru daty z formatem DD.MM i poprawnie działającym natywnym pickerem */}
-            <div className="relative inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground transition-colors hover:border-primary cursor-pointer shadow-sm">
-              <CalendarDays className="h-4 w-4 text-primary shrink-0 pointer-events-none" />
-              <span className="font-medium pointer-events-none">
+            {/* Przycisk wyboru daty z programowym otwieraniem kalendarza po kliknięciu w cały boks */}
+            <div
+              onClick={() => {
+                if (dateInputRef.current) {
+                  try {
+                    if (typeof dateInputRef.current.showPicker === "function") {
+                      dateInputRef.current.showPicker();
+                    } else {
+                      dateInputRef.current.click();
+                    }
+                  } catch {
+                    dateInputRef.current.click();
+                  }
+                }
+              }}
+              className="relative inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground transition-colors hover:border-primary cursor-pointer shadow-sm select-none"
+            >
+              <CalendarDays className="h-4 w-4 text-primary shrink-0" />
+              <span className="font-medium">
                 {(() => {
                   const [y, m, d] = date.split("-");
                   return `${d}.${m}`;
                 })()}
               </span>
               <input
+                ref={dateInputRef}
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                className="absolute opacity-0 pointer-events-none w-0 h-0"
                 style={{ colorScheme: "dark" }}
               />
             </div>
