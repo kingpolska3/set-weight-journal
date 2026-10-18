@@ -72,6 +72,44 @@ export function removeReceivedPlan(id: string): ReceivedPlan[] {
   return next;
 }
 
+/** Parsuje tekst przerwy z planu trenera → sekundy. */
+export function parseRestToSeconds(raw?: string): number | undefined {
+  if (!raw?.trim()) return undefined;
+  const t = raw.trim().toLowerCase().replace(",", ".");
+
+  // "2:30"
+  const colon = t.match(/^(\d+):(\d+)$/);
+  if (colon) return Number(colon[1]) * 60 + Number(colon[2]);
+
+  // "2,5 minuty" / "2.5 min" / "2 min"
+  const min = t.match(/(\d+(?:\.\d+)?)\s*min/);
+  if (min) return Math.round(parseFloat(min[1]) * 60);
+
+  // "90s" / "90 sek" / "90 sec"
+  const sec = t.match(/(\d+)\s*(s|sek|sec)\b/);
+  if (sec) return Number(sec[1]);
+
+  // "90s / 2 min" → bierz pierwszą sensowną liczbę z jednostką, preferuj min jeśli są obie
+  const both = t.match(/(\d+(?:\.\d+)?)\s*min|(\d+)\s*(s|sek|sec)/g);
+  if (both?.length) {
+    for (const part of both) {
+      const m = part.match(/(\d+(?:\.\d+)?)\s*min/);
+      if (m) return Math.round(parseFloat(m[1]) * 60);
+      const s = part.match(/(\d+)\s*(s|sek|sec)/);
+      if (s) return Number(s[1]);
+    }
+  }
+
+  // sama liczba → traktuj jako sekundy jeśli >= 30, inaczej minuty
+  const only = t.match(/^(\d+(?:\.\d+)?)$/);
+  if (only) {
+    const n = parseFloat(only[1]);
+    return n >= 30 ? Math.round(n) : Math.round(n * 60);
+  }
+
+  return undefined;
+}
+
 function planSetToEntry(s: PlanSet): SetEntry {
   const repsRaw = (s.reps || "").trim().toLowerCase();
   const weight = Number(String(s.weight || "0").replace(",", ".")) || 0;
