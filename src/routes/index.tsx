@@ -421,10 +421,15 @@ function Index() {
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            {/* Nowoczesny przycisk wyboru daty dopasowany do ciemnego motywu */}
+            {/* Przycisk wyboru daty z formatem DD.MM i poprawnie działającym natywnym pickerem */}
             <div className="relative inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground transition-colors hover:border-primary cursor-pointer shadow-sm">
-              <CalendarDays className="h-4 w-4 text-primary shrink-0" />
-              <span className="font-medium">{formatDatePL(date)}</span>
+              <CalendarDays className="h-4 w-4 text-primary shrink-0 pointer-events-none" />
+              <span className="font-medium pointer-events-none">
+                {(() => {
+                  const [y, m, d] = date.split("-");
+                  return `${d}.${m}`;
+                })()}
+              </span>
               <input
                 type="date"
                 value={date}
