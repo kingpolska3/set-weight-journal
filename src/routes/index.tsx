@@ -421,14 +421,20 @@ function Index() {
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            {/* Czyste, dopasowane wizualnie pole daty, które reaguje na kliknięcie w każdym miejscu */}
-            <div className="inline-flex items-center rounded-xl border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground shadow-sm hover:border-primary transition-colors cursor-pointer">
-              <CalendarDays className="h-4 w-4 text-primary shrink-0 mr-2 pointer-events-none" />
+            {/* Przycisk wyboru daty - indicator rozciągnięty na 100% szerokości i wysokości */}
+            <div className="relative inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm font-medium text-foreground shadow-sm hover:border-primary transition-colors cursor-pointer select-none">
+              <CalendarDays className="h-4 w-4 text-primary shrink-0 pointer-events-none" />
+              <span className="font-medium pointer-events-none">
+                {(() => {
+                  const [y, m, d] = date.split("-");
+                  return `${d}.${m}`;
+                })()}
+              </span>
               <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="bg-transparent text-foreground font-medium outline-none cursor-pointer text-sm py-0.5"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                 style={{ colorScheme: "dark" }}
               />
             </div>
