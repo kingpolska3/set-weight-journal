@@ -15,11 +15,13 @@ export function RestTimer({
   onSave,
   compact = false,
   autoSignal = 0,
+  /** Czas z planu/szablonu (sekundy). Gdy jest — ma pierwszeństwo przed globalnym ustawieniem. */
+  presetSec,
 }: {
   onSave?: (sec: number) => void;
   compact?: boolean;
-  /** Rośnie po uzupełnieniu serii – startuje przerwę, jeśli włączono autostart. */
   autoSignal?: number;
+  presetSec?: number;
 }) {
   const [settings, setSettings] = useState<RestSettings>(DEFAULT_REST);
   const [sec, setSec] = useState(0);
@@ -27,6 +29,9 @@ export function RestTimer({
   const [done, setDone] = useState(false);
   const ref = useRef<ReturnType<typeof setInterval> | null>(null);
   const firedRef = useRef(false);
+
+  const targetSec =
+    typeof presetSec === "number" && presetSec > 0 ? presetSec : settings.seconds;
 
   useEffect(() => {
     setSettings(loadRest());
@@ -41,16 +46,16 @@ export function RestTimer({
   }, [running]);
 
   useEffect(() => {
-    if (!running || firedRef.current || sec < settings.seconds) return;
+    if (!running || firedRef.current || sec < targetSec) return;
     firedRef.current = true;
     setDone(true);
     if (settings.soundOn) playSound(settings.sound, settings.volume);
     if (settings.vibrate) vibrate();
     if (settings.notify) notifyRestOver();
-  }, [sec, running, settings]);
+  }, [sec, running, settings, targetSec]);
 
-  const remaining = Math.max(0, settings.seconds - sec);
-  const pct = Math.min(100, (sec / Math.max(1, settings.seconds)) * 100);
+  const remaining = Math.max(0, targetSec - sec);
+  const pct = Math.min(100, (sec / Math.max(1, targetSec)) * 100);
 
   const reset = () => {
     setRunning(false);
@@ -82,13 +87,13 @@ export function RestTimer({
     return (
       <button
         onClick={start}
-        title={`Start przerwy (${formatRest(settings.seconds)})`}
+        title={`Start przerwy (${formatRest(targetSec)})`}
         className={`inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary ${
           compact ? "" : "px-2.5 py-1.5 text-xs"
         }`}
       >
         <Timer className="h-3.5 w-3.5" />
-        {compact ? formatRest(settings.seconds) : `Przerwa ${formatRest(settings.seconds)}`}
+        {compact ? formatRest(targetSec) : `Przerwa ${formatRest(targetSec)}`}
       </button>
     );
   }
@@ -106,7 +111,7 @@ export function RestTimer({
       />
       <Timer className="relative h-3.5 w-3.5 text-primary" />
       <span className="relative font-semibold tabular-nums text-foreground">
-        {done ? `+${formatRest(sec - settings.seconds)}` : formatRest(remaining)}
+        {done ? `+${formatRest(sec - targetSec)}` : formatRest(remaining)}
       </span>
       {done ? (
         <span className="relative font-semibold uppercase text-primary">czas na serię</span>
