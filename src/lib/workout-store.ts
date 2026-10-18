@@ -463,7 +463,7 @@ const step = prof.step;
   const perSide = prof.unilateral ? " (na stronę)" : "";
 
   if (minReps >= hi) {
-    const nextW = roundStep(topW + step);
+    const nextW = roundToGymEquipment(topW + step, eqType);
     out.push({
       tone: "up",
       text: `${count}×${minReps}@${topW} kg${perSide} – górny zakres (${lo}–${hi}) domknięty we wszystkich seriach. Następnie ${count}×${lo}@${nextW} kg.`,
