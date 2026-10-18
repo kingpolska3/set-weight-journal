@@ -421,20 +421,37 @@ function Index() {
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            {/* Przycisk wyboru daty z bezpośrednią, w pełni klikalną warstwą inputa i formatem DD.MM */}
-            <div className="relative inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm hover:border-primary cursor-pointer">
-              <CalendarDays className="h-4 w-4 text-primary shrink-0 pointer-events-none" />
-              <span className="font-medium pointer-events-none">
+            {/* Przycisk wyboru daty w pełni aktywny na całej powierzchni */}
+            <div 
+              onClick={() => {
+                const input = document.getElementById("native-date-picker") as HTMLInputElement;
+                if (input) {
+                  try {
+                    if (typeof input.showPicker === "function") {
+                      input.showPicker();
+                    } else {
+                      input.click();
+                    }
+                  } catch {
+                    input.click();
+                  }
+                }
+              }}
+              className="relative inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground shadow-sm hover:border-primary cursor-pointer select-none"
+            >
+              <CalendarDays className="h-4 w-4 text-primary shrink-0" />
+              <span className="font-medium">
                 {(() => {
                   const [y, m, d] = date.split("-");
                   return `${d}.${m}`;
                 })()}
               </span>
               <input
+                id="native-date-picker"
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="absolute inset-0 z-10 w-full h-full opacity-0 cursor-pointer"
+                className="sr-only"
                 style={{ colorScheme: "dark" }}
               />
             </div>
