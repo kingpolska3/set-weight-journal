@@ -233,9 +233,10 @@ export function ExerciseCard({
                     : "border-input"
                 }`}
               />
-              <RestTimer
+                            <RestTimer
                 compact
                 autoSignal={restSignal[i] ?? 0}
+                presetSec={set.restSec}
                 onSave={(secVal) => updateSet(i, { restSec: secVal })}
               />
               <button
