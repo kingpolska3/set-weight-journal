@@ -75,19 +75,27 @@ export function removeReceivedPlan(id: string): ReceivedPlan[] {
 function planSetToEntry(s: PlanSet): SetEntry {
   const repsRaw = (s.reps || "").trim().toLowerCase();
   const weight = Number(String(s.weight || "0").replace(",", ".")) || 0;
-  // czas: "30s", "45 sek", "1:00"
-  const timeMatch = repsRaw.match(/^(\d+)\s*(s|sek|sec)?$/) || repsRaw.match(/^(\d+):(\d+)$/);
-  if (repsRaw.includes("s") || repsRaw.includes("sek") || /^\d+:\d+$/.test(repsRaw)) {
-    let timeSec = 0;
-    if (repsRaw.includes(":")) {
-      const [m, sec] = repsRaw.split(":").map(Number);
-      timeSec = (m || 0) * 60 + (sec || 0);
-    } else {
-      timeSec = parseInt(repsRaw, 10) || 0;
-    }
-    return { reps: 0, weight, timeSec, warmup: !!s.warmup };
+
+  // "5 min" / "5min"
+  const minMatch = repsRaw.match(/^(\d+(?:[.,]\d+)?)\s*min/);
+  if (minMatch) {
+    const mins = parseFloat(minMatch[1].replace(",", "."));
+    return { reps: 0, weight, timeSec: Math.round(mins * 60), warmup: !!s.warmup };
   }
-  // zakres "8–12" → bierzemy górną wartość jako podpowiedź
+
+  // "1:20" albo "5:00"
+  if (/^\d+:\d+$/.test(repsRaw)) {
+    const [m, sec] = repsRaw.split(":").map(Number);
+    return { reps: 0, weight, timeSec: (m || 0) * 60 + (sec || 0), warmup: !!s.warmup };
+  }
+
+  // "40s" / "40 sek"
+  if (repsRaw.includes("s") || repsRaw.includes("sek")) {
+    const n = parseInt(repsRaw, 10) || 0;
+    return { reps: 0, weight, timeSec: n, warmup: !!s.warmup };
+  }
+
+  // "8-10" / "8–12" → górna wartość jako podpowiedź reps
   const range = repsRaw.match(/(\d+)\s*[–\-]\s*(\d+)/);
   const reps = range ? Number(range[2]) : parseInt(repsRaw, 10) || 0;
   return { reps, weight, warmup: !!s.warmup };
