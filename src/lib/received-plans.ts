@@ -248,11 +248,19 @@ export function activateReceivedPlan(plan: ReceivedPlan): { weekPlan: WeekPlan; 
   if (todayPlanDay && todayPlanDay.exercises.length > 0 && todayLabel !== "Rest day") {
     const session: Session = {
       date: today,
-      exercises: todayPlanDay.exercises.map((ex) => ({
-        id: uid(),
-        name: ex.name,
-        sets: (ex.sets.length ? ex.sets : [{ reps: "8–12", weight: "", warmup: false }]).map(planSetToEntry),
-      })),
+            exercises: todayPlanDay.exercises.map((ex) => {
+        const restSec = parseRestToSeconds(ex.rest);
+        return {
+          id: uid(),
+          name: ex.name,
+          sets: (ex.sets.length ? ex.sets : [{ reps: "8-12", weight: "", warmup: false }]).map(
+            (s) => {
+              const entry = planSetToEntry(s);
+              return restSec ? { ...entry, restSec } : entry;
+            },
+          ),
+        };
+      }),
       note: exNoteFromDay(todayPlanDay),
     };
     const all = loadSessions();
