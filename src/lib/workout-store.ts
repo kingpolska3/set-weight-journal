@@ -463,11 +463,17 @@ const step = prof.step;
   const perSide = prof.unilateral ? " (na stronę)" : "";
 
   if (minReps >= hi) {
-    const nextW = roundToGymEquipment(topW + step, eqType);
-    out.push({
-      tone: "up",
-      text: `${count}×${minReps}@${topW} kg${perSide} – górny zakres (${lo}–${hi}) domknięty we wszystkich seriach. Następnie ${count}×${lo}@${nextW} kg.`,
-    });
+  const nextW = roundToGymEquipment(topW + step, eqType);
+  
+  // Jeśli to wyciąg/stos (cable_stack), dodajemy opcję przeskoku o pełną płytkę (+7.5 kg z topW)
+  const targetWeightText = eqType === 'cable_stack' 
+    ? `${nextW} kg lub ${count}×${lo}@${roundToGymEquipment(topW + 7.5, eqType)} kg`
+    : `${nextW} kg`;
+
+  out.push({
+    tone: "up",
+    text: `${count}×${minReps}@${topW} kg${perSide} – górny zakres (${lo}–${hi}) domknięty we wszystkich seriach. Następnie ${count}×${lo}@${targetWeightText}.`,
+  });
   } else if (maxReps >= hi) {
     out.push({
       tone: "info",
