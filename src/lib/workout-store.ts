@@ -451,7 +451,8 @@ export function nextSessionSuggestions(
   if (!last) return [];
   const prof = exerciseProfile(name);
   const [lo, hi] = repRange ?? prof.repRange;
-  const step = prof.step;
+  const eqType = detectEquipmentType(name);
+const step = roundToGymEquipment(prof.step, eqType) || prof.step;
   const out: Suggestion[] = [];
   const sets = workingSets(last.sets);
   const count = sets.length;
