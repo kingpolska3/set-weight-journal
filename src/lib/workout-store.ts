@@ -1,3 +1,4 @@
+import { roundToGymEquipment, detectEquipmentType } from "@/lib/gymWeights";
 export type SetEntry = {
   reps: number;
   weight: number;
