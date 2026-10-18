@@ -144,15 +144,24 @@ export function dayToTemplate(day: PlanDay, planName: string): Template {
     id: uid(),
     name: `${planName} · ${day.name}`,
     exercises: day.exercises.map((ex: PlanExercise) => {
+      const restSec = parseRestToSeconds(ex.rest);
       const sets = (ex.sets.length ? ex.sets : [{ reps: "8-12", weight: "", warmup: false }]).map(
-        planSetToEntry,
+        (s) => {
+          const entry = planSetToEntry(s);
+          // przerwa z planu → na serie robocze (i rozgrzewkowe, jeśli chcesz ten sam czas)
+          if (restSec && !s.warmup) return { ...entry, restSec };
+          if (restSec && s.warmup) return { ...entry, restSec };
+          return entry;
+        },
       );
-      // przerwa + uwagi trenera → note pierwszej serii roboczej (widać w Treningu)
-      const meta = [ex.rest ? `Przerwa: ${ex.rest}` : "", ex.note || ""].filter(Boolean).join(" · ");
-      if (meta && sets.length) {
+      // uwagi trenera zostaw w notatce pierwszej serii roboczej
+      if (ex.note?.trim() && sets.length) {
         const idx = sets.findIndex((s) => !s.warmup);
         const target = idx >= 0 ? idx : 0;
-        sets[target] = { ...sets[target], note: meta };
+        sets[target] = {
+          ...sets[target],
+          note: [sets[target].note, ex.note.trim()].filter(Boolean).join(" · "),
+        };
       }
       return { name: ex.name, sets };
     }),
