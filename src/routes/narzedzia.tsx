@@ -45,7 +45,6 @@ import {
   type Session,
   type Template,
 } from "@/lib/workout-store";
-
 import {
   activateReceivedPlan,
   loadReceivedPlans,
@@ -241,7 +240,6 @@ function ToolsPage() {
       </header>
 
       <section className="mx-auto max-w-2xl space-y-6 px-4 py-6">
-        {/* 1. Tworzenie planów treningowych */}
         <Link
           to="/plany"
           className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3 text-sm font-semibold text-primary-foreground"
@@ -249,10 +247,8 @@ function ToolsPage() {
           <ClipboardList className="h-4 w-4" /> Tworzenie planów treningowych
         </Link>
 
-        {/* 2. Atlas ćwiczeń */}
         <ExerciseAtlas />
 
-        {/* 3. Otrzymane plany treningowe */}
         <section className="rounded-2xl border border-border bg-card p-4">
           <div className="flex items-center gap-3">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15">
@@ -268,8 +264,8 @@ function ToolsPage() {
 
           {received.length === 0 ? (
             <p className="mt-3 rounded-xl border border-dashed border-border bg-secondary/30 p-4 text-center text-xs text-muted-foreground">
-              Brak otrzymanych planów. Gdy ktoś udostępni Ci link do planu i go otworzysz (będąc zalogowanym),
-              pojawi się tutaj.
+              Brak otrzymanych planów. Gdy ktoś udostępni Ci link do planu i go otworzysz (będąc
+              zalogowanym), pojawi się tutaj.
             </p>
           ) : (
             <ul className="mt-3 space-y-3">
@@ -344,32 +340,62 @@ function ToolsPage() {
                                   </button>
                                 ) : null}
                               </div>
+
                               {day.exercises.length > 0 ? (
-                                <ol className="mt-2 space-y-1.5">
-                                  {day.exercises.map((ex, i) => (
-                                    <li key={ex.id || i} className="text-xs text-foreground">
-                                      <span className="font-medium">
-                                        {i + 1}. {ex.name}
-                                      </span>
-                                      <span className="text-muted-foreground">
-                                        {" "}
-                                        · {ex.sets.length} serii
-                                        {ex.sets.length
-                                          ? ` (${ex.sets
-                                              .map((s) =>
-                                                s.warmup ? `${s.reps} rozgrz.` : s.reps || "—",
-                                              )
-                                              .join(" / ")})`
-                                          : ""}
-                                      </span>
-                                      {ex.note ? (
-                                        <p className="mt-0.5 text-[11px] text-muted-foreground">{ex.note}</p>
-                                      ) : null}
-                                    </li>
-                                  ))}
+                                <ol className="mt-2 space-y-2">
+                                  {day.exercises.map((ex, i) => {
+                                    const warm = ex.sets.filter((s) => s.warmup);
+                                    const work = ex.sets.filter((s) => !s.warmup);
+                                    const fmt = (s: {
+                                      reps: string;
+                                      weight: string;
+                                      warmup?: boolean;
+                                    }) => {
+                                      const w = s.weight?.trim() ? `${s.weight} kg` : "— kg";
+                                      return `${s.reps || "—"} × ${w}`;
+                                    };
+                                    return (
+                                      <li
+                                        key={ex.id || i}
+                                        className="rounded-md border border-border/60 bg-background/40 px-2 py-1.5 text-xs"
+                                      >
+                                        <p className="font-medium text-foreground">
+                                          {i + 1}. {ex.name}
+                                        </p>
+                                        {warm.length > 0 ? (
+                                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                                            <span className="font-semibold uppercase tracking-wide">
+                                              Rozgrzewka:{" "}
+                                            </span>
+                                            {warm.map((s, k) => `R${k + 1} ${fmt(s)}`).join(" · ")}
+                                          </p>
+                                        ) : null}
+                                        {work.length > 0 ? (
+                                          <p className="mt-0.5 text-[11px] text-foreground/90">
+                                            <span className="font-semibold text-primary">Serie: </span>
+                                            {work.map((s, k) => `${k + 1}. ${fmt(s)}`).join(" · ")}
+                                          </p>
+                                        ) : null}
+                                        {ex.rest ? (
+                                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                                            Przerwa:{" "}
+                                            <span className="text-foreground">{ex.rest}</span>
+                                          </p>
+                                        ) : null}
+                                        {ex.note ? (
+                                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                                            Uwagi:{" "}
+                                            <span className="text-foreground">{ex.note}</span>
+                                          </p>
+                                        ) : null}
+                                      </li>
+                                    );
+                                  })}
                                 </ol>
                               ) : (
-                                <p className="mt-1 text-[11px] text-muted-foreground">Brak ćwiczeń w tym dniu.</p>
+                                <p className="mt-1 text-[11px] text-muted-foreground">
+                                  Brak ćwiczeń w tym dniu.
+                                </p>
                               )}
                             </div>
                           ))
@@ -391,7 +417,6 @@ function ToolsPage() {
           )}
         </section>
 
-        {/* 4. Przerwa między seriami */}
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
           <div className="flex items-center gap-3 border-b border-border bg-secondary/50 px-4 py-3">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15">
@@ -407,7 +432,6 @@ function ToolsPage() {
               {formatRest(rest.seconds)}
             </span>
           </div>
-
           <div className="space-y-5 p-4">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -457,7 +481,6 @@ function ToolsPage() {
                 <span className="text-xs text-muted-foreground">sek.</span>
               </div>
             </div>
-
             <div>
               <div className="flex items-center justify-between">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -501,7 +524,6 @@ function ToolsPage() {
                   </button>
                 ))}
               </div>
-
               <div className="mt-3 flex items-center gap-3">
                 <Volume2 className="h-4 w-4 text-muted-foreground" />
                 <input
@@ -525,7 +547,6 @@ function ToolsPage() {
                 </button>
               </div>
             </div>
-
             <label className="flex items-start gap-3 rounded-xl border border-primary/40 bg-primary/5 px-3 py-3 text-foreground">
               <input
                 type="checkbox"
@@ -540,7 +561,6 @@ function ToolsPage() {
                 </span>
               </span>
             </label>
-
             <div className="grid gap-2 sm:grid-cols-2">
               <label className="flex items-center gap-2 rounded-xl border border-border px-3 py-2.5 text-xs text-foreground">
                 <input
@@ -575,7 +595,6 @@ function ToolsPage() {
           </div>
         </div>
 
-        {/* 5. Twoje szablony */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -651,7 +670,6 @@ function ToolsPage() {
           ))}
         </div>
 
-        {/* 6. Nowy szablon */}
         <div className="rounded-2xl border border-border bg-card p-4">
           <h2 className="text-sm font-semibold text-foreground">Nowy szablon</h2>
           <input
@@ -680,7 +698,6 @@ function ToolsPage() {
           </div>
         </div>
 
-        {/* 7. Eksport i kopia zapasowa */}
         <div className="rounded-2xl border border-border bg-card p-4">
           <h2 className="text-sm font-semibold text-foreground">Eksport i kopia zapasowa</h2>
           <div className="mt-2 flex flex-wrap gap-2">
