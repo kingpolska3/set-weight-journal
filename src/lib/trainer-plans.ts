@@ -1,8 +1,23 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type PlanSet = { reps: string; weight: string; warmup?: boolean };
-export type PlanExercise = { id: string; name: string; sets: PlanSet[]; note: string };
-export type PlanDay = { id: string; name: string; exercises: PlanExercise[]; weekday?: string };
+export type PlanSet = {
+  reps: string;       // "8-10", "15", "5 min", "12-15"
+  weight: string;     // kg albo puste
+  warmup?: boolean;   // seria rozgrzewkowa
+};
+export type PlanExercise = {
+  id: string;
+  name: string;
+  sets: PlanSet[];
+  note: string;       // uwagi dla podopiecznego
+  rest?: string;      // przerwa, np. "2,5 minuty", "90s / 2 min"
+};
+export type PlanDay = {
+  id: string;
+  name: string;
+  exercises: PlanExercise[];
+  weekday?: string;   // Pon, Wt, …
+};
 export type Client = {
   id: string;
   name: string;
