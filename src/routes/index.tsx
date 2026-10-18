@@ -85,7 +85,6 @@ function Index() {
   const { user } = useAuth();
 
   useEffect(() => {
-    // Nowa osoba zaczyna z pustym dziennikiem – brak przykładowych treningów.
     const cleanStart = new URLSearchParams(window.location.search).get("nowy") === "1";
     if (cleanStart) window.history.replaceState(null, "", window.location.pathname);
     ensureFreshStart();
@@ -98,7 +97,6 @@ function Index() {
     if (loaded) saveSessions(sessions);
   }, [sessions, loaded]);
 
-  // Synchronizacja w tle: po zalogowaniu, po zmianach i po powrocie online.
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
@@ -164,7 +162,7 @@ function Index() {
   const elapsedMs = session.startTime
     ? (session.endTime ? new Date(session.endTime).getTime() : now) -
       new Date(session.startTime).getTime()
-    : 0;
+    : (session.durationSec ? session.durationSec * 1000 : 0);
 
   const formatDuration = (ms: number) => {
     const total = Math.max(0, Math.floor(ms / 1000));
@@ -179,28 +177,21 @@ function Index() {
     setNow(Date.now());
     const next = { ...session, startTime: new Date().toISOString() };
     delete next.endTime;
+    delete next.durationSec;
     setSession(next);
     toast.success("Stoper treningu włączony");
   };
 
+  // Zatrzymanie stopera od razu zapisuje czas w tle bez zielonego napisu
   const stopWorkout = () => {
     if (!session.startTime) return;
-    const ended = { ...session, endTime: new Date().toISOString() };
-    setSession(ended);
-    toast.success(
-      `Pomiar zatrzymany – ${formatDuration(
-        new Date(ended.endTime).getTime() - new Date(session.startTime).getTime(),
-      )}. Możesz zapisać ten czas.`,
-    );
-  };
-
-  const saveWorkoutTime = () => {
-    if (!session.startTime || !session.endTime) return;
+    const endTime = new Date().toISOString();
     const secs = Math.round(
-      (new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / 1000,
+      (new Date(endTime).getTime() - new Date(session.startTime).getTime()) / 1000,
     );
-    setSession({ ...session, durationSec: secs });
-    toast.success(`Zapisano czas treningu: ${formatDuration(secs * 1000)}`);
+    const ended = { ...session, endTime, durationSec: secs };
+    setSession(ended);
+    toast.success(`Pomiar zatrzymany i zapisany – ${formatDuration(secs * 1000)}`);
   };
 
   /** Zakończenie treningu: stop stopera + automatyczny zapis czasu. */
@@ -223,7 +214,6 @@ function Index() {
     );
   };
 
-  /** Pierwszy trening: włącza stoper i dodaje pierwsze ćwiczenie. */
   const firstWorkout = () => {
     setNow(Date.now());
     const next: Session = {
@@ -232,6 +222,7 @@ function Index() {
       exercises: [{ id: uid(), name: "", sets: [{ reps: 0, weight: 0 }] }],
     };
     delete next.endTime;
+    delete next.durationSec;
     setSession(next);
     toast.success("Powodzenia! Stoper włączony");
   };
@@ -360,11 +351,6 @@ function Index() {
               <p className="font-mono text-lg font-semibold tabular-nums text-foreground">
                 {formatDuration(elapsedMs)}
               </p>
-              {session.durationSec !== undefined ? (
-                <p className="text-[11px] text-success">
-                  zapisany czas: {formatDuration(session.durationSec * 1000)}
-                </p>
-              ) : null}
             </div>
             <div className="ml-auto flex items-center gap-2">
               {running ? (
@@ -379,17 +365,9 @@ function Index() {
                   onClick={startWorkout}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
                 >
-                  <Play className="h-3.5 w-3.5" /> {session.endTime ? "Nowy pomiar" : "Start"}
+                  <Play className="h-3.5 w-3.5" /> {session.endTime || session.durationSec ? "Nowy pomiar" : "Start"}
                 </button>
               )}
-              {session.endTime && session.durationSec === undefined ? (
-                <button
-                  onClick={saveWorkoutTime}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-primary px-3 py-2 text-xs font-semibold text-primary"
-                >
-                  <Save className="h-3.5 w-3.5" /> Zapisz czas
-                </button>
-              ) : null}
               {session.startTime ? (
                 <button
                   onClick={resetWorkoutTimer}
@@ -412,10 +390,10 @@ function Index() {
                     ? "dzień bez treningu"
                     : "deload – bez porównania"
                   : summary.prevDate
-                    ? `${summary.volume - summary.prevVolume >= 0 ? "+" : "−"}${Math.abs(
-                        Math.round(summary.volume - summary.prevVolume),
-                      )} kg vs ostatni „${summary.planName}”`
-                    : "brak porównania"
+                  ? `${summary.volume - summary.prevVolume >= 0 ? "+" : "−"}${Math.abs(
+                      Math.round(summary.volume - summary.prevVolume),
+                    )} kg vs ostatni „${summary.planName}”`
+                  : "brak porównania"
               }
               subTone={
                 noProgress || !summary.prevDate
@@ -613,7 +591,6 @@ function Index() {
           </div>
         ) : null}
 
-
         <div className="mt-6 rounded-2xl border border-border bg-card p-4">
           <h2 className="text-sm font-semibold text-foreground">Notatka do treningu</h2>
           <textarea
@@ -731,7 +708,6 @@ function Index() {
             </button>
           ) : null}
         </div>
-
       </section>
       <AppNav />
     </main>
