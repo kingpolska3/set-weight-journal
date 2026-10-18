@@ -16,6 +16,8 @@ import {
   Timer,
   Trophy,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppNav } from "@/components/AppNav";
@@ -182,7 +184,6 @@ function Index() {
     toast.success("Stoper treningu włączony");
   };
 
-  // Zatrzymanie stopera od razu zapisuje czas w tle bez zielonego napisu
   const stopWorkout = () => {
     if (!session.startTime) return;
     const endTime = new Date().toISOString();
@@ -194,7 +195,6 @@ function Index() {
     toast.success(`Pomiar zatrzymany i zapisany – ${formatDuration(secs * 1000)}`);
   };
 
-  /** Zakończenie treningu: stop stopera + automatyczny zapis czasu. */
   const finishWorkout = () => {
     setConfirmFinish(false);
     const end = new Date().toISOString();
@@ -421,15 +421,19 @@ function Index() {
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2">
-              <CalendarDays className="h-4 w-4 text-primary" />
+            {/* Nowoczesny przycisk wyboru daty dopasowany do ciemnego motywu */}
+            <div className="relative inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground transition-colors hover:border-primary cursor-pointer shadow-sm">
+              <CalendarDays className="h-4 w-4 text-primary shrink-0" />
+              <span className="font-medium">{formatDatePL(date)}</span>
               <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="bg-transparent text-sm text-foreground outline-none"
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                style={{ colorScheme: "dark" }}
               />
-            </label>
+            </div>
+
             <button
               onClick={copyLastSame}
               className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground transition-colors hover:border-primary"
