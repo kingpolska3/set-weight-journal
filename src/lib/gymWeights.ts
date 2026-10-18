@@ -26,11 +26,20 @@ export function roundToGymEquipment(weight: number, equipment: EquipmentType): n
 export function detectEquipmentType(exerciseName: string): EquipmentType {
   const name = exerciseName.toLowerCase();
   
-  if (name.includes('hantle') || name.includes('hantli')) {
+  // 1. Najpierw sprawdzamy Smitha i sztangę (zanim wykryje ogólne słowo "maszyna")
+  if (name.includes('smith') || name.includes('sztang')) {
+    return 'smith_barbell';
+  }
+  
+  // 2. Hantle
+  if (name.includes('hantel') || name.includes('hantle') || name.includes('hantli')) {
     return 'dumbbells';
   }
-  if (name.includes('wyciąg') || name.includes('bram') || name.includes('butterfly') || name.includes('maszyna')) {
+  
+  // 3. Pozostałe wyciągi i maszyny ze stosem
+  if (name.includes('wyciąg') || name.includes('brama') || name.includes('bram') || name.includes('butterfly') || name.includes('maszyna')) {
     return 'cable_stack';
   }
+  
   return 'smith_barbell';
 }
