@@ -105,10 +105,19 @@ export function dayToTemplate(day: PlanDay, planName: string): Template {
   return {
     id: uid(),
     name: `${planName} · ${day.name}`,
-    exercises: day.exercises.map((ex: PlanExercise) => ({
-      name: ex.name,
-      sets: (ex.sets.length ? ex.sets : [{ reps: "8–12", weight: "", warmup: false }]).map(planSetToEntry),
-    })),
+    exercises: day.exercises.map((ex: PlanExercise) => {
+      const sets = (ex.sets.length ? ex.sets : [{ reps: "8-12", weight: "", warmup: false }]).map(
+        planSetToEntry,
+      );
+      // przerwa + uwagi trenera → note pierwszej serii roboczej (widać w Treningu)
+      const meta = [ex.rest ? `Przerwa: ${ex.rest}` : "", ex.note || ""].filter(Boolean).join(" · ");
+      if (meta && sets.length) {
+        const idx = sets.findIndex((s) => !s.warmup);
+        const target = idx >= 0 ? idx : 0;
+        sets[target] = { ...sets[target], note: meta };
+      }
+      return { name: ex.name, sets };
+    }),
   };
 }
 
