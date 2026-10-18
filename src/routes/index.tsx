@@ -422,12 +422,13 @@ function Index() {
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {/* Przycisk wyboru daty - indicator rozciągnięty na 100% szerokości i wysokości */}
+            {/* Przycisk wyboru daty z formatem DD.MM.RRRR */}
             <div className="relative inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm font-medium text-foreground shadow-sm hover:border-primary transition-colors cursor-pointer select-none">
               <CalendarDays className="h-4 w-4 text-primary shrink-0 pointer-events-none" />
               <span className="font-medium pointer-events-none">
                 {(() => {
                   const [y, m, d] = date.split("-");
-                  return `${d}.${m}`;
+                  return `${d}.${m}.${y}`;
                 })()}
               </span>
               <input
