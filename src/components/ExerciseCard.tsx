@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import {
   ArrowDown,
   ArrowUp,
+  Check,
   ChevronDown,
   Copy,
   Lightbulb,
@@ -68,6 +69,10 @@ function ProgressPill({ label, value }: { label: string; value: number }) {
   );
 }
 
+function isSetFilled(s: { reps: number; weight: number; timeSec?: number }) {
+  return (s.timeSec ?? 0) > 0 || ((s.reps || 0) > 0 && (s.weight || 0) > 0);
+}
+
 export function ExerciseCard({
   index,
   exercise,
@@ -83,6 +88,7 @@ export function ExerciseCard({
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<number[]>([]);
   const [restSignal, setRestSignal] = useState<Record<number, number>>({});
+  const [manualCollapsed, setManualCollapsed] = useState<boolean | null>(null);
 
   const bumpRest = (i: number, s: { reps: number; weight: number }) => {
     if (!s.reps || !s.weight) return;
@@ -93,6 +99,7 @@ export function ExerciseCard({
     const own = sessions.flatMap((s) => s.exercises.map((x) => x.name.trim())).filter(Boolean);
     return Array.from(new Set([...own, ...ATLAS_NAMES])).filter((n) => n !== exercise.name.trim());
   }, [sessions, exercise.name]);
+
   const progress = computeProgress(sessions, date, exercise);
   const history = useMemo(
     () => exerciseHistory(sessions, exercise.name),
@@ -107,6 +114,14 @@ export function ExerciseCard({
   const best60 = bestInWindow(sessions, date, exercise.name, 60);
   const e1rm = best1RM(exercise.sets);
   const prevE1rm = history.filter((h) => h.date < date).slice(-1)[0]?.e1rm ?? 0;
+
+  const allSetsDone = exercise.sets.length > 0 && exercise.sets.every(isSetFilled);
+  const volKg = Math.round(volume(exercise.sets, exercise.name));
+  const collapsed = manualCollapsed ?? allSetsDone;
+
+  useEffect(() => {
+    if (!allSetsDone && manualCollapsed === true) setManualCollapsed(null);
+  }, [allSetsDone, manualCollapsed]);
 
   const update = (patch: Partial<Exercise>) => onChange({ ...exercise, ...patch });
 
@@ -125,7 +140,6 @@ export function ExerciseCard({
     update({ sets });
   };
 
-
   const lastSets = history.filter((h) => h.date < date).slice(-1)[0]?.sets ?? [];
   const copyPicked = () => {
     const copied = picked
@@ -138,6 +152,34 @@ export function ExerciseCard({
     update({ sets: [...exercise.sets, ...copied] });
     setPicked([]);
   };
+
+  if (collapsed) {
+    return (
+      <article className="rounded-2xl border border-primary/30 bg-card/80 px-3 py-2.5 shadow-sm">
+        <button
+          type="button"
+          onClick={() => setManualCollapsed(false)}
+          className="flex w-full items-center gap-3 text-left"
+          aria-expanded={false}
+        >
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-sm font-bold text-primary">
+            {index + 1}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-foreground">
+              {exercise.name.trim() || "Bez nazwy"}
+            </p>
+            <p className="text-[11px] tabular-nums text-muted-foreground">
+              {volKg.toLocaleString("pl-PL")} kg · {exercise.sets.length} serii
+            </p>
+          </div>
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+            <Check className="h-3 w-3" /> Ukończone
+          </span>
+        </button>
+      </article>
+    );
+  }
 
   return (
     <article className="rounded-2xl border border-border bg-card p-4 shadow-lg shadow-black/20">
@@ -159,6 +201,16 @@ export function ExerciseCard({
           ))}
         </datalist>
         <div className="flex shrink-0 items-center gap-0.5">
+          {allSetsDone ? (
+            <button
+              type="button"
+              onClick={() => setManualCollapsed(true)}
+              className="mr-0.5 rounded-lg border border-primary/40 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary hover:bg-primary/10"
+              title="Zwiń ukończone ćwiczenie"
+            >
+              Zwiń
+            </button>
+          ) : null}
           <button
             onClick={onMoveUp}
             disabled={!canMoveUp}
@@ -233,7 +285,7 @@ export function ExerciseCard({
                     : "border-input"
                 }`}
               />
-                            <RestTimer
+              <RestTimer
                 compact
                 autoSignal={restSignal[i] ?? 0}
                 presetSec={set.restSec}
@@ -296,7 +348,7 @@ export function ExerciseCard({
         )}
       </div>
 
-      <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-muted-foreground tabular-nums">
+      <div className="mt-2 flex flex-wrap gap-3 text-[11px] tabular-nums text-muted-foreground">
         <span>Objętość: {volume(exercise.sets, exercise.name).toFixed(1)} kg</span>
         <span>Max: {topWeight(exercise.sets)} kg</span>
         <span>Powtórzenia: {totalReps(exercise.sets)}</span>
@@ -310,7 +362,6 @@ export function ExerciseCard({
           ) : null}
         </span>
       </div>
-
 
       {suggestions.length > 0 ? (
         <div className="mt-3 space-y-1.5 rounded-xl border border-border bg-secondary/50 p-3">
@@ -358,9 +409,7 @@ export function ExerciseCard({
               />
             </div>
           ) : null}
-
           <ExerciseChart history={history} />
-
           {lastSets.length > 0 ? (
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -392,7 +441,6 @@ export function ExerciseCard({
               </div>
             </div>
           ) : null}
-
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               Ostatnie treningi
@@ -404,12 +452,11 @@ export function ExerciseCard({
                 .map((h) => (
                   <li
                     key={h.date}
-                    className="flex justify-between text-[11px] text-muted-foreground tabular-nums"
+                    className="flex justify-between text-[11px] tabular-nums text-muted-foreground"
                   >
                     <span>{shortDatePL(h.date)}</span>
                     <span>
-                      {workingSets(h.sets).length}×, {Math.round(h.volume)} kg obj., max{" "}
-                      {h.top} kg
+                      {workingSets(h.sets).length}×, {Math.round(h.volume)} kg obj., max {h.top} kg
                     </span>
                   </li>
                 ))}
@@ -426,16 +473,13 @@ export function ExerciseCard({
           </div>
         </div>
       ) : null}
-
     </article>
   );
 }
 
 function PrTag({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-success">
-      {children}
-    </span>
+    <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-success">{children}</span>
   );
 }
 
@@ -453,7 +497,7 @@ function BestBox({
   return (
     <div className="rounded-lg border border-border p-2">
       <p className="text-[10px] uppercase tracking-wide">{title}</p>
-      <p className="text-foreground tabular-nums">
+      <p className="tabular-nums text-foreground">
         {Math.round(best.volume)} kg obj. · {best.weight} kg · 1RM {best.e1rm.toFixed(1)}
       </p>
       <p className={diff >= 0 ? "text-success" : "text-danger"}>
@@ -479,7 +523,11 @@ function RepsInput({
   useEffect(() => {
     if (!focused) setDraft(display);
   }, [display, focused]);
-  const prev = set.prevTimeSec ? formatTime(set.prevTimeSec) : set.prevReps ? String(set.prevReps) : "";
+  const prev = set.prevTimeSec
+    ? formatTime(set.prevTimeSec)
+    : set.prevReps
+      ? String(set.prevReps)
+      : "";
   const empty = !set.reps && !set.timeSec;
   return (
     <input
@@ -500,7 +548,9 @@ function RepsInput({
       title="Powtórzenia lub czas (np. 12, 40s, 1:20, 1min 20s)"
       aria-label="Powtórzenia / Czas"
       className={`w-16 rounded-lg border bg-secondary px-2 py-2 text-center text-sm tabular-nums outline-none focus:border-primary ${
-        prev && empty ? "border-primary/60 placeholder:font-semibold placeholder:text-primary" : "border-input"
+        prev && empty
+          ? "border-primary/60 placeholder:font-semibold placeholder:text-primary"
+          : "border-input"
       } ${set.timeSec ? "text-primary" : ""}`}
     />
   );
