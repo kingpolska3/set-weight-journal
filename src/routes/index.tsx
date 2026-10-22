@@ -82,8 +82,10 @@ function Index() {
   const [plan, setPlan] = useState<WeekPlan>(() => loadPlan());
   const [editPlan, setEditPlan] = useState(false);
   const photoRef = useRef<HTMLInputElement>(null);
+  const statsRef = useRef<HTMLDivElement>(null);
   const [now, setNow] = useState(() => Date.now());
   const [confirmFinish, setConfirmFinish] = useState(false);
+  const [showFloatingTimer, setShowFloatingTimer] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -160,6 +162,22 @@ function Index() {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [running]);
+
+  useEffect(() => {
+    const el = statsRef.current;
+    if (!el || !running) {
+      setShowFloatingTimer(false);
+      return;
+    }
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        setShowFloatingTimer(!entry.isIntersecting);
+      },
+      { threshold: 0, rootMargin: "0px" },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [running, date]);
 
   const elapsedMs = session.startTime
     ? (session.endTime ? new Date(session.endTime).getTime() : now) -
@@ -346,81 +364,85 @@ function Index() {
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">{formatDatePL(date)}</p>
 
-          <div className="mt-3 flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5">
-            <Timer className={`h-4 w-4 ${running ? "text-primary" : "text-muted-foreground"}`} />
-            <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Czas treningu</p>
-              <p className="font-mono text-lg font-semibold tabular-nums text-foreground">
-                {formatDuration(elapsedMs)}
-              </p>
+          <div ref={statsRef}>
+            <div className="mt-3 flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2.5">
+              <Timer className={`h-4 w-4 ${running ? "text-primary" : "text-muted-foreground"}`} />
+              <div className="min-w-0">
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  Czas treningu
+                </p>
+                <p className="font-mono text-lg font-semibold tabular-nums text-foreground">
+                  {formatDuration(elapsedMs)}
+                </p>
+              </div>
+              <div className="ml-auto flex items-center gap-2">
+                {running ? (
+                  <button
+                    onClick={stopWorkout}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
+                  >
+                    <Square className="h-3.5 w-3.5" /> Zakończ
+                  </button>
+                ) : (
+                  <button
+                    onClick={startWorkout}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
+                  >
+                    <Play className="h-3.5 w-3.5" />{" "}
+                    {session.endTime || session.durationSec ? "Nowy pomiar" : "Start"}
+                  </button>
+                )}
+                {session.startTime ? (
+                  <button
+                    onClick={resetWorkoutTimer}
+                    className="rounded-xl border border-border px-2.5 py-2 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Wyzeruj
+                  </button>
+                ) : null}
+              </div>
             </div>
-            <div className="ml-auto flex items-center gap-2">
-              {running ? (
-                <button
-                  onClick={stopWorkout}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
-                >
-                  <Square className="h-3.5 w-3.5" /> Zakończ
-                </button>
-              ) : (
-                <button
-                  onClick={startWorkout}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
-                >
-                  <Play className="h-3.5 w-3.5" />{" "}
-                  {session.endTime || session.durationSec ? "Nowy pomiar" : "Start"}
-                </button>
-              )}
-              {session.startTime ? (
-                <button
-                  onClick={resetWorkoutTimer}
-                  className="rounded-xl border border-border px-2.5 py-2 text-xs text-muted-foreground hover:text-foreground"
-                >
-                  Wyzeruj
-                </button>
-              ) : null}
-            </div>
-          </div>
 
-          <div className="mt-4 grid grid-cols-3 gap-2">
-            <Stat label="Ćwiczenia" value={String(session.exercises.length)} />
-            <Stat
-              label="Objętość"
-              value={`${Math.round(summary.volume).toLocaleString("pl-PL")} kg`}
-              sub={
-                noProgress
-                  ? session.rest
-                    ? "dzień wolny"
-                    : "deload"
-                  : summary.prevDate
-                    ? `${summary.volume - summary.prevVolume >= 0 ? "+" : "−"}${Math.abs(
-                        Math.round(summary.volume - summary.prevVolume),
-                      ).toLocaleString("pl-PL")} kg`
-                    : undefined
-              }
-              subTone={
-                noProgress || !summary.prevDate
-                  ? ""
-                  : summary.volume - summary.prevVolume >= 0
-                    ? "text-success"
-                    : "text-danger"
-              }
-            />
-            <Stat
-              label="Progres dnia"
-              value={
-                noProgress || summary.pct === null
-                  ? "—"
-                  : `${summary.pct > 0 ? "+" : ""}${summary.pct.toFixed(1)}%`
-              }
-              tone={
-                noProgress || summary.pct === null
-                  ? ""
-                  : summary.pct >= 0
-                    ? "text-success"
-                    : "text-danger"
-              }
-            />
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <Stat label="Ćwiczenia" value={String(session.exercises.length)} />
+              <Stat
+                label="Objętość"
+                value={`${Math.round(summary.volume).toLocaleString("pl-PL")} kg`}
+                sub={
+                  noProgress
+                    ? session.rest
+                      ? "dzień wolny"
+                      : "deload"
+                    : summary.prevDate
+                      ? `${summary.volume - summary.prevVolume >= 0 ? "+" : "−"}${Math.abs(
+                          Math.round(summary.volume - summary.prevVolume),
+                        ).toLocaleString("pl-PL")} kg`
+                      : undefined
+                }
+                subTone={
+                  noProgress || !summary.prevDate
+                    ? ""
+                    : summary.volume - summary.prevVolume >= 0
+                      ? "text-success"
+                      : "text-danger"
+                }
+              />
+              <Stat
+                label="Progres dnia"
+                value={
+                  noProgress || summary.pct === null
+                    ? "—"
+                    : `${summary.pct > 0 ? "+" : ""}${summary.pct.toFixed(1)}%`
+                }
+                tone={
+                  noProgress || summary.pct === null
+                    ? ""
+                    : summary.pct >= 0
+                      ? "text-success"
+                      : "text-danger"
+                }
+              />
+            </div>
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -721,31 +743,32 @@ function Index() {
         </div>
       </section>
 
-      {/* Floating timer — widoczny gdy stoper działa */}
-      {running ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-20 z-40 flex justify-center px-4 sm:bottom-6">
-          <div
-            className="pointer-events-auto flex items-center gap-3 rounded-2xl border border-primary/40 bg-card/95 px-4 py-3 shadow-lg shadow-black/40 backdrop-blur-md"
-            role="timer"
-            aria-live="polite"
-            aria-label={`Czas treningu ${formatDuration(elapsedMs)}`}
-          >
-            <span className="relative flex h-2.5 w-2.5 shrink-0">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
+      {/* Floating u góry — tylko gdy stoper działa i główne karty są poza ekranem */}
+      {running && showFloatingTimer ? (
+        <div className="fixed inset-x-0 top-0 z-40 border-b border-border/80 bg-card/95 pt-[env(safe-area-inset-top)] shadow-md backdrop-blur-md">
+          <div className="mx-auto flex max-w-2xl items-center gap-3 px-3 py-2.5">
+            <span className="relative flex h-2 w-2 shrink-0">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-50" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
             </span>
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Trening
-              </p>
-              <p className="font-mono text-2xl font-bold tabular-nums leading-none text-foreground">
+            <div className="min-w-0 flex-1">
+              <p className="font-mono text-lg font-bold tabular-nums leading-none text-foreground">
                 {formatDuration(elapsedMs)}
+              </p>
+              <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
+                {Math.round(summary.volume).toLocaleString("pl-PL")} kg
+                {" · "}
+                {noProgress || summary.pct === null
+                  ? "progres —"
+                  : `${summary.pct > 0 ? "+" : ""}${summary.pct.toFixed(1)}%`}
+                {" · "}
+                {session.exercises.length} ćw.
               </p>
             </div>
             <button
               type="button"
               onClick={stopWorkout}
-              className="ml-1 inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
             >
               <Square className="h-3.5 w-3.5" /> Stop
             </button>
