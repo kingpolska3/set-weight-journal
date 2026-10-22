@@ -381,19 +381,19 @@ function Index() {
 
           <div className="mt-4 grid grid-cols-3 gap-2">
             <Stat label="Ćwiczenia" value={String(session.exercises.length)} />
-            <Stat
+                        <Stat
               label="Objętość"
-              value={`${Math.round(summary.volume)} kg`}
+              value={`${Math.round(summary.volume).toLocaleString("pl-PL")} kg`}
               sub={
                 noProgress
                   ? session.rest
-                    ? "dzień bez treningu"
-                    : "deload – bez porównania"
+                    ? "dzień wolny"
+                    : "deload"
                   : summary.prevDate
-                  ? `${summary.volume - summary.prevVolume >= 0 ? "+" : "−"}${Math.abs(
-                      Math.round(summary.volume - summary.prevVolume),
-                    )} kg vs ostatni „${summary.planName}”`
-                  : "brak porównania"
+                    ? `${summary.volume - summary.prevVolume >= 0 ? "+" : "−"}${Math.abs(
+                        Math.round(summary.volume - summary.prevVolume),
+                      ).toLocaleString("pl-PL")} kg`
+                    : undefined
               }
               subTone={
                 noProgress || !summary.prevDate
