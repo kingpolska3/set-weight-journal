@@ -90,9 +90,10 @@ function aggregate(sessions: Session[], from: string | null, to: string | null):
     .filter((s) => (!from || s.date >= from) && (!to || s.date <= to))
     .filter((s) => !s.rest)
     .sort((a, b) => a.date.localeCompare(b.date));
+
   const agg = emptyAgg();
   const bestSoFar = new Map<string, number>();
-  // Rekordy liczymy chronologicznie: nowy max ciężaru w danym ćwiczeniu = PR.
+
   for (const s of inRange) {
     const vol = sessionVolume(s);
     if (vol <= 0 && s.exercises.length === 0) continue;
@@ -430,68 +431,56 @@ function VsPage() {
             </div>
 
             {!rival ? (
-              <p className="rounded-xl border border-border bg-card p-4 text-xs text-muted-foreground">
-                <div className="rounded-xl border border-dashed border-border bg-card/50 p-6 text-center">
-  <p className="text-sm font-medium text-foreground">Wybierz rywala</p>
-  <p className="mt-1 text-xs text-muted-foreground">
-    Wyszukaj osobę albo kliknij kogoś z ulubionych, żeby zobaczyć porównanie.
-  </p>
-</div>
-              </p>
+              <div className="rounded-xl border border-dashed border-border bg-card/50 p-6 text-center">
+                <p className="text-sm font-medium text-foreground">Wybierz rywala</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Wyszukaj osobę albo kliknij kogoś z ulubionych, żeby zobaczyć porównanie.
+                </p>
+              </div>
             ) : !theirs ? (
               <p className="text-sm text-muted-foreground">Wczytywanie danych rywala…</p>
             ) : (
               <>
                 <div className="rounded-xl border border-border bg-card p-4">
-                  <div className="flex items-center justify-between text-sm font-semibold text-foreground">
-                    <div className="rounded-xl border border-border bg-card p-4">
-  <div className="flex items-center justify-between gap-3">
-    <div className="flex min-w-0 flex-1 flex-col items-center text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-sm font-bold text-primary">
-        TY
-      </div>
-      <p className="mt-2 truncate text-sm font-semibold text-foreground">Ty</p>
-    </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 flex-1 flex-col items-center text-center">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-sm font-bold text-primary">
+                        TY
+                      </div>
+                      <p className="mt-2 truncate text-sm font-semibold text-foreground">Ty</p>
+                    </div>
 
-    <div className="flex flex-col items-center gap-1">
-      <span className="rounded-full bg-muted px-3 py-1 text-xs font-bold uppercase tracking-widest text-primary">
-        VS
-      </span>
-      <span className="text-[10px] text-muted-foreground">
-        {range === "all"
-          ? "cały czas"
-          : range === "custom"
-            ? `${customFrom} – ${customTo}`
-            : `ostatnie ${range} dni`}
-      </span>
-    </div>
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="rounded-full bg-muted px-3 py-1 text-xs font-bold uppercase tracking-widest text-primary">
+                        VS
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {range === "all"
+                          ? "cały czas"
+                          : range === "custom"
+                            ? `${customFrom} – ${customTo}`
+                            : `ostatnie ${range} dni`}
+                      </span>
+                    </div>
 
-    <div className="flex min-w-0 flex-1 flex-col items-center text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-foreground/10 text-sm font-bold text-foreground">
-        {(rival.display_name || rival.username || "R").slice(0, 2).toUpperCase()}
-      </div>
-      <p className="mt-2 truncate text-sm font-semibold text-foreground">
-        {rival.display_name || rival.username || "Rywal"}
-      </p>
-    </div>
-  </div>
-
-  <div className="mt-4 grid gap-2">
-    <StatRow label="Objętość" mine={mine.volume} theirs={theirs.volume} unit="kg" />
-    <StatRow label="Treningi" mine={mine.sessions} theirs={theirs.sessions} />
-    <StatRow label="Serie" mine={mine.sets} theirs={theirs.sets} />
-    <StatRow label="Śr. objętość / trening" mine={mine.avgVolume} theirs={theirs.avgVolume} unit="kg" />
-    <StatRow label="Rekordy (PR)" mine={mine.prs} theirs={theirs.prs} />
-  </div>
-</div>
+                    <div className="flex min-w-0 flex-1 flex-col items-center text-center">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-foreground/10 text-sm font-bold text-foreground">
+                        {(rival.display_name || rival.username || "R").slice(0, 2).toUpperCase()}
+                      </div>
+                      <p className="mt-2 truncate text-sm font-semibold text-foreground">
+                        {rival.display_name || rival.username || "Rywal"}
+                      </p>
+                    </div>
                   </div>
-                  <div className="mt-3">
-                    <StatRow label="objętość" mine={mine.volume} theirs={theirs.volume} unit="kg" />
-                    <StatRow label="treningi" mine={mine.sessions} theirs={theirs.sessions} />
-                    <StatRow label="śr. objętość / trening" mine={mine.avgVolume} theirs={theirs.avgVolume} unit="kg" />
-                    <StatRow label="serie robocze" mine={mine.sets} theirs={theirs.sets} />
-                    <StatRow label="rekordy (PR)" mine={mine.prs} theirs={theirs.prs} />
+
+                  <div className="mt-4 grid gap-2">
+                    <StatRow label="Objętość" mine={mine.volume} theirs={theirs.volume} unit="kg" />
+                    <StatRow label="Treningi" mine={mine.sessions} theirs={theirs.sessions} />
+                    <StatRow label="Serie" mine={mine.sets} theirs={theirs.sets} />
+                    <StatRow label="Śr. objętość / trening" mine={mine.avgVolume} theirs={theirs.avgVolume} unit="kg" />
+                    <StatRow label="Rekordy (PR)" mine={mine.prs} theirs={theirs.prs} />
                   </div>
+
                   <p className="mt-3 text-xs text-muted-foreground">
                     Ostatni trening rywala: {theirs.lastDate ?? "brak danych"}
                   </p>
@@ -516,7 +505,15 @@ function VsPage() {
                               }}
                             />
                             <Legend wrapperStyle={{ fontSize: 11 }} />
-                            <Line type="monotone" dataKey="ja" name="Ty" stroke="var(--primary)" strokeWidth={2} connectNulls dot={false} />
+                            <Line
+                              type="monotone"
+                              dataKey="ja"
+                              name="Ty"
+                              stroke="var(--primary)"
+                              strokeWidth={2}
+                              connectNulls
+                              dot={false}
+                            />
                             <Line
                               type="monotone"
                               dataKey="rywal"
@@ -596,8 +593,8 @@ function VsPage() {
             )}
 
             <p className="text-xs text-muted-foreground">
-              Domyślnie widoczne są tylko zbiorcze statystyki. Pełny plan treningowy pokazuje się wyłącznie
-              wtedy, gdy dana osoba wyraziła na to zgodę w swoim profilu — Twoją zgodę ustawisz w zakładce Profil.
+              Domyślnie widoczne są tylko zbiorcze statystyki. Pełny plan treningowy pokazuje się wyłącznie wtedy,
+              gdy dana osoba wyraziła na to zgodę w swoim profilu — Twoją zgodę ustawisz w zakładce Profil.
             </p>
           </div>
         )}
