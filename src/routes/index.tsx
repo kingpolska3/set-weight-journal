@@ -743,32 +743,41 @@ function Index() {
         </div>
       </section>
 
-      {/* Floating u góry — tylko gdy stoper działa i główne karty są poza ekranem */}
+      {/* Floating u góry — jedna linia: czas · kg · progres · ćw. */}
       {running && showFloatingTimer ? (
         <div className="fixed inset-x-0 top-0 z-40 border-b border-border/80 bg-card/95 pt-[env(safe-area-inset-top)] shadow-md backdrop-blur-md">
-          <div className="mx-auto flex max-w-2xl items-center gap-3 px-3 py-2.5">
+          <div className="mx-auto flex max-w-2xl items-center gap-2 px-3 py-2">
             <span className="relative flex h-2 w-2 shrink-0">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-50" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
             </span>
-            <div className="min-w-0 flex-1">
-              <p className="font-mono text-lg font-bold tabular-nums leading-none text-foreground">
-                {formatDuration(elapsedMs)}
-              </p>
-              <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
-                {Math.round(summary.volume).toLocaleString("pl-PL")} kg
-                {" · "}
+
+            <p className="min-w-0 flex-1 truncate font-mono text-sm font-semibold tabular-nums text-foreground">
+              <span className="text-base font-bold">{formatDuration(elapsedMs)}</span>
+              <span className="mx-1.5 text-muted-foreground">·</span>
+              <span>{Math.round(summary.volume).toLocaleString("pl-PL")} kg</span>
+              <span className="mx-1.5 text-muted-foreground">·</span>
+              <span
+                className={
+                  noProgress || summary.pct === null
+                    ? "text-muted-foreground"
+                    : summary.pct >= 0
+                      ? "text-success"
+                      : "text-danger"
+                }
+              >
                 {noProgress || summary.pct === null
-                  ? "progres —"
+                  ? "—"
                   : `${summary.pct > 0 ? "+" : ""}${summary.pct.toFixed(1)}%`}
-                {" · "}
-                {session.exercises.length} ćw.
-              </p>
-            </div>
+              </span>
+              <span className="mx-1.5 text-muted-foreground">·</span>
+              <span>{session.exercises.length} ćw.</span>
+            </p>
+
             <button
               type="button"
               onClick={stopWorkout}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
+              className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground"
             >
               <Square className="h-3.5 w-3.5" /> Stop
             </button>
