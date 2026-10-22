@@ -164,7 +164,9 @@ function Index() {
   const elapsedMs = session.startTime
     ? (session.endTime ? new Date(session.endTime).getTime() : now) -
       new Date(session.startTime).getTime()
-    : (session.durationSec ? session.durationSec * 1000 : 0);
+    : session.durationSec
+      ? session.durationSec * 1000
+      : 0;
 
   const formatDuration = (ms: number) => {
     const total = Math.max(0, Math.floor(ms / 1000));
@@ -365,7 +367,8 @@ function Index() {
                   onClick={startWorkout}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
                 >
-                  <Play className="h-3.5 w-3.5" /> {session.endTime || session.durationSec ? "Nowy pomiar" : "Start"}
+                  <Play className="h-3.5 w-3.5" />{" "}
+                  {session.endTime || session.durationSec ? "Nowy pomiar" : "Start"}
                 </button>
               )}
               {session.startTime ? (
@@ -381,7 +384,7 @@ function Index() {
 
           <div className="mt-4 grid grid-cols-3 gap-2">
             <Stat label="Ćwiczenia" value={String(session.exercises.length)} />
-                        <Stat
+            <Stat
               label="Objętość"
               value={`${Math.round(summary.volume).toLocaleString("pl-PL")} kg`}
               sub={
@@ -421,11 +424,9 @@ function Index() {
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            {/* Przycisk wyboru daty - indicator rozciągnięty na 100% szerokości i wysokości */}
-            {/* Przycisk wyboru daty z formatem DD.MM.RRRR */}
-            <div className="relative inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm font-medium text-foreground shadow-sm hover:border-primary transition-colors cursor-pointer select-none">
-              <CalendarDays className="h-4 w-4 text-primary shrink-0 pointer-events-none" />
-              <span className="font-medium pointer-events-none">
+            <div className="relative inline-flex cursor-pointer select-none items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm font-medium text-foreground shadow-sm transition-colors hover:border-primary">
+              <CalendarDays className="pointer-events-none h-4 w-4 shrink-0 text-primary" />
+              <span className="pointer-events-none font-medium">
                 {(() => {
                   const [y, m, d] = date.split("-");
                   return `${d}.${m}.${y}`;
@@ -435,11 +436,10 @@ function Index() {
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                 style={{ colorScheme: "dark" }}
               />
             </div>
-
             <button
               onClick={copyLastSame}
               className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground transition-colors hover:border-primary"
@@ -490,11 +490,12 @@ function Index() {
             <BatteryCharging className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
             <span>
               Dzień <strong>deload</strong> – trenuj na ok. <strong>50%</strong> zwykłego obciążenia
-              dla regeneracji. Ten dzień nie jest porównywany z poprzednimi treningami i nie liczy
-              się do progresu.
+              dla regeneracji. Ten dzień nie jest porównywany z poprzednimi treningami i nie liczy się
+              do progresu.
             </span>
           </div>
         ) : null}
+
         <div className={session.rest ? "hidden" : "space-y-4"}>
           {session.exercises.map((ex, i) => (
             <ExerciseCard
@@ -719,6 +720,39 @@ function Index() {
           ) : null}
         </div>
       </section>
+
+      {/* Floating timer — widoczny gdy stoper działa */}
+      {running ? (
+        <div className="pointer-events-none fixed inset-x-0 bottom-20 z-40 flex justify-center px-4 sm:bottom-6">
+          <div
+            className="pointer-events-auto flex items-center gap-3 rounded-2xl border border-primary/40 bg-card/95 px-4 py-3 shadow-lg shadow-black/40 backdrop-blur-md"
+            role="timer"
+            aria-live="polite"
+            aria-label={`Czas treningu ${formatDuration(elapsedMs)}`}
+          >
+            <span className="relative flex h-2.5 w-2.5 shrink-0">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Trening
+              </p>
+              <p className="font-mono text-2xl font-bold tabular-nums leading-none text-foreground">
+                {formatDuration(elapsedMs)}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={stopWorkout}
+              className="ml-1 inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
+            >
+              <Square className="h-3.5 w-3.5" /> Stop
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <AppNav />
     </main>
   );
