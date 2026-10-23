@@ -50,6 +50,34 @@ type Props = {
   canMoveDown?: boolean;
 };
 
+const COLLAPSED_KEY = "trening-ex-collapsed-v1";
+
+function loadCollapsedIds(date: string): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(COLLAPSED_KEY);
+    const all = raw ? (JSON.parse(raw) as Record<string, string[]>) : {};
+    return new Set(all[date] ?? []);
+  } catch {
+    return new Set();
+  }
+}
+
+function persistCollapsed(date: string, exerciseId: string, collapsed: boolean) {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = window.localStorage.getItem(COLLAPSED_KEY);
+    const all = raw ? (JSON.parse(raw) as Record<string, string[]>) : {};
+    const set = new Set(all[date] ?? []);
+    if (collapsed) set.add(exerciseId);
+    else set.delete(exerciseId);
+    all[date] = [...set];
+    window.localStorage.setItem(COLLAPSED_KEY, JSON.stringify(all));
+  } catch {
+    /* quota */
+  }
+}
+
 function pctLabel(v: number) {
   const sign = v > 0 ? "+" : "";
   return `${sign}${v.toFixed(1)}%`;
@@ -88,7 +116,16 @@ export function ExerciseCard({
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<number[]>([]);
   const [restSignal, setRestSignal] = useState<Record<number, number>>({});
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => loadCollapsedIds(date).has(exercise.id));
+
+  useEffect(() => {
+    setCollapsed(loadCollapsedIds(date).has(exercise.id));
+  }, [date, exercise.id]);
+
+  const toggleCollapsed = (next: boolean) => {
+    setCollapsed(next);
+    persistCollapsed(date, exercise.id, next);
+  };
 
   const bumpRest = (i: number, s: { reps: number; weight: number }) => {
     if (!s.reps || !s.weight) return;
@@ -154,7 +191,7 @@ export function ExerciseCard({
         <div className="flex w-full items-center gap-3">
           <button
             type="button"
-            onClick={() => setCollapsed(false)}
+            onClick={() => toggleCollapsed(false)}
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
             title="Rozwiń ćwiczenie"
             aria-label="Rozwiń ćwiczenie"
@@ -163,7 +200,7 @@ export function ExerciseCard({
           </button>
           <button
             type="button"
-            onClick={() => setCollapsed(false)}
+            onClick={() => toggleCollapsed(false)}
             className="min-w-0 flex-1 text-left"
           >
             <p className="truncate text-sm font-semibold text-foreground">
@@ -190,7 +227,7 @@ export function ExerciseCard({
       <header className="flex items-start gap-3">
         <button
           type="button"
-          onClick={() => setCollapsed(true)}
+          onClick={() => toggleCollapsed(true)}
           className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground transition-opacity hover:opacity-80"
           title="Zwiń ćwiczenie"
           aria-label="Zwiń ćwiczenie"
