@@ -88,7 +88,7 @@ export function ExerciseCard({
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<number[]>([]);
   const [restSignal, setRestSignal] = useState<Record<number, number>>({});
-  const [manualCollapsed, setManualCollapsed] = useState<boolean | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
 
   const bumpRest = (i: number, s: { reps: number; weight: number }) => {
     if (!s.reps || !s.weight) return;
@@ -117,11 +117,6 @@ export function ExerciseCard({
 
   const allSetsDone = exercise.sets.length > 0 && exercise.sets.every(isSetFilled);
   const volKg = Math.round(volume(exercise.sets, exercise.name));
-  const collapsed = manualCollapsed ?? allSetsDone;
-
-  useEffect(() => {
-    if (!allSetsDone && manualCollapsed === true) setManualCollapsed(null);
-  }, [allSetsDone, manualCollapsed]);
 
   const update = (patch: Partial<Exercise>) => onChange({ ...exercise, ...patch });
 
@@ -156,27 +151,36 @@ export function ExerciseCard({
   if (collapsed) {
     return (
       <article className="rounded-2xl border border-primary/30 bg-card/80 px-3 py-2.5 shadow-sm">
-        <button
-          type="button"
-          onClick={() => setManualCollapsed(false)}
-          className="flex w-full items-center gap-3 text-left"
-          aria-expanded={false}
-        >
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-sm font-bold text-primary">
+        <div className="flex w-full items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setCollapsed(false)}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+            title="Rozwiń ćwiczenie"
+            aria-label="Rozwiń ćwiczenie"
+          >
             {index + 1}
-          </span>
-          <div className="min-w-0 flex-1">
+          </button>
+          <button
+            type="button"
+            onClick={() => setCollapsed(false)}
+            className="min-w-0 flex-1 text-left"
+          >
             <p className="truncate text-sm font-semibold text-foreground">
               {exercise.name.trim() || "Bez nazwy"}
             </p>
             <p className="text-[11px] tabular-nums text-muted-foreground">
               {volKg.toLocaleString("pl-PL")} kg · {exercise.sets.length} serii
             </p>
-          </div>
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
-            <Check className="h-3 w-3" /> Ukończone
-          </span>
-        </button>
+          </button>
+          {allSetsDone ? (
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+              <Check className="h-3 w-3" /> Ukończone
+            </span>
+          ) : (
+            <span className="text-[10px] text-muted-foreground">zwinięte</span>
+          )}
+        </div>
       </article>
     );
   }
@@ -184,9 +188,15 @@ export function ExerciseCard({
   return (
     <article className="rounded-2xl border border-border bg-card p-4 shadow-lg shadow-black/20">
       <header className="flex items-start gap-3">
-        <span className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
+        <button
+          type="button"
+          onClick={() => setCollapsed(true)}
+          className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground transition-opacity hover:opacity-80"
+          title="Zwiń ćwiczenie"
+          aria-label="Zwiń ćwiczenie"
+        >
           {index + 1}
-        </span>
+        </button>
         <input
           list={`ex-names-${index}`}
           value={exercise.name}
@@ -201,16 +211,6 @@ export function ExerciseCard({
           ))}
         </datalist>
         <div className="flex shrink-0 items-center gap-0.5">
-          {allSetsDone ? (
-            <button
-              type="button"
-              onClick={() => setManualCollapsed(true)}
-              className="mr-0.5 rounded-lg border border-primary/40 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary hover:bg-primary/10"
-              title="Zwiń ukończone ćwiczenie"
-            >
-              Zwiń
-            </button>
-          ) : null}
           <button
             onClick={onMoveUp}
             disabled={!canMoveUp}
