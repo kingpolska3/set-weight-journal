@@ -5,7 +5,6 @@ import {
   BatteryCharging,
   CalendarDays,
   Camera,
-  CheckCircle2,
   Dumbbell,
   Pencil,
   Play,
@@ -84,7 +83,6 @@ function Index() {
   const photoRef = useRef<HTMLInputElement>(null);
   const statsRef = useRef<HTMLDivElement>(null);
   const [now, setNow] = useState(() => Date.now());
-  const [confirmFinish, setConfirmFinish] = useState(false);
   const [showFloatingTimer, setShowFloatingTimer] = useState(false);
   const { user } = useAuth();
 
@@ -213,25 +211,6 @@ function Index() {
     const ended = { ...session, endTime, durationSec: secs };
     setSession(ended);
     toast.success(`Pomiar zatrzymany i zapisany – ${formatDuration(secs * 1000)}`);
-  };
-
-  const finishWorkout = () => {
-    setConfirmFinish(false);
-    const end = new Date().toISOString();
-    const next: Session = { ...session };
-    if (session.startTime) {
-      next.endTime = session.endTime ?? end;
-      next.durationSec = Math.round(
-        (new Date(next.endTime).getTime() - new Date(session.startTime).getTime()) / 1000,
-      );
-    }
-    setSession(next);
-    if (user) void syncNow(user.id).catch(() => undefined);
-    toast.success(
-      next.durationSec !== undefined
-        ? `Trening zakończony i zapisany – czas ${formatDuration(next.durationSec * 1000)}`
-        : "Trening zakończony i zapisany",
-    );
   };
 
   const firstWorkout = () => {
@@ -588,42 +567,6 @@ function Index() {
           </button>
         )}
 
-        {!session.rest && session.exercises.length > 0 ? (
-          <div className="mt-4 rounded-2xl border border-primary/40 bg-card p-4">
-            {confirmFinish ? (
-              <div>
-                <p className="text-sm font-semibold text-foreground">Zakończyć trening?</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Zapiszemy czas treningu{" "}
-                  {session.startTime ? `(${formatDuration(elapsedMs)})` : "(stoper nie był włączony)"}{" "}
-                  i zamkniemy dzień.
-                </p>
-                <div className="mt-3 flex gap-2">
-                  <button
-                    onClick={finishWorkout}
-                    className="flex-1 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground"
-                  >
-                    Tak, zakończ
-                  </button>
-                  <button
-                    onClick={() => setConfirmFinish(false)}
-                    className="rounded-xl border border-border px-4 py-3 text-sm text-muted-foreground hover:text-foreground"
-                  >
-                    Anuluj
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => setConfirmFinish(true)}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-base font-bold text-primary-foreground transition-opacity hover:opacity-90"
-              >
-                <CheckCircle2 className="h-5 w-5" /> Zakończ trening
-              </button>
-            )}
-          </div>
-        ) : null}
-
         <div className="mt-6 rounded-2xl border border-border bg-card p-4">
           <h2 className="text-sm font-semibold text-foreground">Notatka do treningu</h2>
           <textarea
@@ -743,7 +686,6 @@ function Index() {
         </div>
       </section>
 
-      {/* Floating u góry — jedna linia: czas · kg · progres · ćw. */}
       {running && showFloatingTimer ? (
         <div className="fixed inset-x-0 top-0 z-40 border-b border-border/80 bg-card/95 pt-[env(safe-area-inset-top)] shadow-md backdrop-blur-md">
           <div className="mx-auto flex max-w-2xl items-center gap-2 px-3 py-2">
@@ -751,7 +693,6 @@ function Index() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-50" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
             </span>
-
             <p className="min-w-0 flex-1 truncate font-mono text-sm font-semibold tabular-nums text-foreground">
               <span className="text-base font-bold">{formatDuration(elapsedMs)}</span>
               <span className="mx-1.5 text-muted-foreground">·</span>
@@ -773,7 +714,6 @@ function Index() {
               <span className="mx-1.5 text-muted-foreground">·</span>
               <span>{session.exercises.length} ćw.</span>
             </p>
-
             <button
               type="button"
               onClick={stopWorkout}
