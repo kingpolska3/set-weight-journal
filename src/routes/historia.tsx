@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, ChevronDown, Search } from "lucide-react";
 import { AppNav } from "@/components/AppNav";
 import { ExerciseChart } from "@/components/ExerciseChart";
 import {
@@ -36,7 +36,7 @@ export const Route = createFileRoute("/historia")({
       { name: "twitter:card", content: "summary" },
       {
         property: "og:description",
-        content: "Filtruj historię ruchu, porównuj objętość, 1RM i rekordy w czasie.",
+        content: "Filtruj historię ruchu, porównaj objętość, 1RM i rekordy w czasie.",
       },
     ],
   }),
@@ -54,13 +54,35 @@ function HistoryPage() {
   const { ex, dni } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [collapsedDays, setCollapsedDays] = useState<Set<string>>(() => new Set());
+  const pickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setSessions(loadSessions());
   }, []);
 
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setPickerOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [pickerOpen]);
+
   const names = useMemo(() => allExerciseNames(sessions), [sessions]);
   const selected = ex || names[0] || "";
+
+  const filteredNames = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return names;
+    return names.filter((n) => n.toLowerCase().includes(q));
+  }, [names, query]);
+
   const history = useMemo(() => exerciseHistory(sessions, selected), [sessions, selected]);
   const filtered = useMemo(() => {
     if (!dni) return history;
@@ -72,6 +94,22 @@ function HistoryPage() {
   const best1 = Math.max(0, ...filtered.map((h) => h.e1rm));
   const bestW = Math.max(0, ...filtered.map((h) => h.top));
 
+  const pickExercise = (name: string) => {
+    navigate({ to: ".", search: (prev) => ({ ...prev, ex: name }) });
+    setQuery("");
+    setPickerOpen(false);
+    setCollapsedDays(new Set());
+  };
+
+  const toggleDay = (date: string) => {
+    setCollapsedDays((prev) => {
+      const next = new Set(prev);
+      if (next.has(date)) next.delete(date);
+      else next.add(date);
+      return next;
+    });
+  };
+
   return (
     <main className="min-h-screen bg-background pb-24">
       <header className="border-b border-border px-4 pb-5 pt-8">
@@ -82,29 +120,71 @@ function HistoryPage() {
           </div>
           <h1 className="mt-2 text-2xl font-bold text-foreground">Historia ćwiczenia</h1>
 
-          <select
-            value={selected}
-            onChange={(e) =>
-              navigate({ to: ".", search: (prev) => ({ ...prev, ex: e.target.value }) })
-            }
-            className="mt-4 w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground outline-none"
-          >
-            {names.length === 0 ? <option value="">Brak zapisanych ćwiczeń</option> : null}
-            {names.map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
+          {/* Wyszukiwarka ćwiczenia */}
+          <div ref={pickerRef} className="relative mt-3">
+            <button
+              type="button"
+              onClick={() => {
+                setPickerOpen((o) => !o);
+                setQuery("");
+              }}
+              className="flex w-full items-center justify-between gap-2 rounded-xl border border-border bg-card px-3 py-2.5 text-left text-sm text-foreground"
+            >
+              <span className="truncate">{selected || "Wybierz ćwiczenie"}</span>
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${
+                  pickerOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
 
-          <div className="mt-3 flex flex-wrap gap-1.5">
+            {pickerOpen ? (
+              <div className="absolute left-0 right-0 z-20 mt-1 overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+                <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+                  <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <input
+                    autoFocus
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Szukaj ćwiczenia…"
+                    className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                  />
+                </div>
+                <ul className="max-h-64 overflow-y-auto py-1">
+                  {filteredNames.length === 0 ? (
+                    <li className="px-3 py-3 text-center text-xs text-muted-foreground">
+                      Brak wyników
+                    </li>
+                  ) : (
+                    filteredNames.map((n) => (
+                      <li key={n}>
+                        <button
+                          type="button"
+                          onClick={() => pickExercise(n)}
+                          className={`w-full px-3 py-2 text-left text-sm hover:bg-secondary ${
+                            n === selected
+                              ? "bg-primary/15 font-medium text-primary"
+                              : "text-foreground"
+                          }`}
+                        >
+                          {n}
+                        </button>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
             {RANGES.map((r) => (
               <button
                 key={r.value}
                 onClick={() =>
                   navigate({ to: ".", search: (prev) => ({ ...prev, dni: r.value }) })
                 }
-                className={`rounded-full px-3 py-1 text-xs font-medium ${
+                className={`rounded-full px-3 py-1.5 text-xs font-medium ${
                   dni === r.value
                     ? "bg-primary text-primary-foreground"
                     : "bg-secondary text-muted-foreground"
@@ -128,28 +208,55 @@ function HistoryPage() {
         </div>
 
         <ul className="mt-4 space-y-3">
-          {[...filtered].reverse().map((h) => (
-            <li key={h.date} className="rounded-2xl border border-border bg-card p-4">
-              <div className="flex items-baseline justify-between">
-                <p className="text-sm font-semibold text-foreground">{formatDatePL(h.date)}</p>
-                <p className="text-[11px] text-muted-foreground tabular-nums">
-                  1RM {best1RM(h.sets).toFixed(1)} kg
-                </p>
-              </div>
-              <ul className="mt-2 space-y-0.5">
-                {h.sets.map((s, i) => (
-                  <li key={i} className="text-xs text-muted-foreground tabular-nums">
-                    {s.warmup ? "W-up" : `${i + 1}-`} {formatRepsOrTime(s)}×{s.weight} kg
-                    {s.note ? ` · ${s.note}` : ""}
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-2 text-[11px] text-muted-foreground tabular-nums">
-                {workingSets(h.sets).length} serii roboczych · {Math.round(h.volume)} kg objętości
-                · max {h.top} kg
-              </p>
-            </li>
-          ))}
+          {[...filtered].reverse().map((h) => {
+            const isCollapsed = collapsedDays.has(h.date);
+            return (
+              <li key={h.date} className="rounded-2xl border border-border bg-card">
+                <button
+                  type="button"
+                  onClick={() => toggleDay(h.date)}
+                  className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground">{formatDatePL(h.date)}</p>
+                    {isCollapsed ? (
+                      <p className="mt-0.5 text-[11px] tabular-nums text-muted-foreground">
+                        {workingSets(h.sets).length} serii · {Math.round(h.volume)} kg · max {h.top}{" "}
+                        kg
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <p className="text-[11px] tabular-nums text-muted-foreground">
+                      1RM {best1RM(h.sets).toFixed(1)} kg
+                    </p>
+                    <ChevronDown
+                      className={`h-4 w-4 text-muted-foreground transition-transform ${
+                        isCollapsed ? "" : "rotate-180"
+                      }`}
+                    />
+                  </div>
+                </button>
+
+                {!isCollapsed ? (
+                  <div className="border-t border-border px-4 pb-4 pt-2">
+                    <ul className="space-y-0.5">
+                      {h.sets.map((s, i) => (
+                        <li key={i} className="text-xs tabular-nums text-muted-foreground">
+                          {s.warmup ? "W-up" : `${i + 1}-`} {formatRepsOrTime(s)}×{s.weight} kg
+                          {s.note ? ` · ${s.note}` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-2 text-[11px] tabular-nums text-muted-foreground">
+                      {workingSets(h.sets).length} serii roboczych · {Math.round(h.volume)} kg
+                      objętości · max {h.top} kg
+                    </p>
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
           {filtered.length === 0 ? (
             <li className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
               Brak zapisów w wybranym zakresie.
@@ -166,7 +273,7 @@ function Box({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl bg-secondary px-2 py-2">
       <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="text-sm font-bold text-foreground tabular-nums">{value}</p>
+      <p className="text-sm font-bold tabular-nums text-foreground">{value}</p>
     </div>
   );
 }
