@@ -120,7 +120,6 @@ function HistoryPage() {
           </div>
           <h1 className="mt-2 text-2xl font-bold text-foreground">Historia ćwiczenia</h1>
 
-          {/* Wyszukiwarka ćwiczenia */}
           <div ref={pickerRef} className="relative mt-3">
             <button
               type="button"
@@ -207,7 +206,26 @@ function HistoryPage() {
           </div>
         </div>
 
-        <ul className="mt-4 space-y-3">
+        {filtered.length > 0 ? (
+          <div className="mt-4 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setCollapsedDays(new Set(filtered.map((h) => h.date)))}
+              className="rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground hover:border-primary hover:text-foreground"
+            >
+              Zwiń wszystkie
+            </button>
+            <button
+              type="button"
+              onClick={() => setCollapsedDays(new Set())}
+              className="rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground hover:border-primary hover:text-foreground"
+            >
+              Rozwiń wszystkie
+            </button>
+          </div>
+        ) : null}
+
+        <ul className="mt-2 space-y-3">
           {[...filtered].reverse().map((h) => {
             const isCollapsed = collapsedDays.has(h.date);
             return (
