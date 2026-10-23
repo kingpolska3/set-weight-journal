@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowDown,
@@ -117,6 +117,10 @@ export function ExerciseCard({
   const [picked, setPicked] = useState<number[]>([]);
   const [restSignal, setRestSignal] = useState<Record<number, number>>({});
   const [collapsed, setCollapsed] = useState(() => loadCollapsedIds(date).has(exercise.id));
+  const [nameOpen, setNameOpen] = useState(false);
+  const [nameQuery, setNameQuery] = useState("");
+  const nameBoxRef = useRef<HTMLDivElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setCollapsed(loadCollapsedIds(date).has(exercise.id));
@@ -136,6 +140,23 @@ export function ExerciseCard({
     const own = sessions.flatMap((s) => s.exercises.map((x) => x.name.trim())).filter(Boolean);
     return Array.from(new Set([...own, ...ATLAS_NAMES])).filter((n) => n !== exercise.name.trim());
   }, [sessions, exercise.name]);
+
+  const nameSuggestions = useMemo(() => {
+    const q = nameQuery.trim().toLowerCase();
+    if (!q) return knownNames.slice(0, 40);
+    return knownNames.filter((n) => n.toLowerCase().includes(q)).slice(0, 40);
+  }, [knownNames, nameQuery]);
+
+  useEffect(() => {
+    if (!nameOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (nameBoxRef.current && !nameBoxRef.current.contains(e.target as Node)) {
+        setNameOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [nameOpen]);
 
   const progress = computeProgress(sessions, date, exercise);
   const history = useMemo(
@@ -234,19 +255,59 @@ export function ExerciseCard({
         >
           {index + 1}
         </button>
-        <input
-          list={`ex-names-${index}`}
-          value={exercise.name}
-          onChange={(e) => update({ name: e.target.value })}
-          placeholder="Dodaj ćwiczenie…"
-          maxLength={80}
-          className="min-w-0 flex-1 rounded-lg bg-transparent px-1 py-1 text-base font-semibold text-foreground outline-none focus:bg-secondary"
-        />
-        <datalist id={`ex-names-${index}`}>
-          {knownNames.map((n) => (
-            <option key={n} value={n} />
-          ))}
-        </datalist>
+
+        <div ref={nameBoxRef} className="relative min-w-0 flex-1">
+          <input
+            ref={nameInputRef}
+            value={nameOpen ? nameQuery : exercise.name}
+            onChange={(e) => {
+              const v = e.target.value;
+              setNameQuery(v);
+              update({ name: v });
+              if (!nameOpen) setNameOpen(true);
+            }}
+            onFocus={() => {
+              setNameQuery(exercise.name);
+              setNameOpen(true);
+              requestAnimationFrame(() => {
+                nameInputRef.current?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "center",
+                });
+              });
+            }}
+            placeholder="Dodaj ćwiczenie…"
+            maxLength={80}
+            autoComplete="off"
+            className="w-full rounded-lg bg-transparent px-1 py-1 text-base font-semibold text-foreground outline-none focus:bg-secondary"
+          />
+
+          {nameOpen && nameSuggestions.length > 0 ? (
+            <ul className="absolute bottom-full left-0 right-0 z-50 mb-1 max-h-48 overflow-y-auto rounded-xl border border-border bg-card py-1 shadow-lg">
+              {nameSuggestions.map((n) => (
+                <li key={n}>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      update({ name: n });
+                      setNameQuery(n);
+                      setNameOpen(false);
+                    }}
+                    className={`w-full px-3 py-2.5 text-left text-sm hover:bg-secondary ${
+                      n === exercise.name
+                        ? "bg-primary/15 font-medium text-primary"
+                        : "text-foreground"
+                    }`}
+                  >
+                    {n}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+
         <div className="flex shrink-0 items-center gap-0.5">
           <button
             onClick={onMoveUp}
