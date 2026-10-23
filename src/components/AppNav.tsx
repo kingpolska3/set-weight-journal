@@ -20,8 +20,8 @@ export function AppNav() {
               to={to}
               activeOptions={{ exact: to === "/" }}
               activeProps={{ className: "text-primary" }}
-              inactiveProps={{ className: "text-muted-foreground" }}
-              className="flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium"
+              inactiveProps={{ className: "text-muted-foreground hover:text-foreground" }}
+              className="flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition-colors hover:no-underline"
             >
               <Icon className="h-5 w-5" />
               {label}
