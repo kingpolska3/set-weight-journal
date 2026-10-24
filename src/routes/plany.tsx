@@ -49,9 +49,15 @@ export const Route = createFileRoute("/plany")({
   head: () => ({
     meta: [
       { title: "Tworzenie planów treningowych dla podopiecznych" },
-      { name: "description", content: "Dziennik trenera: twórz i udostępniaj plany treningowe podopiecznym." },
+      {
+        name: "description",
+        content: "Dziennik trenera: twórz i udostępniaj plany treningowe podopiecznym.",
+      },
       { property: "og:title", content: "Tworzenie planów treningowych dla podopiecznych" },
-      { property: "og:description", content: "Twórz plany treningowe, oznaczaj serie rozgrzewkowe i udostępniaj je innym." },
+      {
+        property: "og:description",
+        content: "Twórz plany treningowe, oznaczaj serie rozgrzewkowe i udostępniaj je innym.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -77,7 +83,6 @@ function PlansPage() {
   const [shareOpen, setShareOpen] = useState(false);
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
-  // Wczytywanie: chmura dla zalogowanych, lokalnie dla gości.
   useEffect(() => {
     if (loading) return;
     let cancelled = false;
@@ -85,9 +90,20 @@ function PlansPage() {
       let local: Client[] = [];
       try {
         local = JSON.parse(localStorage.getItem(LOCAL_KEY) || "[]");
-      } catch {}
+      } catch {
+        /* ignore */
+      }
       if (!user) {
-        setPlans(local.map((c) => ({ id: c.id, owner_id: "", data: c, link_token: "", link_access: "none", access: "local" })));
+        setPlans(
+          local.map((c) => ({
+            id: c.id,
+            owner_id: "",
+            data: c,
+            link_token: "",
+            link_access: "none",
+            access: "local",
+          })),
+        );
         setReady(true);
         return;
       }
@@ -102,7 +118,6 @@ function PlansPage() {
           if (!claimed) {
             toast.error("Link do planu jest nieaktywny");
           } else {
-            // Plan trafia też do Narzędzia → Otrzymane plany treningowe
             try {
               const rowsAfter = await fetchPlans(user.id);
               const claimedRow = rowsAfter.find((r) => r.id === claimed);
@@ -142,7 +157,6 @@ function PlansPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, loading]);
 
-  // Zapis lokalny dla gości.
   useEffect(() => {
     if (ready && !user) localStorage.setItem(LOCAL_KEY, JSON.stringify(plans.map((p) => p.data)));
   }, [plans, ready, user]);
@@ -166,7 +180,17 @@ function PlansPage() {
     const data: Client = { id: uid(), name, goal: "", days: [] };
     setNewName("");
     if (!user) {
-      setPlans((l) => [...l, { id: data.id, owner_id: "", data, link_token: "", link_access: "none", access: "local" }]);
+      setPlans((l) => [
+        ...l,
+        {
+          id: data.id,
+          owner_id: "",
+          data,
+          link_token: "",
+          link_access: "none",
+          access: "local",
+        },
+      ]);
       setActiveId(data.id);
       return;
     }
@@ -182,7 +206,14 @@ function PlansPage() {
   const removeActive = async () => {
     if (!active) return;
     const mine = active.access === "owner" || active.access === "local";
-    if (!confirm(mine ? `Usunąć plan „${active.data.name}”?` : `Usunąć udostępniony plan „${active.data.name}” ze swojej biblioteki?`)) return;
+    if (
+      !confirm(
+        mine
+          ? `Usunąć plan „${active.data.name}”?`
+          : `Usunąć udostępniony plan „${active.data.name}” ze swojej biblioteki?`,
+      )
+    )
+      return;
     try {
       if (active.access === "owner") await deletePlan(active.id);
       else if (user && active.access !== "local") await leavePlan(active.id, user.id);
@@ -197,9 +228,17 @@ function PlansPage() {
     <button
       key={p.id}
       onClick={() => setActiveId(p.id)}
-      className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm ${p.id === activeId ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+      className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm ${
+        p.id === activeId
+          ? "bg-primary text-primary-foreground"
+          : "bg-secondary text-muted-foreground"
+      }`}
     >
-      {p.access === "view" ? <Eye className="h-3 w-3" /> : p.access === "edit" ? <Pencil className="h-3 w-3" /> : null}
+      {p.access === "view" ? (
+        <Eye className="h-3 w-3" />
+      ) : p.access === "edit" ? (
+        <Pencil className="h-3 w-3" />
+      ) : null}
       {p.data.name || "Bez nazwy"}
     </button>
   );
@@ -223,11 +262,14 @@ function PlansPage() {
           <h1 className="mt-2 text-2xl font-bold text-foreground">Tworzenie planów treningowych</h1>
         </div>
       </header>
-
       <section className="mx-auto max-w-2xl space-y-4 px-4 py-6">
         {!loading && !user ? (
           <p className="rounded-xl bg-secondary/60 p-3 text-xs text-muted-foreground">
-            Plany zapisują się na tym urządzeniu. <Link to="/profil" className="font-medium text-primary">Zaloguj się w Profilu</Link>, aby je synchronizować i udostępniać.
+            Plany zapisują się na tym urządzeniu.{" "}
+            <Link to="/profil" className="font-medium text-primary">
+              Zaloguj się w Profilu
+            </Link>
+            , aby je synchronizować i udostępniać.
           </p>
         ) : null}
         <div className="flex gap-2">
@@ -239,11 +281,13 @@ function PlansPage() {
             maxLength={60}
             className="min-w-0 flex-1 rounded-lg border border-input bg-secondary px-3 py-2 text-sm outline-none focus:border-primary"
           />
-          <button onClick={() => void addClient()} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">
+          <button
+            onClick={() => void addClient()}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
+          >
             <UserPlus className="h-4 w-4" /> Dodaj
           </button>
         </div>
-
         {ready && plans.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
             Brak podopiecznych. Dodaj pierwszą osobę, aby zacząć tworzyć jej plan.
@@ -251,17 +295,20 @@ function PlansPage() {
         ) : null}
         {own.length ? (
           <div>
-            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Moje plany</p>
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Moje plany
+            </p>
             <div className="flex flex-wrap gap-1.5">{own.map(chip)}</div>
           </div>
         ) : null}
         {shared.length ? (
           <div>
-            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Udostępnione mi</p>
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Udostępnione mi
+            </p>
             <div className="flex flex-wrap gap-1.5">{shared.map(chip)}</div>
           </div>
         ) : null}
-
         {active ? (
           <ClientEditor
             key={active.id}
@@ -271,15 +318,15 @@ function PlansPage() {
             onShare={() => setShareOpen(true)}
           />
         ) : null}
-
         <ExerciseAtlas />
       </section>
-
       {shareOpen && active && active.access === "owner" ? (
         <ShareDialog
           row={active}
           onClose={() => setShareOpen(false)}
-          onLinkAccess={(a) => setPlans((l) => l.map((x) => (x.id === active.id ? { ...x, link_access: a } : x)))}
+          onLinkAccess={(a) =>
+            setPlans((l) => l.map((x) => (x.id === active.id ? { ...x, link_access: a } : x)))
+          }
         />
       ) : null}
       <AppNav />
@@ -287,13 +334,21 @@ function PlansPage() {
   );
 }
 
-function ShareDialog({ row, onClose, onLinkAccess }: { row: PlanRow; onClose: () => void; onLinkAccess: (a: LinkAccess) => void }) {
+function ShareDialog({
+  row,
+  onClose,
+  onLinkAccess,
+}: {
+  row: PlanRow;
+  onClose: () => void;
+  onLinkAccess: (a: LinkAccess) => void;
+}) {
   const [ident, setIdent] = useState("");
   const [canEdit, setCanEdit] = useState(false);
   const [shares, setShares] = useState<ShareEntry[]>([]);
   const [busy, setBusy] = useState(false);
-  const url = typeof window !== "undefined" ? `${window.location.origin}/plany?plan=${row.link_token}` : "";
-
+  const url =
+    typeof window !== "undefined" ? `${window.location.origin}/plany?plan=${row.link_token}` : "";
   const reload = () => listShares(row.id).then(setShares).catch(() => {});
   useEffect(() => {
     void reload();
@@ -308,13 +363,11 @@ function ShareDialog({ row, onClose, onLinkAccess }: { row: PlanRow; onClose: ()
       toast.error("Nie udało się zmienić ustawień linku");
     }
   };
-
   const copy = async () => {
     if (row.link_access === "none") await changeLink("view");
     await navigator.clipboard.writeText(url).catch(() => {});
     toast.success("Skopiowano link do planu");
   };
-
   const send = async () => {
     if (!ident.trim()) return;
     setBusy(true);
@@ -331,58 +384,123 @@ function ShareDialog({ row, onClose, onLinkAccess }: { row: PlanRow; onClose: ()
     }
     setBusy(false);
   };
-
   const toggle = async (s: ShareEntry) => {
     const name = s.username ?? s.display_name ?? "";
     if (!name) return;
-    await sharePlan(row.id, name, !s.can_edit).catch(() => toast.error("Nie udało się zmienić uprawnień"));
+    await sharePlan(row.id, name, !s.can_edit).catch(() =>
+      toast.error("Nie udało się zmienić uprawnień"),
+    );
     void reload();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-background/80 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
-      <div className="w-full max-w-md space-y-4 rounded-t-2xl border border-border bg-card p-5 sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-background/80 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md space-y-4 rounded-t-2xl border border-border bg-card p-5 sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 font-semibold text-foreground">
             <Share2 className="h-4 w-4 text-primary" /> Udostępnij plan „{row.data.name}”
           </h2>
-          <button onClick={onClose} aria-label="Zamknij" className="text-muted-foreground"><X className="h-4 w-4" /></button>
+          <button onClick={onClose} aria-label="Zamknij" className="text-muted-foreground">
+            <X className="h-4 w-4" />
+          </button>
         </div>
-
         <div className="space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Link do planu</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Link do planu
+          </p>
           <div className="grid grid-cols-3 gap-1.5 text-xs">
             {(["none", "view", "edit"] as const).map((a) => (
-              <button key={a} onClick={() => void changeLink(a)} className={`rounded-lg py-1.5 ${row.link_access === a ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>
+              <button
+                key={a}
+                onClick={() => void changeLink(a)}
+                className={`rounded-lg py-1.5 ${
+                  row.link_access === a
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-muted-foreground"
+                }`}
+              >
                 {a === "none" ? "Wyłączony" : a === "view" ? "Podgląd" : "Edycja"}
               </button>
             ))}
           </div>
-          <button onClick={() => void copy()} className="flex w-full items-center justify-center gap-2 rounded-lg border border-border py-2 text-sm font-medium text-primary">
+          <button
+            onClick={() => void copy()}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-border py-2 text-sm font-medium text-primary"
+          >
             <Copy className="h-4 w-4" /> Kopiuj link
           </button>
-          <p className="text-[11px] text-muted-foreground">Osoba otwierająca link musi być zalogowana – plan trafi do jej biblioteki.</p>
+          <p className="text-[11px] text-muted-foreground">
+            Osoba otwierająca link musi być zalogowana – plan trafi do jej biblioteki.
+          </p>
         </div>
-
         <div className="space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Udostępnij osobie</p>
-          <input value={ident} onChange={(e) => setIdent(e.target.value)} placeholder="nazwa użytkownika lub e-mail" className="w-full rounded-lg border border-input bg-secondary px-3 py-2 text-sm outline-none focus:border-primary" />
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Udostępnij osobie
+          </p>
+          <input
+            value={ident}
+            onChange={(e) => setIdent(e.target.value)}
+            placeholder="nazwa użytkownika lub e-mail"
+            className="w-full rounded-lg border border-input bg-secondary px-3 py-2 text-sm outline-none focus:border-primary"
+          />
           <div className="flex gap-2">
             <div className="grid flex-1 grid-cols-2 gap-1.5 text-xs">
-              <button onClick={() => setCanEdit(false)} className={`rounded-lg py-1.5 ${!canEdit ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>Tylko podgląd</button>
-              <button onClick={() => setCanEdit(true)} className={`rounded-lg py-1.5 ${canEdit ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>Może edytować</button>
+              <button
+                onClick={() => setCanEdit(false)}
+                className={`rounded-lg py-1.5 ${
+                  !canEdit ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"
+                }`}
+              >
+                Tylko podgląd
+              </button>
+              <button
+                onClick={() => setCanEdit(true)}
+                className={`rounded-lg py-1.5 ${
+                  canEdit ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"
+                }`}
+              >
+                Może edytować
+              </button>
             </div>
-            <button disabled={busy} onClick={() => void send()} className="rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground disabled:opacity-50">Udostępnij</button>
+            <button
+              disabled={busy}
+              onClick={() => void send()}
+              className="rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground disabled:opacity-50"
+            >
+              Udostępnij
+            </button>
           </div>
         </div>
-
         {shares.length ? (
           <ul className="space-y-1.5">
             {shares.map((s) => (
-              <li key={s.user_id} className="flex items-center gap-2 rounded-lg bg-secondary/60 px-3 py-2 text-sm">
-                <span className="min-w-0 flex-1 truncate">{s.display_name || s.username || "Użytkownik"}{s.username ? <span className="text-muted-foreground"> @{s.username}</span> : null}</span>
-                <button onClick={() => void toggle(s)} className="rounded-md bg-card px-2 py-0.5 text-[11px] text-primary">{s.can_edit ? "edycja" : "podgląd"}</button>
-                <button onClick={() => void removeShare(row.id, s.user_id).then(reload)} aria-label="Cofnij dostęp" className="text-muted-foreground hover:text-danger"><X className="h-3.5 w-3.5" /></button>
+              <li
+                key={s.user_id}
+                className="flex items-center gap-2 rounded-lg bg-secondary/60 px-3 py-2 text-sm"
+              >
+                <span className="min-w-0 flex-1 truncate">
+                  {s.display_name || s.username || "Użytkownik"}
+                  {s.username ? <span className="text-muted-foreground"> @{s.username}</span> : null}
+                </span>
+                <button
+                  onClick={() => void toggle(s)}
+                  className="rounded-md bg-card px-2 py-0.5 text-[11px] text-primary"
+                >
+                  {s.can_edit ? "edycja" : "podgląd"}
+                </button>
+                <button
+                  onClick={() => void removeShare(row.id, s.user_id).then(reload)}
+                  aria-label="Cofnij dostęp"
+                  className="text-muted-foreground hover:text-danger"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
               </li>
             ))}
           </ul>
@@ -392,32 +510,86 @@ function ShareDialog({ row, onClose, onLinkAccess }: { row: PlanRow; onClose: ()
   );
 }
 
-function SetChip({ s, readOnly, onPatch, onRemove, label }: { s: PlanSet; readOnly: boolean; onPatch: (p: Partial<PlanSet>) => void; onRemove: () => void; label: string }) {
+function SetChip({
+  s,
+  readOnly,
+  onPatch,
+  onRemove,
+  label,
+}: {
+  s: PlanSet;
+  readOnly: boolean;
+  onPatch: (p: Partial<PlanSet>) => void;
+  onRemove: () => void;
+  label: string;
+}) {
   const parsed = parseRepsOrTime(s.reps);
   return (
-    <div className={`flex items-center gap-1 rounded-lg px-2 py-1 text-xs ${s.warmup ? "border border-dashed border-muted-foreground/40 bg-transparent" : "bg-secondary"}`}>
+    <div
+      className={`flex items-center gap-1 rounded-lg px-2 py-1 text-xs ${
+        s.warmup
+          ? "border border-dashed border-muted-foreground/40 bg-transparent"
+          : "bg-secondary"
+      }`}
+    >
       <button
         disabled={readOnly}
         onClick={() => onPatch({ warmup: !s.warmup })}
-        title={s.warmup ? "Seria rozgrzewkowa – kliknij, by zmienić na roboczą" : "Oznacz jako rozgrzewkową"}
-        className={`inline-flex items-center gap-0.5 font-semibold ${s.warmup ? "text-muted-foreground" : "text-primary"}`}
+        title={
+          s.warmup
+            ? "Seria rozgrzewkowa – kliknij, by zmienić na roboczą"
+            : "Oznacz jako rozgrzewkową"
+        }
+        className={`inline-flex items-center gap-0.5 font-semibold ${
+          s.warmup ? "text-muted-foreground" : "text-primary"
+        }`}
       >
         {s.warmup ? <Flame className="h-3 w-3" /> : null}
         {label}
       </button>
-      <input readOnly={readOnly} value={s.reps} onChange={(e) => onPatch({ reps: e.target.value })} placeholder="—" aria-label="Powtórzenia / Czas" title="Powtórzenia lub czas (np. 12, 40s, 1:20)" className="w-12 bg-transparent text-center outline-none" />
+      <input
+        readOnly={readOnly}
+        value={s.reps}
+        onChange={(e) => onPatch({ reps: e.target.value })}
+        placeholder="—"
+        aria-label="Powtórzenia / Czas"
+        title="Powtórzenia lub czas (np. 12, 40s, 1:20)"
+        className="w-12 bg-transparent text-center outline-none"
+      />
       {parsed.timeSec ? <Timer className="h-3 w-3 text-primary" /> : null}
       <span className="text-muted-foreground">×</span>
-      <input readOnly={readOnly} value={s.weight} onChange={(e) => onPatch({ weight: e.target.value })} placeholder="—" className="w-12 bg-transparent text-center outline-none" />
+      <input
+        readOnly={readOnly}
+        value={s.weight}
+        onChange={(e) => onPatch({ weight: e.target.value })}
+        placeholder="—"
+        className="w-12 bg-transparent text-center outline-none"
+      />
       <span className="text-muted-foreground">kg</span>
       {!readOnly ? (
-        <button onClick={onRemove} aria-label="Usuń serię" className="text-muted-foreground hover:text-danger"><X className="h-3 w-3" /></button>
+        <button
+          onClick={onRemove}
+          aria-label="Usuń serię"
+          className="text-muted-foreground hover:text-danger"
+        >
+          <X className="h-3 w-3" />
+        </button>
       ) : null}
     </div>
   );
 }
 
-function ClientEditor({ row, onChange, onRemove, onShare }: { row: PlanRow; onChange: (c: Client) => void; onRemove: () => void; onShare: () => void }) {
+function ClientEditor({
+  row,
+  onChange,
+  onRemove,
+  onShare,
+}: {
+  row: PlanRow;
+  onChange: (c: Client) => void;
+  onRemove: () => void;
+  onShare: () => void;
+}) {
   const client = row.data;
   const readOnly = row.access === "view";
   const setDays = (days: PlanDay[]) => onChange({ ...client, days });
@@ -434,25 +606,42 @@ function ClientEditor({ row, onChange, onRemove, onShare }: { row: PlanRow; onCh
             className="min-w-0 flex-1 bg-transparent text-lg font-semibold text-foreground outline-none"
           />
           {row.access === "owner" ? (
-            <button onClick={onShare} className="inline-flex items-center gap-1 rounded-lg bg-primary/15 px-2.5 py-1.5 text-xs font-medium text-primary">
+            <button
+              onClick={onShare}
+              className="inline-flex items-center gap-1 rounded-lg bg-primary/15 px-2.5 py-1.5 text-xs font-medium text-primary"
+            >
               <Share2 className="h-3.5 w-3.5" /> Udostępnij plan
             </button>
           ) : row.access === "local" ? (
-            <button onClick={() => toast.info("Zaloguj się w Profilu, aby udostępniać plany")} className="inline-flex items-center gap-1 rounded-lg bg-secondary px-2.5 py-1.5 text-xs text-muted-foreground">
+            <button
+              onClick={() => toast.info("Zaloguj się w Profilu, aby udostępniać plany")}
+              className="inline-flex items-center gap-1 rounded-lg bg-secondary px-2.5 py-1.5 text-xs text-muted-foreground"
+            >
               <Share2 className="h-3.5 w-3.5" /> Udostępnij plan
             </button>
           ) : (
-            <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-muted-foreground">{readOnly ? "tylko podgląd" : "możesz edytować"}</span>
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-muted-foreground">
+              {readOnly ? "tylko podgląd" : "możesz edytować"}
+            </span>
           )}
-          <button onClick={onRemove} aria-label="Usuń plan" className="p-1.5 text-muted-foreground hover:text-danger">
+          <button
+            onClick={onRemove}
+            aria-label="Usuń plan"
+            className="p-1.5 text-muted-foreground hover:text-danger"
+          >
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
-        {row.access === "owner" || row.access === "local" ? <ClientIntake client={client} onChange={onChange} /> : null}
+        {row.access === "owner" || row.access === "local" ? (
+          <ClientIntake client={client} onChange={onChange} />
+        ) : null}
       </div>
 
       {client.days.map((d) => {
-        const dayTonnage = d.exercises.reduce((sum, ex) => sum + ex.sets.reduce((a, s) => a + setTonnage(s), 0), 0);
+        const dayTonnage = d.exercises.reduce(
+          (sum, ex) => sum + ex.sets.reduce((a, s) => a + setTonnage(s), 0),
+          0,
+        );
         return (
           <article key={d.id} className="rounded-2xl border border-border bg-card p-4">
             <div className="flex items-center gap-2">
@@ -463,25 +652,45 @@ function ClientEditor({ row, onChange, onRemove, onShare }: { row: PlanRow; onCh
                 placeholder="Nazwa dnia (np. Pon – Push)"
                 className="min-w-0 flex-1 bg-transparent font-semibold text-foreground outline-none"
               />
-              <span className="text-[11px] tabular-nums text-muted-foreground">{Math.round(dayTonnage)} kg</span>
+              <span className="text-[11px] tabular-nums text-muted-foreground">
+                {Math.round(dayTonnage)} kg
+              </span>
               {!readOnly ? (
-                <button onClick={() => setDays(client.days.filter((x) => x.id !== d.id))} aria-label="Usuń dzień" className="p-1.5 text-muted-foreground hover:text-danger">
+                <button
+                  onClick={() => setDays(client.days.filter((x) => x.id !== d.id))}
+                  aria-label="Usuń dzień"
+                  className="p-1.5 text-muted-foreground hover:text-danger"
+                >
                   <Trash2 className="h-4 w-4" />
                 </button>
               ) : null}
             </div>
+
             <div className="mt-3 space-y-3">
               {d.exercises.map((ex, ei) => {
                 const patchEx = (p: Partial<PlanExercise>) =>
-                  patchDay({ ...d, exercises: d.exercises.map((x) => (x.id === ex.id ? { ...x, ...p } : x)) });
+                  patchDay({
+                    ...d,
+                    exercises: d.exercises.map((x) => (x.id === ex.id ? { ...x, ...p } : x)),
+                  });
                 const patchSet = (si: number, p: Partial<PlanSet>) =>
                   patchEx({ sets: ex.sets.map((x, i) => (i === si ? { ...x, ...p } : x)) });
                 const indexed = ex.sets.map((s, i) => ({ s, i }));
                 const warm = indexed.filter((x) => x.s.warmup);
                 const work = indexed.filter((x) => !x.s.warmup);
                 const tonnage = ex.sets.reduce((a, s) => a + setTonnage(s), 0);
-                const renderSet = ({ s, i }: { s: PlanSet; i: number }, label: string) => (
-                  <SetChip key={i} s={s} label={label} readOnly={readOnly} onPatch={(p) => patchSet(i, p)} onRemove={() => patchEx({ sets: ex.sets.filter((_, k) => k !== i) })} />
+                const renderSet = (
+                  { s, i }: { s: PlanSet; i: number },
+                  label: string,
+                ) => (
+                  <SetChip
+                    key={i}
+                    s={s}
+                    label={label}
+                    readOnly={readOnly}
+                    onPatch={(p) => patchSet(i, p)}
+                    onRemove={() => patchEx({ sets: ex.sets.filter((_, k) => k !== i) })}
+                  />
                 );
                 return (
                   <div key={ex.id} className="rounded-xl border border-border p-3">
@@ -496,42 +705,76 @@ function ClientEditor({ row, onChange, onRemove, onShare }: { row: PlanRow; onCh
                         className="min-w-0 flex-1 bg-transparent text-sm font-medium outline-none"
                       />
                       {!readOnly ? (
-                        <button onClick={() => patchDay({ ...d, exercises: d.exercises.filter((x) => x.id !== ex.id) })} aria-label="Usuń ćwiczenie" className="text-muted-foreground hover:text-danger">
+                        <button
+                          onClick={() =>
+                            patchDay({
+                              ...d,
+                              exercises: d.exercises.filter((x) => x.id !== ex.id),
+                            })
+                          }
+                          aria-label="Usuń ćwiczenie"
+                          className="text-muted-foreground hover:text-danger"
+                        >
                           <X className="h-4 w-4" />
                         </button>
                       ) : null}
                     </div>
+
                     {warm.length ? (
                       <div className="mt-2">
-                        <p className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"><Flame className="h-3 w-3" /> Rozgrzewka</p>
-                        <div className="flex flex-wrap gap-2">{warm.map((x, k) => renderSet(x, `R${k + 1}`))}</div>
+                        <p className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          <Flame className="h-3 w-3" /> Rozgrzewka
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {warm.map((x, k) => renderSet(x, `R${k + 1}`))}
+                        </div>
                       </div>
                     ) : null}
+
                     <div className={warm.length ? "mt-2 border-t border-border pt-2" : "mt-2"}>
-                      {warm.length ? <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-primary">Serie robocze</p> : null}
+                      {warm.length ? (
+                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                          Serie robocze
+                        </p>
+                      ) : null}
                       <div className="flex flex-wrap gap-2">
                         {work.map((x, k) => renderSet(x, `${k + 1}.`))}
                         {!readOnly ? (
                           <>
-                            <button onClick={() => patchEx({ sets: [...ex.sets, { reps: "", weight: "" }] })} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-primary hover:bg-secondary">
+                            <button
+                              onClick={() =>
+                                patchEx({ sets: [...ex.sets, { reps: "", weight: "" }] })
+                              }
+                              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-primary hover:bg-secondary"
+                            >
                               <Plus className="h-3 w-3" /> Seria
                             </button>
-                            <button onClick={() => patchEx({ sets: [...ex.sets, { reps: "", weight: "", warmup: true }] })} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-muted-foreground hover:bg-secondary">
+                            <button
+                              onClick={() =>
+                                patchEx({
+                                  sets: [...ex.sets, { reps: "", weight: "", warmup: true }],
+                                })
+                              }
+                              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-muted-foreground hover:bg-secondary"
+                            >
                               <Flame className="h-3 w-3" /> Rozgrzewkowa
                             </button>
                           </>
                         ) : null}
                       </div>
                     </div>
-                    {/* Okienko Czas przerwy */}
-                    <div className="mt-2 flex items-center gap-3">
-                      <input
-                        readOnly={readOnly}
-                        value={ex.note || ""}
-                        onChange={(e) => patchEx({ note: e.target.value })}
-                        placeholder="uwagi dla podopiecznego…"
-                        className="min-w-0 flex-1 bg-transparent text-xs text-muted-foreground outline-none"
-                      />
+
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <div className="flex items-center gap-1.5 rounded-lg border border-border bg-secondary/40 px-2 py-1 text-xs">
+                        <span className="text-[11px] text-muted-foreground">Zakres:</span>
+                        <input
+                          readOnly={readOnly}
+                          value={ex.range || ""}
+                          onChange={(e) => patchEx({ range: e.target.value })}
+                          placeholder="8–12 / 40s"
+                          className="w-20 bg-transparent text-right font-medium text-foreground outline-none placeholder:text-muted-foreground/50"
+                        />
+                      </div>
                       <div className="flex items-center gap-1.5 rounded-lg border border-border bg-secondary/40 px-2 py-1 text-xs">
                         <Timer className="h-3 w-3 text-primary" />
                         <span className="text-[11px] text-muted-foreground">Przerwa:</span>
@@ -543,19 +786,51 @@ function ClientEditor({ row, onChange, onRemove, onShare }: { row: PlanRow; onCh
                           className="w-20 bg-transparent text-right font-medium text-foreground outline-none placeholder:text-muted-foreground/50"
                         />
                       </div>
-                      <span className="text-[10px] tabular-nums text-muted-foreground">tonaż roboczy {Math.round(tonnage)} kg</span>
+                      <span className="text-[10px] tabular-nums text-muted-foreground">
+                        tonaż roboczy {Math.round(tonnage)} kg
+                      </span>
                     </div>
+
+                    <input
+                      readOnly={readOnly}
+                      value={ex.note || ""}
+                      onChange={(e) => patchEx({ note: e.target.value })}
+                      placeholder="uwagi dla podopiecznego…"
+                      className="mt-1.5 w-full bg-transparent text-xs text-muted-foreground outline-none"
+                    />
+
                     {ex.sets.some((s) => parseRepsOrTime(s.reps).timeSec) ? (
                       <p className="mt-1 text-[10px] text-primary">
-                        Na czas: {ex.sets.map((s) => parseRepsOrTime(s.reps).timeSec).filter((t): t is number => !!t).map(formatTime).join(", ")}
+                        Na czas:{" "}
+                        {ex.sets
+                          .map((s) => parseRepsOrTime(s.reps).timeSec)
+                          .filter((t): t is number => !!t)
+                          .map(formatTime)
+                          .join(", ")}
                       </p>
                     ) : null}
                   </div>
                 );
               })}
+
               {!readOnly ? (
                 <button
-                  onClick={() => patchDay({ ...d, exercises: [...d.exercises, { id: uid(), name: "", sets: [{ reps: "", weight: "" }], note: "", rest: "" }] })}
+                  onClick={() =>
+                    patchDay({
+                      ...d,
+                      exercises: [
+                        ...d.exercises,
+                        {
+                          id: uid(),
+                          name: "",
+                          sets: [{ reps: "", weight: "" }],
+                          note: "",
+                          rest: "",
+                          range: "",
+                        },
+                      ],
+                    })
+                  }
                   className="inline-flex items-center gap-1.5 text-xs font-medium text-primary"
                 >
                   <Plus className="h-3.5 w-3.5" /> Dodaj ćwiczenie
