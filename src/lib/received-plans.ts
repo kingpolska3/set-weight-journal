@@ -15,10 +15,10 @@ import {
 } from "@/lib/workout-store";
 
 export type ReceivedPlan = {
-  id: string; // plan_id z chmury lub lokalne id
+  id: string;
   token?: string;
-  name: string; // nazwa podopiecznego / planu
-  receivedAt: string; // ISO
+  name: string;
+  receivedAt: string;
   trainingDays: string[];
   days: PlanDay[];
   sourceLabel?: string;
@@ -26,7 +26,6 @@ export type ReceivedPlan = {
 
 const KEY = "received-training-plans-v1";
 
-/** Skróty dni z formularza trenera → indeks JS Date.getDay() (0=Nd … 6=Sob) */
 export const WEEKDAY_TO_JS: Record<string, number> = {
   Nd: 0,
   Pon: 1,
@@ -58,7 +57,6 @@ export function saveReceivedPlans(list: ReceivedPlan[]) {
   }
 }
 
-/** Dodaj / zaktualizuj plan z linku udostępnienia (bez duplikatów po id). */
 export function upsertReceivedPlan(plan: ReceivedPlan): ReceivedPlan[] {
   const list = loadReceivedPlans().filter((p) => p.id !== plan.id);
   const next = [plan, ...list];
@@ -72,24 +70,19 @@ export function removeReceivedPlan(id: string): ReceivedPlan[] {
   return next;
 }
 
-/** Parsuje tekst przerwy z planu trenera → sekundy. */
 export function parseRestToSeconds(raw?: string): number | undefined {
   if (!raw?.trim()) return undefined;
   const t = raw.trim().toLowerCase().replace(",", ".");
 
-  // "2:30"
   const colon = t.match(/^(\d+):(\d+)$/);
   if (colon) return Number(colon[1]) * 60 + Number(colon[2]);
 
-  // "2,5 minuty" / "2.5 min" / "2 min"
   const min = t.match(/(\d+(?:\.\d+)?)\s*min/);
   if (min) return Math.round(parseFloat(min[1]) * 60);
 
-  // "90s" / "90 sek" / "90 sec"
   const sec = t.match(/(\d+)\s*(s|sek|sec)\b/);
   if (sec) return Number(sec[1]);
 
-  // "90s / 2 min" → bierz pierwszą sensowną liczbę z jednostką, preferuj min jeśli są obie
   const both = t.match(/(\d+(?:\.\d+)?)\s*min|(\d+)\s*(s|sek|sec)/g);
   if (both?.length) {
     for (const part of both) {
@@ -100,7 +93,6 @@ export function parseRestToSeconds(raw?: string): number | undefined {
     }
   }
 
-  // sama liczba → traktuj jako sekundy jeśli >= 30, inaczej minuty
   const only = t.match(/^(\d+(?:\.\d+)?)$/);
   if (only) {
     const n = parseFloat(only[1]);
@@ -114,61 +106,70 @@ function planSetToEntry(s: PlanSet): SetEntry {
   const repsRaw = (s.reps || "").trim().toLowerCase();
   const weight = Number(String(s.weight || "0").replace(",", ".")) || 0;
 
-  // "5 min" / "5min"
   const minMatch = repsRaw.match(/^(\d+(?:[.,]\d+)?)\s*min/);
   if (minMatch) {
     const mins = parseFloat(minMatch[1].replace(",", "."));
     return { reps: 0, weight, timeSec: Math.round(mins * 60), warmup: !!s.warmup };
   }
 
-  // "1:20" albo "5:00"
   if (/^\d+:\d+$/.test(repsRaw)) {
     const [m, sec] = repsRaw.split(":").map(Number);
     return { reps: 0, weight, timeSec: (m || 0) * 60 + (sec || 0), warmup: !!s.warmup };
   }
 
-  // "40s" / "40 sek"
   if (repsRaw.includes("s") || repsRaw.includes("sek")) {
     const n = parseInt(repsRaw, 10) || 0;
     return { reps: 0, weight, timeSec: n, warmup: !!s.warmup };
   }
 
-  // "8-10" / "8–12" → górna wartość jako podpowiedź reps
   const range = repsRaw.match(/(\d+)\s*[–\-]\s*(\d+)/);
   const reps = range ? Number(range[2]) : parseInt(repsRaw, 10) || 0;
   return { reps, weight, warmup: !!s.warmup };
+}
+
+/** Serie z planu → wpisy treningu; puste reps uzupełnia `ex.range`. */
+function exerciseSetsFromPlan(ex: PlanExercise): SetEntry[] {
+  const restSec = parseRestToSeconds(ex.rest);
+  const rangeHint = (ex.range || "").trim();
+  const baseSets =
+    ex.sets.length > 0
+      ? ex.sets
+      : [{ reps: rangeHint || "8-12", weight: "", warmup: false }];
+
+  const sets = baseSets.map((s) => {
+    const withRange: PlanSet = {
+      ...s,
+      reps: (s.reps || "").trim() || rangeHint || s.reps,
+    };
+    const entry = planSetToEntry(withRange);
+    return restSec ? { ...entry, restSec } : entry;
+  });
+
+  const extra = [rangeHint ? `Zakres: ${rangeHint}` : "", ex.note?.trim() || ""]
+    .filter(Boolean)
+    .join(" · ");
+  if (extra && sets.length) {
+    const idx = sets.findIndex((s) => !s.warmup);
+    const target = idx >= 0 ? idx : 0;
+    sets[target] = {
+      ...sets[target],
+      note: [sets[target].note, extra].filter(Boolean).join(" · "),
+    };
+  }
+  return sets;
 }
 
 export function dayToTemplate(day: PlanDay, planName: string): Template {
   return {
     id: uid(),
     name: `${planName} · ${day.name}`,
-    exercises: day.exercises.map((ex: PlanExercise) => {
-      const restSec = parseRestToSeconds(ex.rest);
-      const sets = (ex.sets.length ? ex.sets : [{ reps: "8-12", weight: "", warmup: false }]).map(
-        (s) => {
-          const entry = planSetToEntry(s);
-          // przerwa z planu → na serie robocze (i rozgrzewkowe, jeśli chcesz ten sam czas)
-          if (restSec && !s.warmup) return { ...entry, restSec };
-          if (restSec && s.warmup) return { ...entry, restSec };
-          return entry;
-        },
-      );
-      // uwagi trenera zostaw w notatce pierwszej serii roboczej
-      if (ex.note?.trim() && sets.length) {
-        const idx = sets.findIndex((s) => !s.warmup);
-        const target = idx >= 0 ? idx : 0;
-        sets[target] = {
-          ...sets[target],
-          note: [sets[target].note, ex.note.trim()].filter(Boolean).join(" · "),
-        };
-      }
-      return { name: ex.name, sets };
-    }),
+    exercises: day.exercises.map((ex: PlanExercise) => ({
+      name: ex.name,
+      sets: exerciseSetsFromPlan(ex),
+    })),
   };
 }
 
-/** Zapisuje jeden dzień planu jako szablon w Narzędziach. */
 export function saveReceivedDayAsTemplate(plan: ReceivedPlan, dayId: string): Template | null {
   const day = plan.days.find((d) => d.id === dayId);
   if (!day || day.exercises.length === 0) return null;
@@ -179,7 +180,6 @@ export function saveReceivedDayAsTemplate(plan: ReceivedPlan, dayId: string): Te
   return tpl;
 }
 
-/** Zapisuje wszystkie dni z ćwiczeniami jako osobne szablony. */
 export function saveAllReceivedDaysAsTemplates(plan: ReceivedPlan): number {
   const days = plan.days.filter((d) => d.exercises.length > 0);
   if (!days.length) return 0;
@@ -190,12 +190,22 @@ export function saveAllReceivedDaysAsTemplates(plan: ReceivedPlan): number {
   return fresh.length;
 }
 
-/** Buduje rozkład tygodnia: dni z planu = nazwa dnia, pozostałe = "Rest day". */
 export function buildWeekPlanFromReceived(plan: ReceivedPlan): WeekPlan {
-  const next: WeekPlan = { 0: "Rest day", 1: "Rest day", 2: "Rest day", 3: "Rest day", 4: "Rest day", 5: "Rest day", 6: "Rest day" };
+  const next: WeekPlan = {
+    0: "Rest day",
+    1: "Rest day",
+    2: "Rest day",
+    3: "Rest day",
+    4: "Rest day",
+    5: "Rest day",
+    6: "Rest day",
+  };
 
   const training = new Set(
-    (plan.trainingDays?.length ? plan.trainingDays : plan.days.map((d) => d.weekday || "")).filter(Boolean),
+    (plan.trainingDays?.length
+      ? plan.trainingDays
+      : plan.days.map((d) => d.weekday || "")
+    ).filter(Boolean),
   );
 
   for (const day of plan.days) {
@@ -206,7 +216,6 @@ export function buildWeekPlanFromReceived(plan: ReceivedPlan): WeekPlan {
     training.add(key);
   }
 
-  // dni zaznaczone jako treningowe, ale bez rozpiski – zostaw skrót dnia
   for (const key of training) {
     const js = WEEKDAY_TO_JS[key];
     if (js === undefined) continue;
@@ -216,27 +225,21 @@ export function buildWeekPlanFromReceived(plan: ReceivedPlan): WeekPlan {
   return next;
 }
 
-/**
- * Aktywuje otrzymany plan:
- * - zapisuje ROZKŁAD TYGODNIA (pozostałe dni = "Rest day")
- * - dodaje szablony dni do Narzędzi
- * - jeśli dziś jest dniem treningowym z planu → wstawia ćwiczenia w zakładce Trening
- */
-export function activateReceivedPlan(plan: ReceivedPlan): { weekPlan: WeekPlan; todayFilled: boolean } {
+export function activateReceivedPlan(plan: ReceivedPlan): {
+  weekPlan: WeekPlan;
+  todayFilled: boolean;
+} {
   const weekPlan = buildWeekPlanFromReceived(plan);
   savePlan(weekPlan);
 
-  // Szablony – jeden na dzień treningowy
   const templates = loadTemplates();
   const fresh = plan.days
     .filter((d) => d.exercises.length > 0)
     .map((d) => dayToTemplate(d, plan.name));
-  // Usuń stare szablony z tym samym prefiksem nazwy planu, żeby nie dublować
   const prefix = `${plan.name} · `;
   const kept = templates.filter((t) => !t.name.startsWith(prefix));
   saveTemplates([...fresh, ...kept]);
 
-  // Wypełnij dzisiejszą sesję, jeśli dziś jest w planie
   const today = todayISO();
   const jsDay = new Date(today + "T12:00:00").getDay();
   const todayLabel = weekPlan[jsDay] ?? "";
@@ -248,19 +251,11 @@ export function activateReceivedPlan(plan: ReceivedPlan): { weekPlan: WeekPlan; 
   if (todayPlanDay && todayPlanDay.exercises.length > 0 && todayLabel !== "Rest day") {
     const session: Session = {
       date: today,
-            exercises: todayPlanDay.exercises.map((ex) => {
-        const restSec = parseRestToSeconds(ex.rest);
-        return {
-          id: uid(),
-          name: ex.name,
-          sets: (ex.sets.length ? ex.sets : [{ reps: "8-12", weight: "", warmup: false }]).map(
-            (s) => {
-              const entry = planSetToEntry(s);
-              return restSec ? { ...entry, restSec } : entry;
-            },
-          ),
-        };
-      }),
+      exercises: todayPlanDay.exercises.map((ex) => ({
+        id: uid(),
+        name: ex.name,
+        sets: exerciseSetsFromPlan(ex),
+      })),
       note: exNoteFromDay(todayPlanDay),
     };
     const all = loadSessions();
@@ -275,11 +270,9 @@ export function activateReceivedPlan(plan: ReceivedPlan): { weekPlan: WeekPlan; 
 }
 
 function exNoteFromDay(day: PlanDay): string | undefined {
-  const notes = day.exercises.map((e) => e.note).filter(Boolean);
-  return notes.length ? `Plan: ${day.name}` : `Plan: ${day.name}`;
+  return `Plan: ${day.name}`;
 }
 
-/** Z danych Client (po claimLink / fetchPlans) zbuduj ReceivedPlan. */
 export function clientToReceivedPlan(
   planId: string,
   data: Client,
