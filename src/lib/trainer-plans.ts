@@ -5,19 +5,23 @@ export type PlanSet = {
   weight: string;     // kg albo puste
   warmup?: boolean;   // seria rozgrzewkowa
 };
+
 export type PlanExercise = {
   id: string;
   name: string;
   sets: PlanSet[];
   note: string;       // uwagi dla podopiecznego
   rest?: string;      // przerwa, np. "2,5 minuty", "90s / 2 min"
+  range?: string;     // zakres powtórzeń / czas, np. "8-12", "30-45s"
 };
+
 export type PlanDay = {
   id: string;
   name: string;
   exercises: PlanExercise[];
   weekday?: string;   // Pon, Wt, …
 };
+
 export type Client = {
   id: string;
   name: string;
@@ -26,6 +30,7 @@ export type Client = {
   trainingDays?: string[];
   intake?: Record<string, string>;
 };
+
 export type Access = "owner" | "edit" | "view" | "local";
 export type LinkAccess = "none" | "view" | "edit";
 
@@ -38,7 +43,12 @@ export type PlanRow = {
   access: Access;
 };
 
-export type ShareEntry = { user_id: string; display_name: string | null; username: string | null; can_edit: boolean };
+export type ShareEntry = {
+  user_id: string;
+  display_name: string | null;
+  username: string | null;
+  can_edit: boolean;
+};
 
 // Nowe tabele nie są jeszcze w wygenerowanych typach – luźny klient.
 type Loose = {
@@ -50,15 +60,20 @@ const db = supabase as unknown as Loose;
 export const LOCAL_KEY = "trainer-plans-v1";
 
 export async function fetchPlans(userId: string): Promise<PlanRow[]> {
-  const [{ data: plans, error }, { data: shares }, { data: privateRows, error: privateError }] = await Promise.all([
-    db.from("trainer_plans").select("id, owner_id, data, link_token, link_access").order("created_at"),
-    db.from("plan_shares").select("plan_id, can_edit").eq("user_id", userId),
-    supabase.from("trainer_client_private").select("plan_id,data"),
-  ]);
+  const [{ data: plans, error }, { data: shares }, { data: privateRows, error: privateError }] =
+    await Promise.all([
+      db.from("trainer_plans").select("id, owner_id, data, link_token, link_access").order("created_at"),
+      db.from("plan_shares").select("plan_id, can_edit").eq("user_id", userId),
+      supabase.from("trainer_client_private").select("plan_id,data"),
+    ]);
   if (error) throw error;
   if (privateError) throw privateError;
-  const intake = new Map((privateRows ?? []).map((p) => [p.plan_id, p.data as unknown as Partial<Client>]));
-  const sh = new Map<string, boolean>((shares ?? []).map((s: { plan_id: string; can_edit: boolean }) => [s.plan_id, s.can_edit]));
+  const intake = new Map(
+    (privateRows ?? []).map((p) => [p.plan_id, p.data as unknown as Partial<Client>]),
+  );
+  const sh = new Map<string, boolean>(
+    (shares ?? []).map((s: { plan_id: string; can_edit: boolean }) => [s.plan_id, s.can_edit]),
+  );
   return (plans ?? []).map((p: Omit<PlanRow, "access">) => ({
     ...p,
     data: p.owner_id === userId ? { ...p.data, ...intake.get(p.id) } : { ...p.data, goal: "" },
@@ -97,7 +112,11 @@ export async function setLinkAccess(id: string, access: LinkAccess) {
 }
 
 export async function sharePlan(id: string, ident: string, canEdit: boolean): Promise<string> {
-  const { data, error } = await db.rpc("share_plan", { _plan: id, _ident: ident, _can_edit: canEdit });
+  const { data, error } = await db.rpc("share_plan", {
+    _plan: id,
+    _ident: ident,
+    _can_edit: canEdit,
+  });
   if (error) throw error;
   return data as string;
 }
