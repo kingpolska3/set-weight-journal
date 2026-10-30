@@ -9,7 +9,8 @@ import {
   emptyClientSession,
   loadClientSessions,
   planDayToClientSession,
-  saveClientSession,
+  saveClientSessionWithCloud,
+  syncClientSessionsFromCloud,
   clientSessionAsSession,
   type ClientSession,
 } from "@/lib/client-sessions";
@@ -102,7 +103,18 @@ function CoachWorkoutPage() {
             : emptyClientSession(found.id, found.data);
 
           setSession(draft);
-          setHistory(loadClientSessions(found.id).map(clientSessionAsSession));
+
+          // historia: cloud (gdy zalogowany) → local
+          try {
+            if (user) {
+              const list = await syncClientSessionsFromCloud(found.id);
+              if (!cancelled) setHistory(list.map(clientSessionAsSession));
+            } else {
+              setHistory(loadClientSessions(found.id).map(clientSessionAsSession));
+            }
+          } catch {
+            setHistory(loadClientSessions(found.id).map(clientSessionAsSession));
+          }
         }
       } catch (e) {
         console.error(e);
@@ -160,7 +172,7 @@ function CoachWorkoutPage() {
     });
   };
 
-  const finish = () => {
+  const finish = async () => {
     if (!session) return;
     setSaving(true);
     try {
@@ -169,11 +181,16 @@ function CoachWorkoutPage() {
         endedAt: new Date().toISOString(),
         date: session.date || todayISO(),
       };
-      saveClientSession(done);
-      toast.success(`Zapisano trening u ${done.clientName}`);
+      await saveClientSessionWithCloud(done, user?.id);
+      toast.success(
+        user
+          ? `Zapisano trening u ${done.clientName} (chmura)`
+          : `Zapisano trening u ${done.clientName}`,
+      );
       void navigate({ to: "/plany", search: {} });
-    } catch {
-      toast.error("Nie udało się zapisać");
+    } catch (e) {
+      console.error(e);
+      toast.error("Nie udało się zapisać (sprawdź tabelę / RLS w Supabase)");
     }
     setSaving(false);
   };
@@ -271,7 +288,7 @@ function CoachWorkoutPage() {
         <button
           type="button"
           disabled={saving}
-          onClick={finish}
+          onClick={() => void finish()}
           className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
         >
           <Save className="h-4 w-4" />
