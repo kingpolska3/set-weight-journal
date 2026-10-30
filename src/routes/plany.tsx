@@ -20,7 +20,19 @@ import { ClientIntake } from "@/components/ClientIntake";
 import { ExerciseAtlas } from "@/components/ExerciseAtlas";
 import { useAuth } from "@/hooks/useAuth";
 import { ATLAS_NAMES } from "@/lib/exercise-atlas";
-import { formatTime, parseRepsOrTime, uid } from "@/lib/workout-store";
+import {
+  formatRepsOrTime,
+  formatTime,
+  parseRepsOrTime,
+  uid,
+  volume,
+  workingSets,
+} from "@/lib/workout-store";
+import {
+  loadClientSessions,
+  removeClientSession,
+  type ClientSession,
+} from "@/lib/client-sessions";
 import {
   LOCAL_KEY,
   claimLink,
@@ -596,6 +608,21 @@ function ClientEditor({
   const setDays = (days: PlanDay[]) => onChange({ ...client, days });
   const patchDay = (d: PlanDay) => setDays(client.days.map((x) => (x.id === d.id ? d : x)));
 
+  const [clientHistory, setClientHistory] = useState<ClientSession[]>([]);
+  const [openHistoryId, setOpenHistoryId] = useState<string | null>(null);
+
+  const refreshHistory = () => setClientHistory(loadClientSessions(row.id));
+
+  useEffect(() => {
+    refreshHistory();
+    const onVis = () => {
+      if (document.visibilityState === "visible") refreshHistory();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [row.id]);
+
   return (
     <div className="space-y-3">
       <div className="rounded-2xl border border-border bg-card p-4">
@@ -672,6 +699,96 @@ function ClientEditor({
             </div>
           </div>
         ) : null}
+
+        <div className="mt-3 space-y-2 border-t border-border pt-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Historia treningów
+            </p>
+            <button
+              type="button"
+              onClick={refreshHistory}
+              className="text-[11px] font-medium text-primary"
+            >
+              Odśwież
+            </button>
+          </div>
+          {clientHistory.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-border px-3 py-3 text-xs text-muted-foreground">
+              Brak zapisanych treningów. Uruchom „Start” i zakończ sesję, aby pojawiła się tutaj.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {clientHistory.map((s) => {
+                const vol = Math.round(
+                  s.exercises.reduce((sum, ex) => sum + volume(ex.sets), 0),
+                );
+                const setsCount = s.exercises.reduce(
+                  (n, ex) => n + workingSets(ex.sets).length,
+                  0,
+                );
+                const open = openHistoryId === s.id;
+                return (
+                  <li
+                    key={s.id}
+                    className="rounded-xl border border-border bg-secondary/30 px-3 py-2"
+                  >
+                    <div className="flex items-start gap-2">
+                      <button
+                        type="button"
+                        className="min-w-0 flex-1 text-left"
+                        onClick={() => setOpenHistoryId(open ? null : s.id)}
+                      >
+                        <p className="text-sm font-medium text-foreground">
+                          {s.date} · {s.dayName}
+                        </p>
+                        <p className="text-[11px] tabular-nums text-muted-foreground">
+                          {vol.toLocaleString("pl-PL")} kg · {setsCount} serii ·{" "}
+                          {s.exercises.length} ćw.
+                        </p>
+                      </button>
+                      {!readOnly ? (
+                        <button
+                          type="button"
+                          aria-label="Usuń sesję"
+                          className="shrink-0 p-1 text-muted-foreground hover:text-danger"
+                          onClick={() => {
+                            if (!confirm(`Usunąć trening z ${s.date}?`)) return;
+                            removeClientSession(s.id);
+                            refreshHistory();
+                            toast.success("Usunięto z historii");
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      ) : null}
+                    </div>
+                    {open ? (
+                      <ul className="mt-2 space-y-1 border-t border-border pt-2">
+                        {s.exercises.map((ex, i) => (
+                          <li key={ex.id || i} className="text-xs text-muted-foreground">
+                            <span className="font-medium text-foreground">
+                              {i + 1}. {ex.name}
+                            </span>
+                            {" — "}
+                            {workingSets(ex.sets)
+                              .map((set) => `${formatRepsOrTime(set)}×${set.weight}kg`)
+                              .join(", ") || "brak serii"}
+                          </li>
+                        ))}
+                        {s.note ? (
+                          <li className="text-[11px] italic text-muted-foreground">
+                            Notatka: {s.note}
+                          </li>
+                        ) : null}
+                      </ul>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
 
         {row.access === "owner" || row.access === "local" ? (
           <ClientIntake client={client} onChange={onChange} />
