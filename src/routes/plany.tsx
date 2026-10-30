@@ -590,6 +590,7 @@ function ClientEditor({
   onRemove: () => void;
   onShare: () => void;
 }) {
+  const navigate = useNavigate();
   const client = row.data;
   const readOnly = row.access === "view";
   const setDays = (days: PlanDay[]) => onChange({ ...client, days });
@@ -632,6 +633,46 @@ function ClientEditor({
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
+
+        {!readOnly && client.days.some((d) => d.exercises.length > 0) ? (
+          <div className="mt-3 space-y-2 border-t border-border pt-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Trening z podopiecznym
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {client.days
+                .filter((d) => d.exercises.length > 0)
+                .map((d) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() =>
+                      void navigate({
+                        to: "/plany/trening",
+                        search: { plan: row.id, day: d.id },
+                      })
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
+                  >
+                    Start: {d.name || d.weekday || "Dzień"}
+                  </button>
+                ))}
+              <button
+                type="button"
+                onClick={() =>
+                  void navigate({
+                    to: "/plany/trening",
+                    search: { plan: row.id },
+                  })
+                }
+                className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-medium text-foreground hover:border-primary"
+              >
+                Wolny trening
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         {row.access === "owner" || row.access === "local" ? (
           <ClientIntake client={client} onChange={onChange} />
         ) : null}
