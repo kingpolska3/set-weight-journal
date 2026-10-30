@@ -1,5 +1,6 @@
 import type { Client, PlanDay, PlanExercise, PlanSet } from "@/lib/trainer-plans";
 import { parseRestToSeconds } from "@/lib/received-plans";
+import { supabase } from "@/integrations/supabase/client";
 import {
   todayISO,
   uid,
@@ -24,6 +25,12 @@ export type ClientSession = {
 
 const KEY = "trainer-client-sessions-v1";
 
+// Luźny klient — tabela może nie być w wygenerowanych typach
+type Loose = {
+  from: (t: string) => any; // eslint-disable-line @typescript-eslint/no-explicit-any
+};
+const db = supabase as unknown as Loose;
+
 function loadAll(): ClientSession[] {
   if (typeof window === "undefined") return [];
   try {
@@ -45,7 +52,23 @@ function saveAll(list: ClientSession[]) {
   }
 }
 
-/** Wszystkie sesje danego podopiecznego (planId), od najnowszej. */
+/** Scalenie po id — nowszy endedAt / startedAt wygrywa. */
+function mergeSessions(a: ClientSession[], b: ClientSession[]): ClientSession[] {
+  const map = new Map<string, ClientSession>();
+  for (const s of [...a, ...b]) {
+    const prev = map.get(s.id);
+    if (!prev) {
+      map.set(s.id, s);
+      continue;
+    }
+    const tPrev = prev.endedAt || prev.startedAt || prev.date;
+    const tNext = s.endedAt || s.startedAt || s.date;
+    map.set(s.id, tNext >= tPrev ? s : prev);
+  }
+  return [...map.values()].sort((x, y) => (x.date < y.date ? 1 : x.date > y.date ? -1 : 0));
+}
+
+/** Wszystkie sesje danego podopiecznego (planId), od najnowszej — tylko local. */
 export function loadClientSessions(planId: string): ClientSession[] {
   return loadAll()
     .filter((s) => s.planId === planId)
@@ -57,14 +80,12 @@ export function loadAllClientSessions(): ClientSession[] {
   return loadAll().sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 }
 
-/** Zapisz / nadpisz sesję (po id). */
+/** Zapisz / nadpisz sesję lokalnie (po id). */
 export function saveClientSession(session: ClientSession): ClientSession[] {
   const all = loadAll();
   const idx = all.findIndex((s) => s.id === session.id);
   const next =
-    idx >= 0
-      ? all.map((s, i) => (i === idx ? session : s))
-      : [session, ...all];
+    idx >= 0 ? all.map((s, i) => (i === idx ? session : s)) : [session, ...all];
   saveAll(next);
   return next.filter((s) => s.planId === session.planId);
 }
@@ -73,13 +94,88 @@ export function removeClientSession(id: string): void {
   saveAll(loadAll().filter((s) => s.id !== id));
 }
 
-/** Sesja z danego dnia dla planu (jeśli jest). */
 export function getClientSessionOnDate(
   planId: string,
   date: string,
 ): ClientSession | undefined {
   return loadAll().find((s) => s.planId === planId && s.date === date);
 }
+
+// ——— Cloud ———
+
+type CloudRow = {
+  id: string;
+  plan_id: string;
+  owner_id: string;
+  data: ClientSession;
+};
+
+function rowToSession(row: CloudRow): ClientSession {
+  const d = row.data || ({} as ClientSession);
+  return {
+    ...d,
+    id: d.id || row.id,
+    planId: d.planId || row.plan_id,
+  };
+}
+
+/** Pobierz sesje planu z Supabase i zmerguj do localStorage. */
+export async function syncClientSessionsFromCloud(
+  planId: string,
+): Promise<ClientSession[]> {
+  const { data, error } = await db
+    .from("trainer_client_sessions")
+    .select("id, plan_id, owner_id, data")
+    .eq("plan_id", planId);
+
+  if (error) throw error;
+
+  const cloud = ((data ?? []) as CloudRow[]).map(rowToSession);
+  const merged = mergeSessions(
+    loadAll().filter((s) => s.planId === planId),
+    cloud,
+  );
+  // zachowaj sesje innych planów + zmergowane tego planu
+  const others = loadAll().filter((s) => s.planId !== planId);
+  saveAll([...others, ...merged]);
+  return merged.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+}
+
+/** Zapisz lokalnie + upsert do chmury (gdy jest userId). */
+export async function saveClientSessionWithCloud(
+  session: ClientSession,
+  userId?: string | null,
+): Promise<ClientSession[]> {
+  const local = saveClientSession(session);
+  if (!userId) return local;
+
+  const { error } = await db.from("trainer_client_sessions").upsert(
+    {
+      id: session.id,
+      plan_id: session.planId,
+      owner_id: userId,
+      data: session,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "id" },
+  );
+
+  if (error) throw error;
+  return local;
+}
+
+/** Usuń lokalnie + z chmury. */
+export async function removeClientSessionWithCloud(
+  id: string,
+  userId?: string | null,
+): Promise<void> {
+  removeClientSession(id);
+  if (!userId) return;
+  const { error } = await db.from("trainer_client_sessions").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// ——— Mapowanie z planu ———
 
 function planSetToEntry(s: PlanSet, rangeHint: string, restSec?: number): SetEntry {
   const repsRaw = ((s.reps || "").trim() || rangeHint).toLowerCase();
@@ -154,10 +250,6 @@ function exerciseFromPlan(ex: PlanExercise): Exercise {
   return { id: uid(), name: ex.name || "Ćwiczenie", sets };
 }
 
-/**
- * Buduje roboczą sesję coachingu z dnia planu podopiecznego.
- * Nie zapisuje jeszcze — zapis przy „Zakończ trening”.
- */
 export function planDayToClientSession(
   planId: string,
   client: Client,
@@ -177,7 +269,6 @@ export function planDayToClientSession(
   };
 }
 
-/** Pusta sesja (wolny trening z podopiecznym, bez dnia z planu). */
 export function emptyClientSession(
   planId: string,
   client: Client,
@@ -195,7 +286,6 @@ export function emptyClientSession(
   };
 }
 
-/** Podgląd jak Session z workout-store (do daySummary itd.). */
 export function clientSessionAsSession(s: ClientSession): Session {
   return {
     date: s.date,
