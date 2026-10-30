@@ -30,7 +30,8 @@ import {
 } from "@/lib/workout-store";
 import {
   loadClientSessions,
-  removeClientSession,
+  removeClientSessionWithCloud,
+  syncClientSessionsFromCloud,
   type ClientSession,
 } from "@/lib/client-sessions";
 import {
@@ -603,6 +604,7 @@ function ClientEditor({
   onShare: () => void;
 }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const client = row.data;
   const readOnly = row.access === "view";
   const setDays = (days: PlanDay[]) => onChange({ ...client, days });
@@ -611,17 +613,27 @@ function ClientEditor({
   const [clientHistory, setClientHistory] = useState<ClientSession[]>([]);
   const [openHistoryId, setOpenHistoryId] = useState<string | null>(null);
 
-  const refreshHistory = () => setClientHistory(loadClientSessions(row.id));
+  const refreshHistory = async () => {
+    if (user) {
+      try {
+        setClientHistory(await syncClientSessionsFromCloud(row.id));
+        return;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    setClientHistory(loadClientSessions(row.id));
+  };
 
   useEffect(() => {
-    refreshHistory();
+    void refreshHistory();
     const onVis = () => {
-      if (document.visibilityState === "visible") refreshHistory();
+      if (document.visibilityState === "visible") void refreshHistory();
     };
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [row.id]);
+  }, [row.id, user?.id]);
 
   return (
     <div className="space-y-3">
@@ -707,7 +719,7 @@ function ClientEditor({
             </p>
             <button
               type="button"
-              onClick={refreshHistory}
+              onClick={() => void refreshHistory()}
               className="text-[11px] font-medium text-primary"
             >
               Odśwież
@@ -754,9 +766,15 @@ function ClientEditor({
                           className="shrink-0 p-1 text-muted-foreground hover:text-danger"
                           onClick={() => {
                             if (!confirm(`Usunąć trening z ${s.date}?`)) return;
-                            removeClientSession(s.id);
-                            refreshHistory();
-                            toast.success("Usunięto z historii");
+                            void (async () => {
+                              try {
+                                await removeClientSessionWithCloud(s.id, user?.id);
+                                await refreshHistory();
+                                toast.success("Usunięto z historii");
+                              } catch {
+                                toast.error("Nie udało się usunąć z chmury");
+                              }
+                            })();
                           }}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
