@@ -9,8 +9,6 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
-
-
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { applyTheme, loadTheme } from "../lib/theme";
@@ -81,8 +79,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      {
+        name: "viewport",
+        content: "width=device-width, initial-scale=1, viewport-fit=cover",
+      },
       { name: "theme-color", content: "#1c1d23" },
+      { name: "color-scheme", content: "dark light" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { title: "Dziennik treningowy" },
       { name: "description", content: "Twój dziennik treningów, progresu i planów." },
       { name: "author", content: "Lovable" },
@@ -110,11 +113,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="pl">
+    <html lang="pl" className="dark" style={{ backgroundColor: "#1c1d23" }}>
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body style={{ backgroundColor: "#1c1d23", minHeight: "100dvh" }}>
         {children}
         <Scripts />
       </body>
@@ -132,10 +135,8 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <Toaster />
-
     </QueryClientProvider>
   );
 }
