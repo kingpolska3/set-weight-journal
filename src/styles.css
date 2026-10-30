@@ -47,7 +47,6 @@
   --color-ring: var(--ring);
   --color-success: var(--success);
   --color-danger: var(--danger);
-
   --color-ring-offset-background: var(--background);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
@@ -103,8 +102,7 @@
   --gradient-hero: linear-gradient(140deg, oklch(0.24 0.03 264), oklch(0.16 0.012 264) 60%);
 }
 
-
-/* Jasny motyw – aktywowany klasą .light na <html> (ustawienia w zakładce Narzędzia). */
+/* Jasny motyw – aktywowany klasą .light na <html> */
 .light {
   --background: oklch(0.98 0.004 250);
   --foreground: oklch(0.22 0.02 264);
@@ -137,7 +135,21 @@
     border-color: var(--color-border);
   }
 
+  html {
+    background-color: var(--color-background);
+  }
+
+  /* ciemny pasek systemowy + obszar pod klawiaturą (Chrome/Android) */
+  html.dark {
+    color-scheme: dark;
+  }
+
+  html.light {
+    color-scheme: light;
+  }
+
   body {
+    min-height: 100dvh;
     background-color: var(--color-background);
     color: var(--color-foreground);
   }
