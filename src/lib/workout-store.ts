@@ -21,6 +21,15 @@ export type Exercise = {
   coachRange?: string;
   coachRest?: string;
 };
+export type Exercise = {
+  id: string;
+  name: string;
+  sets: SetEntry[];
+  coachRange?: string;
+  coachRest?: string;
+  /** Uwagi trenera z planu – tylko podgląd w UI (coach). */
+  coachNote?: string;
+};
 export type Session = {
   date: string; // YYYY-MM-DD
   exercises: Exercise[];
