@@ -51,6 +51,7 @@ type Props = {
 };
 
 const COLLAPSED_KEY = "trening-ex-collapsed-v1";
+const REST_ENABLED_KEY = "rest-enabled-v1"; // Klucz ustawienia przerw
 
 function loadCollapsedIds(date: string): Set<string> {
   if (typeof window === "undefined") return new Set();
@@ -119,8 +120,18 @@ export function ExerciseCard({
   const [collapsed, setCollapsed] = useState(() => loadCollapsedIds(date).has(exercise.id));
   const [nameOpen, setNameOpen] = useState(false);
   const [nameQuery, setNameQuery] = useState("");
-  const nameBoxRef = useRef<HTMLDivElement>(null);
-  const nameInputRef = useRef<HTMLInputElement>(null);
+  
+  // Stan sprawdzający, czy timery przerw są włączone w localStorage (domyślnie true)
+  const [restEnabled, setRestEnabled] = useState(true);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const val = window.localStorage.getItem(REST_ENABLED_KEY);
+      if (val !== null) {
+        setRestEnabled(JSON.parse(val));
+      }
+    }
+  }, []);
 
   useEffect(() => {
     setCollapsed(loadCollapsedIds(date).has(exercise.id));
@@ -157,6 +168,9 @@ export function ExerciseCard({
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, [nameOpen]);
+
+  const nameBoxRef = useRef<HTMLDivElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const progress = computeProgress(sessions, date, exercise);
   const history = useMemo(
@@ -397,9 +411,11 @@ export function ExerciseCard({
                     : "border-input"
                 }`}
               />
-              {!(exercise.coachRange || exercise.coachRest) ||
-              exercise.coachRest ||
-              set.restSec ? (
+              {/* Timer wyświetla się tylko wtedy, gdy globalna opcja restEnabled jest włączona */}
+              {restEnabled &&
+              (!(exercise.coachRange || exercise.coachRest) ||
+                exercise.coachRest ||
+                set.restSec) ? (
                 <RestTimer
                   compact
                   autoSignal={restSignal[i] ?? 0}
@@ -425,7 +441,7 @@ export function ExerciseCard({
           </div>
         ))}
 
-        {/* 1. UWAGI TRENERA – TERAZ NAD PRZYCISKAMI, W OSOBNYM BLOKU */}
+        {/* 1. UWAGI TRENERA – NAD PRZYCISKAMI, W OSOBNYM BLOKU */}
         {exercise.coachNote ? (
           <div className="mt-3">
             <p className="rounded-xl border border-border/60 bg-secondary/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
