@@ -655,11 +655,11 @@ function RepsInput({
       placeholder={prev || "—"}
       title="Powtórzenia lub czas (np. 12, 40s, 1:20, 1min 20s)"
       aria-label="Powtórzenia / Czas"
-      className={`w-16 rounded-lg border bg-secondary px-2 py-2 text-center text-sm tabular-nums outline-none focus:border-primary ${
+            className={`w-16 rounded-lg border bg-secondary px-2 py-2 text-center text-sm tabular-nums text-foreground outline-none focus:border-primary ${
         prev && empty
           ? "border-primary/60 placeholder:font-semibold placeholder:text-primary"
           : "border-input"
-      } ${set.timeSec ? "text-primary" : ""}`}
+      }`}
     />
   );
 }
