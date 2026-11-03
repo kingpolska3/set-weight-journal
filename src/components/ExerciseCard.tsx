@@ -424,17 +424,24 @@ export function ExerciseCard({
             />
           </div>
         ))}
-                <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => update({ sets: [...exercise.sets, { reps: 0, weight: 0 }] })}
-            className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-primary hover:bg-secondary"
-          >
-                    {exercise.coachNote ? (
+        {exercise.coachNote ? (
           <p className="rounded-xl border border-border/60 bg-secondary/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
             <span className="font-semibold text-foreground">Uwagi: </span>
             {exercise.coachNote}
           </p>
         ) : null}
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button ...>Dodaj serię</button>
+          <button ...>Rozgrzewkowa</button>
+          {exercise.coachRange ? ( ... ) : null}
+          {exercise.coachRest ? ( ... ) : null}
+        </div>
+                <div className="flex flex-wrap items-center gap-2">
+                    <button
+            onClick={() => update({ sets: [...exercise.sets, { reps: 0, weight: 0 }] })}
+            className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-primary hover:bg-secondary"
+          >
             <Plus className="h-3.5 w-3.5" /> Dodaj serię
           </button>
           <button
