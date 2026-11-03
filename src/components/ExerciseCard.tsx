@@ -429,7 +429,9 @@ export function ExerciseCard({
           </button>
           <button
             onClick={() =>
-              update({ sets: [...exercise.sets, { reps: 0, weight: 0, warmup: true }] })
+              update({
+  sets: [{ reps: 0, weight: 0, warmup: true }, ...exercise.sets],
+})
             }
             className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-secondary"
           >
