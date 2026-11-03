@@ -397,12 +397,16 @@ export function ExerciseCard({
                     : "border-input"
                 }`}
               />
-              <RestTimer
-                compact
-                autoSignal={restSignal[i] ?? 0}
-                presetSec={set.restSec}
-                onSave={(secVal) => updateSet(i, { restSec: secVal })}
-              />
+                            {!(exercise.coachRange || exercise.coachRest) ||
+              exercise.coachRest ||
+              set.restSec ? (
+                <RestTimer
+                  compact
+                  autoSignal={restSignal[i] ?? 0}
+                  presetSec={set.restSec}
+                  onSave={(secVal) => updateSet(i, { restSec: secVal })}
+                />
+              ) : null}
               <button
                 onClick={() => update({ sets: exercise.sets.filter((_, si) => si !== i) })}
                 aria-label="Usuń serię"
