@@ -25,7 +25,6 @@ export type ClientSession = {
 
 const KEY = "trainer-client-sessions-v1";
 
-// Luźny klient — tabela może nie być w wygenerowanych typach
 type Loose = {
   from: (t: string) => any; // eslint-disable-line @typescript-eslint/no-explicit-any
 };
@@ -52,7 +51,6 @@ function saveAll(list: ClientSession[]) {
   }
 }
 
-/** Scalenie po id — nowszy endedAt / startedAt wygrywa. */
 function mergeSessions(a: ClientSession[], b: ClientSession[]): ClientSession[] {
   const map = new Map<string, ClientSession>();
   for (const s of [...a, ...b]) {
@@ -68,19 +66,16 @@ function mergeSessions(a: ClientSession[], b: ClientSession[]): ClientSession[] 
   return [...map.values()].sort((x, y) => (x.date < y.date ? 1 : x.date > y.date ? -1 : 0));
 }
 
-/** Wszystkie sesje danego podopiecznego (planId), od najnowszej — tylko local. */
 export function loadClientSessions(planId: string): ClientSession[] {
   return loadAll()
     .filter((s) => s.planId === planId)
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 }
 
-/** Wszystkie sesje coachingu (wszyscy podopieczni). */
 export function loadAllClientSessions(): ClientSession[] {
   return loadAll().sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 }
 
-/** Zapisz / nadpisz sesję lokalnie (po id). */
 export function saveClientSession(session: ClientSession): ClientSession[] {
   const all = loadAll();
   const idx = all.findIndex((s) => s.id === session.id);
@@ -101,8 +96,6 @@ export function getClientSessionOnDate(
   return loadAll().find((s) => s.planId === planId && s.date === date);
 }
 
-// ——— Cloud ———
-
 type CloudRow = {
   id: string;
   plan_id: string;
@@ -119,7 +112,6 @@ function rowToSession(row: CloudRow): ClientSession {
   };
 }
 
-/** Pobierz sesje planu z Supabase i zmerguj do localStorage. */
 export async function syncClientSessionsFromCloud(
   planId: string,
 ): Promise<ClientSession[]> {
@@ -135,13 +127,11 @@ export async function syncClientSessionsFromCloud(
     loadAll().filter((s) => s.planId === planId),
     cloud,
   );
-  // zachowaj sesje innych planów + zmergowane tego planu
   const others = loadAll().filter((s) => s.planId !== planId);
   saveAll([...others, ...merged]);
   return merged.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 }
 
-/** Zapisz lokalnie + upsert do chmury (gdy jest userId). */
 export async function saveClientSessionWithCloud(
   session: ClientSession,
   userId?: string | null,
@@ -164,7 +154,6 @@ export async function saveClientSessionWithCloud(
   return local;
 }
 
-/** Usuń lokalnie + z chmury. */
 export async function removeClientSessionWithCloud(
   id: string,
   userId?: string | null,
@@ -175,20 +164,22 @@ export async function removeClientSessionWithCloud(
   if (error) throw error;
 }
 
-// ——— Mapowanie z planu ———
-
+/** Cele z planu → puste pola + prev* (podświetlenie), nie jako zrobione serie. */
 function planSetToEntry(s: PlanSet, rangeHint: string, restSec?: number): SetEntry {
-  const repsRaw = ((s.reps || "").trim() || rangeHint).toLowerCase();
-  const weight = Number(String(s.weight || "0").replace(",", ".")) || 0;
+  const explicit = (s.reps || "").trim();
+  const hint = explicit || (rangeHint || "").trim();
+  const repsRaw = hint.toLowerCase();
+  const weightNum = Number(String(s.weight || "0").replace(",", ".")) || 0;
 
   const minMatch = repsRaw.match(/^(\d+(?:[.,]\d+)?)\s*min/);
   if (minMatch) {
     const mins = parseFloat(minMatch[1].replace(",", "."));
     return {
       reps: 0,
-      weight,
-      timeSec: Math.round(mins * 60),
+      weight: 0,
       warmup: !!s.warmup,
+      prevTimeSec: Math.round(mins * 60),
+      ...(weightNum ? { prevWeight: weightNum } : {}),
       ...(restSec ? { restSec } : {}),
     };
   }
@@ -197,9 +188,10 @@ function planSetToEntry(s: PlanSet, rangeHint: string, restSec?: number): SetEnt
     const [m, sec] = repsRaw.split(":").map(Number);
     return {
       reps: 0,
-      weight,
-      timeSec: (m || 0) * 60 + (sec || 0),
+      weight: 0,
       warmup: !!s.warmup,
+      prevTimeSec: (m || 0) * 60 + (sec || 0),
+      ...(weightNum ? { prevWeight: weightNum } : {}),
       ...(restSec ? { restSec } : {}),
     };
   }
@@ -208,19 +200,25 @@ function planSetToEntry(s: PlanSet, rangeHint: string, restSec?: number): SetEnt
     const n = parseInt(repsRaw, 10) || 0;
     return {
       reps: 0,
-      weight,
-      timeSec: n,
+      weight: 0,
       warmup: !!s.warmup,
+      prevTimeSec: n,
+      ...(weightNum ? { prevWeight: weightNum } : {}),
       ...(restSec ? { restSec } : {}),
     };
   }
 
   const range = repsRaw.match(/(\d+)\s*[–\-]\s*(\d+)/);
-  const reps = range ? Number(range[2]) : parseInt(repsRaw, 10) || 0;
+  const targetReps = range
+    ? Number(range[2])
+    : parseInt(repsRaw, 10) || 0;
+
   return {
-    reps,
-    weight,
+    reps: 0,
+    weight: 0,
     warmup: !!s.warmup,
+    ...(targetReps ? { prevReps: targetReps } : {}),
+    ...(weightNum ? { prevWeight: weightNum } : {}),
     ...(restSec ? { restSec } : {}),
   };
 }
@@ -231,7 +229,7 @@ function exerciseFromPlan(ex: PlanExercise): Exercise {
   const baseSets =
     ex.sets.length > 0
       ? ex.sets
-      : [{ reps: rangeHint || "8-12", weight: "", warmup: false }];
+      : [{ reps: rangeHint || "", weight: "", warmup: false }];
 
   const sets = baseSets.map((s) => planSetToEntry(s, rangeHint, restSec));
 
