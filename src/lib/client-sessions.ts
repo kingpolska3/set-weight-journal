@@ -164,7 +164,11 @@ export async function removeClientSessionWithCloud(
   if (error) throw error;
 }
 
-/** Cele z planu → puste pola + prev* (podświetlenie), nie jako zrobione serie. */
+/**
+ * Cele z planu → puste pola (wpisujesz wynik).
+ * Czas → prevTimeSec; ciężar z planu → prevWeight.
+ * Zakres powtórzeń NIE idzie do prevReps – jest w coachRange (chip w UI).
+ */
 function planSetToEntry(s: PlanSet, rangeHint: string, restSec?: number): SetEntry {
   const explicit = (s.reps || "").trim();
   const hint = explicit || (rangeHint || "").trim();
@@ -208,16 +212,11 @@ function planSetToEntry(s: PlanSet, rangeHint: string, restSec?: number): SetEnt
     };
   }
 
-  const range = repsRaw.match(/(\d+)\s*[–\-]\s*(\d+)/);
-  const targetReps = range
-    ? Number(range[2])
-    : parseInt(repsRaw, 10) || 0;
-
+  // Powtórzenia / zakres – pole puste; zakres w coachRange
   return {
     reps: 0,
     weight: 0,
     warmup: !!s.warmup,
-    ...(targetReps ? { prevReps: targetReps } : {}),
     ...(weightNum ? { prevWeight: weightNum } : {}),
     ...(restSec ? { restSec } : {}),
   };
@@ -225,6 +224,7 @@ function planSetToEntry(s: PlanSet, rangeHint: string, restSec?: number): SetEnt
 
 function exerciseFromPlan(ex: PlanExercise): Exercise {
   const rangeHint = (ex.range || "").trim();
+  const restLabel = (ex.rest || "").trim();
   const restSec = parseRestToSeconds(ex.rest);
   const baseSets =
     ex.sets.length > 0
@@ -233,19 +233,23 @@ function exerciseFromPlan(ex: PlanExercise): Exercise {
 
   const sets = baseSets.map((s) => planSetToEntry(s, rangeHint, restSec));
 
-  const extra = [rangeHint ? `Zakres: ${rangeHint}` : "", ex.note?.trim() || ""]
-    .filter(Boolean)
-    .join(" · ");
-  if (extra && sets.length) {
+  // Tylko uwagi trenera w notatce (bez „Zakres:” – to coachRange)
+  if (ex.note?.trim() && sets.length) {
     const idx = sets.findIndex((s) => !s.warmup);
     const target = idx >= 0 ? idx : 0;
     sets[target] = {
       ...sets[target],
-      note: [sets[target].note, extra].filter(Boolean).join(" · "),
+      note: [sets[target].note, ex.note.trim()].filter(Boolean).join(" · "),
     };
   }
 
-  return { id: uid(), name: ex.name || "Ćwiczenie", sets };
+  return {
+    id: uid(),
+    name: ex.name || "Ćwiczenie",
+    sets,
+    ...(rangeHint ? { coachRange: rangeHint } : {}),
+    ...(restLabel ? { coachRest: restLabel } : {}),
+  };
 }
 
 export function planDayToClientSession(
