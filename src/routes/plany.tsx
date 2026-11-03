@@ -687,7 +687,7 @@ function ClientEditor({
                     type="button"
                     onClick={() =>
                       void navigate({
-                        to: "/plany/trening",
+                        to: "/trening-podopieczny",
                         search: { plan: row.id, day: d.id },
                       })
                     }
@@ -700,7 +700,7 @@ function ClientEditor({
                 type="button"
                 onClick={() =>
                   void navigate({
-                    to: "/plany/trening",
+                    to: "/trening-podopieczny",
                     search: { plan: row.id },
                   })
                 }
