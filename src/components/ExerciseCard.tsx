@@ -412,7 +412,7 @@ export function ExerciseCard({
             ) : null}
           </div>
         ))}
-        <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => update({ sets: [...exercise.sets, { reps: 0, weight: 0 }] })}
             className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-primary hover:bg-secondary"
@@ -427,6 +427,22 @@ export function ExerciseCard({
           >
             <Plus className="h-3.5 w-3.5" /> Rozgrzewkowa
           </button>
+          {exercise.coachRange ? (
+            <span
+              className="inline-flex items-center rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-xs font-semibold tabular-nums text-primary"
+              title="Zakres z planu (tylko podgląd)"
+            >
+              Zakres: {exercise.coachRange}
+            </span>
+          ) : null}
+          {exercise.coachRest ? (
+            <span
+              className="inline-flex items-center rounded-lg border border-border bg-secondary px-2.5 py-1.5 text-xs tabular-nums text-muted-foreground"
+              title="Przerwa z planu (tylko podgląd)"
+            >
+              Przerwa: {exercise.coachRest}
+            </span>
+          ) : null}
         </div>
       </div>
 
