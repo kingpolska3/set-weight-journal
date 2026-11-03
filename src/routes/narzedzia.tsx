@@ -75,6 +75,8 @@ export const Route = createFileRoute("/narzedzia")({
   component: ToolsPage,
 });
 
+const REST_ENABLED_KEY = "rest-enabled-v1";
+
 function ToolsPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -85,13 +87,31 @@ function ToolsPage() {
   const [received, setReceived] = useState<ReceivedPlan[]>([]);
   const [previewId, setPreviewId] = useState<string | null>(null);
 
+  // Stan włącznika timerów przerw z localStorage
+  const [restEnabled, setRestEnabled] = useState(true);
+
   useEffect(() => {
     setTemplates(loadTemplates());
     setSessions(loadSessions());
     setReceived(loadReceivedPlans());
     setRest(loadRest());
+    if (typeof window !== "undefined") {
+      const val = window.localStorage.getItem(REST_ENABLED_KEY);
+      if (val !== null) {
+        setRestEnabled(JSON.parse(val));
+      }
+    }
     setLoaded(true);
   }, []);
+
+  const toggleRestEnabled = () => {
+    const next = !restEnabled;
+    setRestEnabled(next);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(REST_ENABLED_KEY, JSON.stringify(next));
+    }
+    toast.success(next ? "Włączono timery przerw" : "Wyłączono timery przerw");
+  };
 
   useEffect(() => {
     if (loaded) saveTemplates(templates);
@@ -424,13 +444,31 @@ function ToolsPage() {
 
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
           <div className="flex items-center gap-3 border-b border-border bg-secondary/50 px-4 py-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15">
-              <Timer className="h-4.5 w-4.5 text-primary" />
-            </span>
-            <div>
-              <h2 className="text-sm font-semibold text-foreground">Przerwa między seriami</h2>
+            {/* KLIKALNA IKONA TIMERA WŁĄCZAJĄCA/WYŁĄCZAJĄCA GLOBALNY TIMER PRZERW */}
+            <button
+              type="button"
+              onClick={toggleRestEnabled}
+              title={restEnabled ? "Wyłącz globalny timer przerw" : "Włącz globalny timer przerw"}
+              aria-label="Przełącz stan timera przerw"
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                restEnabled
+                  ? "bg-primary/15 text-primary hover:bg-primary/25"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80 opacity-60"
+              }`}
+            >
+              <Timer className="h-4.5 w-4.5" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-semibold text-foreground">Przerwa między seriami</h2>
+                {!restEnabled && (
+                  <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                    Wyłączone
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-muted-foreground">
-                Timer przy każdej serii odlicza ten czas i daje znać, że pora na kolejną.
+                Timer przy każdej serii odlicza ten czas i daje znać, że pora na kolejną. (Kliknij ikonę, aby włączyć/wyłączyć)
               </p>
             </div>
             <span className="ml-auto rounded-xl bg-primary px-3 py-1.5 font-mono text-sm font-bold tabular-nums text-primary-foreground">
