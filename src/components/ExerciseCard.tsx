@@ -353,20 +353,20 @@ export function ExerciseCard({
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => {
-  const next = exercise.sets.map((s, j) =>
-    j === i ? { ...s, warmup: !s.warmup } : s,
-  );
-  const moved = next[i];
-  if (!moved) return;
-  const without = next.filter((_, j) => j !== i);
-  if (moved.warmup) {
-    update({ sets: [moved, ...without] });
-  } else {
-    const warm = without.filter((s) => s.warmup);
-    const work = without.filter((s) => !s.warmup);
-    update({ sets: [...warm, moved, ...work] });
-  }
-}}
+                  const next = exercise.sets.map((s, j) =>
+                    j === i ? { ...s, warmup: !s.warmup } : s,
+                  );
+                  const moved = next[i];
+                  if (!moved) return;
+                  const without = next.filter((_, j) => j !== i);
+                  if (moved.warmup) {
+                    update({ sets: [moved, ...without] });
+                  } else {
+                    const warm = without.filter((s) => s.warmup);
+                    const work = without.filter((s) => !s.warmup);
+                    update({ sets: [...warm, moved, ...work] });
+                  }
+                }}
                 title={set.warmup ? "Seria rozgrzewkowa" : "Seria robocza"}
                 className={`w-8 shrink-0 rounded-md py-1 text-[10px] font-bold uppercase ${
                   set.warmup
@@ -397,7 +397,7 @@ export function ExerciseCard({
                     : "border-input"
                 }`}
               />
-                            {!(exercise.coachRange || exercise.coachRest) ||
+              {!(exercise.coachRange || exercise.coachRest) ||
               exercise.coachRest ||
               set.restSec ? (
                 <RestTimer
@@ -424,31 +424,32 @@ export function ExerciseCard({
             />
           </div>
         ))}
+
+        {/* 1. UWAGI TRENERA – TERAZ NAD PRZYCISKAMI, W OSOBNYM BLOKU */}
         {exercise.coachNote ? (
-          <p className="rounded-xl border border-border/60 bg-secondary/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-            <span className="font-semibold text-foreground">Uwagi: </span>
-            {exercise.coachNote}
-          </p>
+          <div className="mt-3">
+            <p className="rounded-xl border border-border/60 bg-secondary/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+              <span className="font-semibold text-foreground">Uwagi: </span>
+              {exercise.coachNote}
+            </p>
+          </div>
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-2">
-          <button ...>Dodaj serię</button>
-          <button ...>Rozgrzewkowa</button>
-          {exercise.coachRange ? ( ... ) : null}
-          {exercise.coachRest ? ( ... ) : null}
-        </div>
-                <div className="flex flex-wrap items-center gap-2">
-                    <button
+        {/* 2. PRZYCISKI DODAWANIA SERII I ZAKRESÓW – W OSOBNYM WIERSZU PONIŻEJ */}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
             onClick={() => update({ sets: [...exercise.sets, { reps: 0, weight: 0 }] })}
             className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-primary hover:bg-secondary"
           >
             <Plus className="h-3.5 w-3.5" /> Dodaj serię
           </button>
           <button
+            type="button"
             onClick={() =>
               update({
-  sets: [{ reps: 0, weight: 0, warmup: true }, ...exercise.sets],
-})
+                sets: [{ reps: 0, weight: 0, warmup: true }, ...exercise.sets],
+              })
             }
             className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-secondary"
           >
@@ -688,7 +689,7 @@ function RepsInput({
       placeholder={prev || "—"}
       title="Powtórzenia lub czas (np. 12, 40s, 1:20, 1min 20s)"
       aria-label="Powtórzenia / Czas"
-            className={`w-16 rounded-lg border bg-secondary px-2 py-2 text-center text-sm tabular-nums text-foreground outline-none focus:border-primary ${
+      className={`w-16 rounded-lg border bg-secondary px-2 py-2 text-center text-sm tabular-nums text-foreground outline-none focus:border-primary ${
         prev && empty
           ? "border-primary/60 placeholder:font-semibold placeholder:text-primary"
           : "border-input"
