@@ -20,13 +20,6 @@ export type Exercise = {
   /** Cel z planu trenera – tylko podgląd w UI (coach). */
   coachRange?: string;
   coachRest?: string;
-};
-export type Exercise = {
-  id: string;
-  name: string;
-  sets: SetEntry[];
-  coachRange?: string;
-  coachRest?: string;
   /** Uwagi trenera z planu – tylko podgląd w UI (coach). */
   coachNote?: string;
 };
