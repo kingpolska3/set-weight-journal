@@ -167,7 +167,7 @@ export async function removeClientSessionWithCloud(
 /**
  * Cele z planu → puste pola (wpisujesz wynik).
  * Czas → prevTimeSec; ciężar z planu → prevWeight.
- * Zakres powtórzeń NIE idzie do prevReps – jest w coachRange (chip w UI).
+ * Zakres w coachRange (chip w UI), nie w prevReps.
  */
 function planSetToEntry(s: PlanSet, rangeHint: string, restSec?: number): SetEntry {
   const explicit = (s.reps || "").trim();
@@ -212,7 +212,6 @@ function planSetToEntry(s: PlanSet, rangeHint: string, restSec?: number): SetEnt
     };
   }
 
-  // Powtórzenia / zakres – pole puste; zakres w coachRange
   return {
     reps: 0,
     weight: 0,
@@ -233,7 +232,6 @@ function exerciseFromPlan(ex: PlanExercise): Exercise {
 
   const sets = baseSets.map((s) => planSetToEntry(s, rangeHint, restSec));
 
-  // Tylko uwagi trenera w notatce (bez „Zakres:” – to coachRange)
   if (ex.note?.trim() && sets.length) {
     const idx = sets.findIndex((s) => !s.warmup);
     const target = idx >= 0 ? idx : 0;
@@ -242,6 +240,9 @@ function exerciseFromPlan(ex: PlanExercise): Exercise {
       note: [sets[target].note, ex.note.trim()].filter(Boolean).join(" · "),
     };
   }
+
+  // Rozgrzewka zawsze na górze
+  sets.sort((a, b) => Number(!!b.warmup) - Number(!!a.warmup));
 
   return {
     id: uid(),
