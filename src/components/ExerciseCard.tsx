@@ -352,7 +352,21 @@ export function ExerciseCard({
           <div key={i} className="rounded-xl border border-transparent px-0 py-0">
             <div className="flex flex-wrap items-center gap-2">
               <button
-                onClick={() => updateSet(i, { warmup: !set.warmup })}
+                onClick={() => {
+  const next = exercise.sets.map((s, j) =>
+    j === i ? { ...s, warmup: !s.warmup } : s,
+  );
+  const moved = next[i];
+  if (!moved) return;
+  const without = next.filter((_, j) => j !== i);
+  if (moved.warmup) {
+    update({ sets: [moved, ...without] });
+  } else {
+    const warm = without.filter((s) => s.warmup);
+    const work = without.filter((s) => !s.warmup);
+    update({ sets: [...warm, moved, ...work] });
+  }
+}}
                 title={set.warmup ? "Seria rozgrzewkowa" : "Seria robocza"}
                 className={`w-8 shrink-0 rounded-md py-1 text-[10px] font-bold uppercase ${
                   set.warmup
