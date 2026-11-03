@@ -404,12 +404,6 @@ export function ExerciseCard({
               maxLength={60}
               className="mt-1 w-full rounded-lg border border-transparent bg-transparent px-2 py-1 text-xs text-muted-foreground outline-none focus:border-input focus:bg-secondary"
             />
-            {set.restSec ? (
-              <p className="px-2 text-[10px] text-muted-foreground">
-                przerwa: {Math.floor(set.restSec / 60)}:
-                {String(set.restSec % 60).padStart(2, "0")}
-              </p>
-            ) : null}
           </div>
         ))}
                 <div className="flex flex-wrap items-center gap-2">
