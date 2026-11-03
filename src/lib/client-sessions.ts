@@ -221,25 +221,6 @@ function planSetToEntry(s: PlanSet, rangeHint: string, restSec?: number): SetEnt
   };
 }
 
-function exerciseFromPlan(ex: PlanExercise): Exercise {
-  const rangeHint = (ex.range || "").trim();
-  const restLabel = (ex.rest || "").trim();
-  const restSec = parseRestToSeconds(ex.rest);
-  const baseSets =
-    ex.sets.length > 0
-      ? ex.sets
-      : [{ reps: rangeHint || "", weight: "", warmup: false }];
-
-  const sets = baseSets.map((s) => planSetToEntry(s, rangeHint, restSec));
-
-  if (ex.note?.trim() && sets.length) {
-    const idx = sets.findIndex((s) => !s.warmup);
-    const target = idx >= 0 ? idx : 0;
-    sets[target] = {
-      ...sets[target],
-      note: [sets[target].note, ex.note.trim()].filter(Boolean).join(" · "),
-    };
-  }
 
   // Rozgrzewka zawsze na górze
   sets.sort((a, b) => Number(!!b.warmup) - Number(!!a.warmup));
