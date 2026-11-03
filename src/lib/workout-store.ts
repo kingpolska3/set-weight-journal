@@ -17,8 +17,10 @@ export type Exercise = {
   id: string;
   name: string;
   sets: SetEntry[];
+  /** Cel z planu trenera – tylko podgląd w UI (coach). */
+  coachRange?: string;
+  coachRest?: string;
 };
-
 export type Session = {
   date: string; // YYYY-MM-DD
   exercises: Exercise[];
