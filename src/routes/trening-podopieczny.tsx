@@ -15,7 +15,7 @@ import {
   type ClientSession,
 } from "@/lib/client-sessions";
 import { LOCAL_KEY, fetchPlans, type PlanRow } from "@/lib/trainer-plans";
-import { daySummary, todayISO, uid, type Exercise, type Session } from "@/lib/workout-store";
+import { todayISO, uid, volume, type Exercise, type Session } from "@/lib/workout-store";
 
 type Search = { plan?: string; day?: string };
 
@@ -127,16 +127,15 @@ function CoachWorkoutPage() {
     };
   }, [planId, dayId, user?.id, authLoading]);
 
-  const summary = useMemo(() => {
-    if (!session) return null;
-    return daySummary(clientSessionAsSession(session), history);
-  }, [session, history]);
+  const totalVolume = useMemo(() => {
+    if (!session) return 0;
+    return session.exercises.reduce((sum, ex) => sum + volume(ex.sets), 0);
+  }, [session]);
 
   const patchExercise = (index: number, ex: Exercise) => {
     setSession((s) => {
       if (!s) return s;
-      const exercises = s.exercises.map((e, i) => (i === index ? ex : e));
-      return { ...s, exercises };
+      return { ...s, exercises: s.exercises.map((e, i) => (i === index ? ex : e)) };
     });
   };
 
@@ -163,10 +162,7 @@ function CoachWorkoutPage() {
       if (!s) return s;
       return {
         ...s,
-        exercises: [
-          ...s.exercises,
-          { id: uid(), name: "", sets: [{ reps: 0, weight: 0 }] },
-        ],
+        exercises: [...s.exercises, { id: uid(), name: "", sets: [{ reps: 0, weight: 0 }] }],
       };
     });
   };
@@ -181,15 +177,11 @@ function CoachWorkoutPage() {
         date: session.date || todayISO(),
       };
       await saveClientSessionWithCloud(done, user?.id);
-      toast.success(
-        user
-          ? `Zapisano trening u ${done.clientName} (chmura)`
-          : `Zapisano trening u ${done.clientName}`,
-      );
-      void navigate({ to: "/plany", search: {} });
+      toast.success(`Zapisano trening u ${done.clientName}`);
+      void navigate({ to: "/plany" });
     } catch (e) {
       console.error(e);
-      toast.error("Nie udało się zapisać (sprawdź tabelę / RLS w Supabase)");
+      toast.error("Nie udało się zapisać");
     }
     setSaving(false);
   };
@@ -234,15 +226,9 @@ function CoachWorkoutPage() {
           <p className="text-sm text-muted-foreground">
             {session.dayName} · {session.date}
           </p>
-          {summary ? (
-            <p className="mt-2 text-xs tabular-nums text-muted-foreground">
-              {Math.round(summary.volume).toLocaleString("pl-PL")} kg ·{" "}
-              {session.exercises.length} ćw.
-              {summary.pct != null
-                ? ` · ${summary.pct > 0 ? "+" : ""}${summary.pct.toFixed(1)}% vs poprzedni`
-                : ""}
-            </p>
-          ) : null}
+          <p className="mt-2 text-xs tabular-nums text-muted-foreground">
+            {Math.round(totalVolume).toLocaleString("pl-PL")} kg · {session.exercises.length} ćw.
+          </p>
         </div>
       </header>
 
@@ -296,7 +282,7 @@ function CoachWorkoutPage() {
 
         <button
           type="button"
-          onClick={() => void navigate({ to: "/plany", search: {} })}
+          onClick={() => void navigate({ to: "/plany" })}
           className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border py-2.5 text-xs text-muted-foreground"
         >
           <Square className="h-3.5 w-3.5" /> Anuluj bez zapisu
