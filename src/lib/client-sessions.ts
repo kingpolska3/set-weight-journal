@@ -222,6 +222,18 @@ function planSetToEntry(s: PlanSet, rangeHint: string, restSec?: number): SetEnt
 }
 
 
+function exerciseFromPlan(ex: PlanExercise): Exercise {
+  const rangeHint = (ex.range || "").trim();
+  const restLabel = (ex.rest || "").trim();
+  const noteHint = (ex.note || "").trim();
+  const restSec = parseRestToSeconds(ex.rest);
+  const baseSets =
+    ex.sets.length > 0
+      ? ex.sets
+      : [{ reps: rangeHint || "", weight: "", warmup: false }];
+
+  const sets = baseSets.map((s) => planSetToEntry(s, rangeHint, restSec));
+
   // Rozgrzewka zawsze na górze
   sets.sort((a, b) => Number(!!b.warmup) - Number(!!a.warmup));
 
@@ -231,6 +243,7 @@ function planSetToEntry(s: PlanSet, rangeHint: string, restSec?: number): SetEnt
     sets,
     ...(rangeHint ? { coachRange: rangeHint } : {}),
     ...(restLabel ? { coachRest: restLabel } : {}),
+    ...(noteHint ? { coachNote: noteHint } : {}),
   };
 }
 
