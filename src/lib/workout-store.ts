@@ -515,7 +515,7 @@ export function ExerciseCard({
         </span>
       </div>
 
-      {/* POPRAWIONY BLOK PODPOWIEDZI "NA DZISIEJSZY TRENING" */}
+      {/* SEKCJA: NA DZISIEJSZY TRENING */}
       {exercise.name.trim() ? (
         <div className="mt-3 space-y-1.5 rounded-xl border border-border bg-secondary/50 p-3">
           <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
