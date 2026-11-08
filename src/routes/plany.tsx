@@ -6,6 +6,7 @@ import {
   Copy,
   Eye,
   Flame,
+  KeyRound,
   Pencil,
   Plus,
   Share2,
@@ -77,6 +78,9 @@ export const Route = createFileRoute("/plany")({
   component: PlansPage,
 });
 
+const TRAINER_AUTH_KEY = "trainer-auth-unlocked-v1";
+const CORRECT_PIN = "trener personalny";
+
 function setTonnage(s: PlanSet) {
   if (s.warmup) return 0;
   const p = parseRepsOrTime(s.reps);
@@ -88,6 +92,33 @@ function PlansPage() {
   const { user, loading } = useAuth();
   const { plan: linkToken } = Route.useSearch();
   const navigate = useNavigate();
+
+  // Stan autoryzacji trenera
+  const [unlocked, setUnlocked] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = window.localStorage.getItem(TRAINER_AUTH_KEY);
+      if (saved === "true") {
+        setUnlocked(true);
+      }
+    }
+  }, []);
+
+  const handleUnlock = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pinInput.trim().toLowerCase() === CORRECT_PIN) {
+      setUnlocked(true);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(TRAINER_AUTH_KEY, "true");
+      }
+      toast.success("Uzyskano dostęp do strefy trenera");
+    } else {
+      toast.error("Nieprawidłowy kod dostępu");
+    }
+  };
+
   const [plans, setPlans] = useState<PlanRow[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
@@ -96,7 +127,7 @@ function PlansPage() {
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || !unlocked) return;
     let cancelled = false;
     (async () => {
       let local: Client[] = [];
@@ -167,11 +198,62 @@ function PlansPage() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, loading]);
+  }, [user?.id, loading, unlocked]);
 
   useEffect(() => {
-    if (ready && !user) localStorage.setItem(LOCAL_KEY, JSON.stringify(plans.map((p) => p.data)));
-  }, [plans, ready, user]);
+    if (ready && !user && unlocked) localStorage.setItem(LOCAL_KEY, JSON.stringify(plans.map((p) => p.data)));
+  }, [plans, ready, user, unlocked]);
+
+  // Jeśli użytkownik nie podał kodu, wyświetlamy ekran blokady dostępu
+  if (!unlocked) {
+    return (
+      <main className="min-h-screen bg-background pb-24">
+        <header className="border-b border-border px-4 pb-5 pt-8">
+          <div className="mx-auto max-w-2xl">
+            <Link to="/narzedzia" className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <ArrowLeft className="h-3.5 w-3.5" /> Narzędzia
+            </Link>
+            <div className="mt-2 flex items-center gap-2 text-primary">
+              <ClipboardList className="h-5 w-5" />
+              <span className="text-xs font-semibold uppercase tracking-[0.2em]">Strefa Trenera</span>
+            </div>
+            <h1 className="mt-2 text-2xl font-bold text-foreground">Autoryzacja dostępu</h1>
+          </div>
+        </header>
+
+        <section className="mx-auto max-w-md px-4 py-12">
+          <form onSubmit={handleUnlock} className="rounded-2xl border border-border bg-card p-6 space-y-4 shadow-lg">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/15 text-primary mx-auto">
+              <KeyRound className="h-6 w-6" />
+            </div>
+            <div className="text-center">
+              <h2 className="text-base font-semibold text-foreground">Wprowadź kod trenera</h2>
+              <p className="text-xs text-muted-foreground mt-1">
+                Ta sekcja jest zastrzeżona dla trenera personalnego.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <input
+                type="password"
+                value={pinInput}
+                onChange={(e) => setPinInput(e.target.value)}
+                placeholder="Wpisz kod dostępu..."
+                autoFocus
+                className="w-full rounded-xl border border-input bg-secondary px-3 py-2.5 text-sm outline-none focus:border-primary text-center"
+              />
+              <button
+                type="submit"
+                className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground shadow transition-colors hover:bg-primary/90"
+              >
+                Odblokuj dostęp
+              </button>
+            </div>
+          </form>
+        </section>
+        <AppNav />
+      </main>
+    );
+  }
 
   const active = plans.find((p) => p.id === activeId) ?? null;
   const own = plans.filter((p) => p.access === "owner" || p.access === "local");
@@ -263,15 +345,29 @@ function PlansPage() {
         ))}
       </datalist>
       <header className="border-b border-border px-4 pb-5 pt-8">
-        <div className="mx-auto max-w-2xl">
-          <Link to="/narzedzia" className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-            <ArrowLeft className="h-3.5 w-3.5" /> Narzędzia
-          </Link>
-          <div className="mt-2 flex items-center gap-2 text-primary">
-            <ClipboardList className="h-5 w-5" />
-            <span className="text-xs font-semibold uppercase tracking-[0.2em]">Dziennik trenera</span>
+        <div className="mx-auto max-w-2xl flex items-center justify-between">
+          <div>
+            <Link to="/narzedzia" className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <ArrowLeft className="h-3.5 w-3.5" /> Narzędzia
+            </Link>
+            <div className="mt-2 flex items-center gap-2 text-primary">
+              <ClipboardList className="h-5 w-5" />
+              <span className="text-xs font-semibold uppercase tracking-[0.2em]">Dziennik trenera</span>
+            </div>
+            <h1 className="mt-2 text-2xl font-bold text-foreground">Tworzenie planów treningowych</h1>
           </div>
-          <h1 className="mt-2 text-2xl font-bold text-foreground">Tworzenie planów treningowych</h1>
+          <button
+            onClick={() => {
+              setUnlocked(false);
+              if (typeof window !== "undefined") {
+                window.localStorage.removeItem(TRAINER_AUTH_KEY);
+              }
+              toast.info("Wylogowano ze strefy trenera");
+            }}
+            className="text-xs text-muted-foreground hover:text-foreground border border-border px-2.5 py-1.5 rounded-lg"
+          >
+            Zablokuj kodem
+          </button>
         </div>
       </header>
       <section className="mx-auto max-w-2xl space-y-4 px-4 py-6">
@@ -995,7 +1091,7 @@ function ClientEditor({
               { id: uid(), name: `Dzień ${client.days.length + 1}`, exercises: [] },
             ])
           }
-          className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-primary/50 py-3 text-sm font-medium text-primary"
+          className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-primary/50 py.3 text-sm font-medium text-primary py-3"
         >
           <Plus className="h-4 w-4" /> Dodaj dzień treningowy
         </button>
