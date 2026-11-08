@@ -22,7 +22,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { ATLAS_NAMES } from "@/lib/exercise-atlas";
 import {
   formatRepsOrTime,
-  formatTime,
   parseRepsOrTime,
   uid,
   volume,
