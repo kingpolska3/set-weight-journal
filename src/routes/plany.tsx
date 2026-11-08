@@ -759,27 +759,41 @@ function ClientEditor({
                           {s.exercises.length} ćw.
                         </p>
                       </button>
-                      {!readOnly ? (
-                        <button
-                          type="button"
-                          aria-label="Usuń sesję"
-                          className="shrink-0 p-1 text-muted-foreground hover:text-danger"
-                          onClick={() => {
-                            if (!confirm(`Usunąć trening z ${s.date}?`)) return;
-                            void (async () => {
-                              try {
-                                await removeClientSessionWithCloud(s.id, user?.id);
-                                await refreshHistory();
-                                toast.success("Usunięto z historii");
-                              } catch {
-                                toast.error("Nie udało się usunąć z chmury");
-                              }
-                            })();
-                          }}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      ) : null}
+
+                      <div className="flex items-center gap-1">
+                        {!readOnly ? (
+                          <Link
+                            to="/trening-podopieczny"
+                            search={{ plan: row.id, session: s.id }}
+                            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-primary"
+                            title="Edytuj trening"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Link>
+                        ) : null}
+
+                        {!readOnly ? (
+                          <button
+                            type="button"
+                            aria-label="Usuń sesję"
+                            className="shrink-0 p-1.5 text-muted-foreground hover:text-danger"
+                            onClick={() => {
+                              if (!confirm(`Usunąć trening z ${s.date}?`)) return;
+                              void (async () => {
+                                try {
+                                  await removeClientSessionWithCloud(s.id, user?.id);
+                                  await refreshHistory();
+                                  toast.success("Usunięto z historii");
+                                } catch {
+                                  toast.error("Nie udało się usunąć z chmury");
+                                }
+                              })();
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        ) : null}
+                      </div>
                     </div>
                     {open ? (
                       <ul className="mt-2 space-y-1 border-t border-border pt-2">
@@ -880,6 +894,9 @@ function ClientEditor({
                         placeholder="Dodaj ćwiczenie…"
                         className="min-w-0 flex-1 bg-transparent text-sm font-medium outline-none"
                       />
+                      <span className="text-[11px] tabular-nums text-muted-foreground">
+                        {Math.round(tonnage)} kg
+                      </span>
                       {!readOnly ? (
                         <button
                           onClick={() =>
@@ -889,102 +906,59 @@ function ClientEditor({
                             })
                           }
                           aria-label="Usuń ćwiczenie"
-                          className="text-muted-foreground hover:text-danger"
+                          className="p-1 text-muted-foreground hover:text-danger"
                         >
-                          <X className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       ) : null}
                     </div>
 
-                    {warm.length ? (
-                      <div className="mt-2">
-                        <p className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                          <Flame className="h-3 w-3" /> Rozgrzewka
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {warm.map((x, k) => renderSet(x, `R${k + 1}`))}
-                        </div>
-                      </div>
-                    ) : null}
-
-                    <div className={warm.length ? "mt-2 border-t border-border pt-2" : "mt-2"}>
+                    <div className="mt-2 space-y-2">
                       {warm.length ? (
-                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
-                          Serie robocze
-                        </p>
+                        <div>
+                          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            Rozgrzewka
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {warm.map((item, wi) =>
+                              renderSet(item, `R${wi + 1}`),
+                            )}
+                          </div>
+                        </div>
                       ) : null}
-                      <div className="flex flex-wrap gap-2">
-                        {work.map((x, k) => renderSet(x, `${k + 1}.`))}
-                        {!readOnly ? (
-                          <>
+                      <div>
+                        {warm.length ? (
+                          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            Serie robocze
+                          </p>
+                        ) : null}
+                        <div className="flex flex-wrap gap-1.5">
+                          {work.map((item, wi) =>
+                            renderSet(item, `${wi + 1}`),
+                          )}
+                          {!readOnly ? (
                             <button
-                              onClick={() =>
-                                patchEx({ sets: [...ex.sets, { reps: "", weight: "" }] })
-                              }
-                              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-primary hover:bg-secondary"
+                              onClick={() => {
+                                const last = ex.sets[ex.sets.length - 1];
+                                patchEx({
+                                  sets: [
+                                    ...ex.sets,
+                                    {
+                                      reps: last?.reps ?? "10",
+                                      weight: last?.weight ?? "",
+                                      warmup: false,
+                                    },
+                                  ],
+                                });
+                              }}
+                              className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-xs text-muted-foreground hover:border-primary hover:text-primary"
                             >
                               <Plus className="h-3 w-3" /> Seria
                             </button>
-                            <button
-                              onClick={() =>
-                                patchEx({
-                                  sets: [...ex.sets, { reps: "", weight: "", warmup: true }],
-                                })
-                              }
-                              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-muted-foreground hover:bg-secondary"
-                            >
-                              <Flame className="h-3 w-3" /> Rozgrzewkowa
-                            </button>
-                          </>
-                        ) : null}
+                          ) : null}
+                        </div>
                       </div>
                     </div>
-
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <div className="flex items-center gap-1.5 rounded-lg border border-border bg-secondary/40 px-2 py-1 text-xs">
-                        <span className="text-[11px] text-muted-foreground">Zakres:</span>
-                        <input
-                          readOnly={readOnly}
-                          value={ex.range || ""}
-                          onChange={(e) => patchEx({ range: e.target.value })}
-                          placeholder="8–12 / 40s"
-                          className="w-20 bg-transparent text-right font-medium text-foreground outline-none placeholder:text-muted-foreground/50"
-                        />
-                      </div>
-                      <div className="flex items-center gap-1.5 rounded-lg border border-border bg-secondary/40 px-2 py-1 text-xs">
-                        <Timer className="h-3 w-3 text-primary" />
-                        <span className="text-[11px] text-muted-foreground">Przerwa:</span>
-                        <input
-                          readOnly={readOnly}
-                          value={ex.rest || ""}
-                          onChange={(e) => patchEx({ rest: e.target.value })}
-                          placeholder="np. 90s / 2 min"
-                          className="w-20 bg-transparent text-right font-medium text-foreground outline-none placeholder:text-muted-foreground/50"
-                        />
-                      </div>
-                      <span className="text-[10px] tabular-nums text-muted-foreground">
-                        tonaż roboczy {Math.round(tonnage)} kg
-                      </span>
-                    </div>
-
-                    <input
-                      readOnly={readOnly}
-                      value={ex.note || ""}
-                      onChange={(e) => patchEx({ note: e.target.value })}
-                      placeholder="uwagi dla podopiecznego…"
-                      className="mt-1.5 w-full bg-transparent text-xs text-muted-foreground outline-none"
-                    />
-
-                    {ex.sets.some((s) => parseRepsOrTime(s.reps).timeSec) ? (
-                      <p className="mt-1 text-[10px] text-primary">
-                        Na czas:{" "}
-                        {ex.sets
-                          .map((s) => parseRepsOrTime(s.reps).timeSec)
-                          .filter((t): t is number => !!t)
-                          .map(formatTime)
-                          .join(", ")}
-                      </p>
-                    ) : null}
                   </div>
                 );
               })}
@@ -999,15 +973,12 @@ function ClientEditor({
                         {
                           id: uid(),
                           name: "",
-                          sets: [{ reps: "", weight: "" }],
-                          note: "",
-                          rest: "",
-                          range: "",
+                          sets: [{ reps: "10", weight: "", warmup: false }],
                         },
                       ],
                     })
                   }
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-primary"
+                  className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-2.5 text-xs font-medium text-muted-foreground hover:border-primary hover:text-primary"
                 >
                   <Plus className="h-3.5 w-3.5" /> Dodaj ćwiczenie
                 </button>
@@ -1019,8 +990,13 @@ function ClientEditor({
 
       {!readOnly ? (
         <button
-          onClick={() => setDays([...client.days, { id: uid(), name: "", exercises: [] }])}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-primary/50 py-3 text-sm font-medium text-primary"
+          onClick={() =>
+            setDays([
+              ...client.days,
+              { id: uid(), name: `Dzień ${client.days.length + 1}`, exercises: [] },
+            ])
+          }
+          className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-primary/50 py-3 text-sm font-medium text-primary"
         >
           <Plus className="h-4 w-4" /> Dodaj dzień treningowy
         </button>
