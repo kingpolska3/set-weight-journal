@@ -26,6 +26,7 @@ import {
   bestInWindow,
   computeProgress,
   exerciseHistory,
+  nextSessionSuggestions,
   prFlags,
   shortDatePL,
   topWeight,
@@ -178,11 +179,17 @@ export function ExerciseCard({
   );
   const pr = prFlags(sessions, date, exercise);
 
-  // Pobieramy poprzednią sesję tego ćwiczenia (sprzed bieżącej daty)
+  // Pobieramy poprzednią sesję tego ćwiczenia
   const previousSession = useMemo(() => {
     const pastSessions = history.filter((h) => h.date < date);
     return pastSessions.length > 0 ? pastSessions[pastSessions.length - 1] : null;
   }, [history, date]);
+
+  // Pobieramy oryginalne sugestie progresji z store
+  const suggestions = useMemo(
+    () => nextSessionSuggestions(sessions, date, exercise.name),
+    [sessions, date, exercise.name],
+  );
 
   const best30 = bestInWindow(sessions, date, exercise.name, 30);
   const best60 = bestInWindow(sessions, date, exercise.name, 60);
@@ -523,7 +530,7 @@ export function ExerciseCard({
         </span>
       </div>
 
-      {/* NOWA SEKCJA: NA DZISIEJSZY TRENING */}
+      {/* SEKCJA: NA DZISIEJSZY TRENING Z OZNACZENIAMI W ORAZ INTELIGENTNĄ PROGRESJĄ */}
       {exercise.name.trim() ? (
         <div className="mt-3 space-y-1.5 rounded-xl border border-border bg-secondary/50 p-3">
           <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
@@ -534,13 +541,20 @@ export function ExerciseCard({
               To Twoje pierwsze podejście do tego ćwiczenia. Daj z siebie wszystko, a na następnym treningu dostaniesz podpowiedź odnośnie progresji.
             </p>
           ) : (
-            <p className="text-xs leading-snug text-foreground">
-              Ostatnio ({shortDatePL(previousSession.date)}) zrobiłeś{" "}
-              {previousSession.sets
-                .map((s, idx) => `[${idx + 1}]-${formatRepsOrTime(s)}×${s.weight}kg`)
-                .join(", ")}{" "}
-              w zaplanowanym zakresie. <span className="font-semibold text-primary">Plan na dziś:</span> Dorzuć +2.5 kg lub spróbuj zrobić 1 powtórzenie więcej.
-            </p>
+            <div className="space-y-1 text-xs leading-snug text-foreground">
+              <p>
+                Ostatnio ({shortDatePL(previousSession.date)}) zrobiłeś{" "}
+                {previousSession.sets
+                  .map((s, idx) => `[${idx + 1}${s.warmup ? "W" : ""}]:-${formatRepsOrTime(s)}×${s.weight}kg`)
+                  .join(", ")}{" "}
+                w zaplanowanym zakresie.
+              </p>
+              {suggestions.map((s, i) => (
+                <p key={i} className="font-semibold text-primary">
+                  Plan na dziś: {s.text}
+                </p>
+              ))}
+            </div>
           )}
         </div>
       ) : null}
