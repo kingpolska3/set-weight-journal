@@ -17,12 +17,13 @@ import {
 import { LOCAL_KEY, fetchPlans, type PlanRow } from "@/lib/trainer-plans";
 import { todayISO, uid, volume, type Exercise, type Session } from "@/lib/workout-store";
 
-type Search = { plan?: string; day?: string };
+type Search = { plan?: string; day?: string; session?: string };
 
 export const Route = createFileRoute("/trening-podopieczny")({
   validateSearch: (s: Record<string, unknown>): Search => ({
     plan: typeof s.plan === "string" ? s.plan : undefined,
     day: typeof s.day === "string" ? s.day : undefined,
+    session: typeof s.session === "string" ? s.session : undefined,
   }),
   head: () => ({
     meta: [
@@ -37,7 +38,7 @@ export const Route = createFileRoute("/trening-podopieczny")({
 });
 
 function CoachWorkoutPage() {
-  const { plan: planId, day: dayId } = Route.useSearch();
+  const { plan: planId, day: dayId, session: sessionId } = Route.useSearch();
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -93,26 +94,41 @@ function CoachWorkoutPage() {
         setRow(found);
 
         if (found) {
-          const day =
-            (dayId ? found.data.days.find((d) => d.id === dayId) : null) ??
-            found.data.days.find((d) => d.exercises.length > 0) ??
-            found.data.days[0];
-
-          const draft = day
-            ? planDayToClientSession(found.id, found.data, day)
-            : emptyClientSession(found.id, found.data);
-
-          setSession(draft);
-
+          let clientSessions: ClientSession[] = [];
           try {
             if (user) {
-              const list = await syncClientSessionsFromCloud(found.id);
-              if (!cancelled) setHistory(list.map(clientSessionAsSession));
+              clientSessions = await syncClientSessionsFromCloud(found.id);
             } else {
-              setHistory(loadClientSessions(found.id).map(clientSessionAsSession));
+              clientSessions = loadClientSessions(found.id);
             }
           } catch {
-            setHistory(loadClientSessions(found.id).map(clientSessionAsSession));
+            clientSessions = loadClientSessions(found.id);
+          }
+
+          if (!cancelled) {
+            setHistory(clientSessions.map(clientSessionAsSession));
+          }
+
+          // Jeśli przekazano sessionId – wczytaj istniejącą sesję do edycji
+          if (sessionId) {
+            const existing = clientSessions.find((s) => s.id === sessionId);
+            if (existing) {
+              setSession(existing);
+            } else {
+              toast.error("Nie znaleziono sesji do edycji");
+            }
+          } else {
+            // W przeciwnym razie stwórz nową sesję z szablonu planu
+            const day =
+              (dayId ? found.data.days.find((d) => d.id === dayId) : null) ??
+              found.data.days.find((d) => d.exercises.length > 0) ??
+              found.data.days[0];
+
+            const draft = day
+              ? planDayToClientSession(found.id, found.data, day)
+              : emptyClientSession(found.id, found.data);
+
+            setSession(draft);
           }
         }
       } catch (e) {
@@ -125,7 +141,7 @@ function CoachWorkoutPage() {
     return () => {
       cancelled = true;
     };
-  }, [planId, dayId, user?.id, authLoading]);
+  }, [planId, dayId, sessionId, user?.id, authLoading]);
 
   const totalVolume = useMemo(() => {
     if (!session) return 0;
@@ -173,7 +189,7 @@ function CoachWorkoutPage() {
     try {
       const done: ClientSession = {
         ...session,
-        endedAt: new Date().toISOString(),
+        endedAt: session.endedAt || new Date().toISOString(),
         date: session.date || todayISO(),
       };
 
@@ -181,7 +197,6 @@ function CoachWorkoutPage() {
         await saveClientSessionWithCloud(done, user?.id);
       } catch (cloudErr) {
         console.warn("Cloud save failed, saving locally:", cloudErr);
-        // Fallback lokalny gwarantujący zapis w przypadku problemów z siecią/bazą
         const existing = loadClientSessions(done.planId);
         const updated = [done, ...existing.filter((s) => s.id !== done.id)];
         if (typeof window !== "undefined") {
@@ -189,7 +204,11 @@ function CoachWorkoutPage() {
         }
       }
 
-      toast.success(`Zapisano trening u ${done.clientName}`);
+      toast.success(
+        sessionId
+          ? `Zaktualizowano trening u ${done.clientName}`
+          : `Zapisano trening u ${done.clientName}`
+      );
       void navigate({ to: "/plany" });
     } catch (e) {
       console.error(e);
@@ -232,7 +251,7 @@ function CoachWorkoutPage() {
           <div className="mt-2 flex items-center gap-2 text-primary">
             <Play className="h-4 w-4" />
             <span className="text-xs font-semibold uppercase tracking-[0.15em]">
-              Trening z podopiecznym
+              {sessionId ? "Edycja treningu podopiecznego" : "Trening z podopiecznym"}
             </span>
           </div>
           <h1 className="mt-1 text-xl font-bold text-foreground">{session.clientName}</h1>
@@ -255,54 +274,3 @@ function CoachWorkoutPage() {
             sessions={history}
             onChange={(updated) => patchExercise(i, updated)}
             onRemove={() => removeExercise(i)}
-            onMoveUp={() => moveExercise(i, -1)}
-            onMoveDown={() => moveExercise(i, 1)}
-            canMoveUp={i > 0}
-            canMoveDown={i < session.exercises.length - 1}
-          />
-        ))}
-
-        <button
-          type="button"
-          onClick={addExercise}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-primary/50 py-3 text-sm font-medium text-primary"
-        >
-          <Plus className="h-4 w-4" /> Dodaj ćwiczenie
-        </button>
-
-        <label className="block rounded-2xl border border-border bg-card p-3">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Notatka do treningu
-          </span>
-          <textarea
-            value={session.note || ""}
-            onChange={(e) => setSession({ ...session, note: e.target.value })}
-            rows={3}
-            placeholder="Samopoczucie, technika, plan na następny raz…"
-            className="mt-2 w-full resize-none rounded-xl border border-input bg-secondary px-3 py-2 text-sm outline-none focus:border-primary"
-          />
-        </label>
-
-        <button
-          type="button"
-          disabled={saving}
-          onClick={() => void finish()}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
-        >
-          <Save className="h-4 w-4" />
-          {saving ? "Zapisywanie…" : "Zakończ i zapisz u podopiecznego"}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => void navigate({ to: "/plany" })}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border py-2.5 text-xs text-muted-foreground"
-        >
-          <Square className="h-3.5 w-3.5" /> Anuluj bez zapisu
-        </button>
-      </section>
-
-      <AppNav />
-    </main>
-  );
-}
