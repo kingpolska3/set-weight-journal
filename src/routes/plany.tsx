@@ -93,7 +93,6 @@ function PlansPage() {
   const { plan: linkToken } = Route.useSearch();
   const navigate = useNavigate();
 
-  // Stan autoryzacji trenera
   const [unlocked, setUnlocked] = useState(false);
   const [pinInput, setPinInput] = useState("");
 
@@ -117,6 +116,16 @@ function PlansPage() {
     } else {
       toast.error("Nieprawidłowy kod dostępu");
     }
+  };
+
+  const handleLogoutTrainer = () => {
+    setUnlocked(false);
+    setPinInput("");
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(TRAINER_AUTH_KEY);
+    }
+    toast.info("Wylogowano ze strefy trenera");
+    void navigate({ to: "/narzedzia", search: {}, replace: true });
   };
 
   const [plans, setPlans] = useState<PlanRow[]>([]);
@@ -204,7 +213,6 @@ function PlansPage() {
     if (ready && !user && unlocked) localStorage.setItem(LOCAL_KEY, JSON.stringify(plans.map((p) => p.data)));
   }, [plans, ready, user, unlocked]);
 
-  // Jeśli użytkownik nie podał kodu, wyświetlamy ekran blokady dostępu
   if (!unlocked) {
     return (
       <main className="min-h-screen bg-background pb-24">
@@ -357,16 +365,10 @@ function PlansPage() {
             <h1 className="mt-2 text-2xl font-bold text-foreground">Tworzenie planów treningowych</h1>
           </div>
           <button
-            onClick={() => {
-              setUnlocked(false);
-              if (typeof window !== "undefined") {
-                window.localStorage.removeItem(TRAINER_AUTH_KEY);
-              }
-              toast.info("Wylogowano ze strefy trenera");
-            }}
+            onClick={handleLogoutTrainer}
             className="text-xs text-muted-foreground hover:text-foreground border border-border px-2.5 py-1.5 rounded-lg"
           >
-            Zablokuj kodem
+            Wyloguj jako trener
           </button>
         </div>
       </header>
@@ -1091,11 +1093,11 @@ function ClientEditor({
               { id: uid(), name: `Dzień ${client.days.length + 1}`, exercises: [] },
             ])
           }
-          className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-primary/50 py.3 text-sm font-medium text-primary py-3"
+          className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-primary/50 text-sm font-medium text-primary py-3"
         >
           <Plus className="h-4 w-4" /> Dodaj dzień treningowy
         </button>
       ) : null}
-    </div>
+    </main>
   );
 }
