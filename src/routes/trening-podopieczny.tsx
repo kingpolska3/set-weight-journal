@@ -176,14 +176,27 @@ function CoachWorkoutPage() {
         endedAt: new Date().toISOString(),
         date: session.date || todayISO(),
       };
-      await saveClientSessionWithCloud(done, user?.id);
+
+      try {
+        await saveClientSessionWithCloud(done, user?.id);
+      } catch (cloudErr) {
+        console.warn("Cloud save failed, saving locally:", cloudErr);
+        // Fallback lokalny gwarantujący zapis w przypadku problemów z siecią/bazą
+        const existing = loadClientSessions(done.planId);
+        const updated = [done, ...existing.filter((s) => s.id !== done.id)];
+        if (typeof window !== "undefined") {
+          localStorage.setItem(`client-sessions-${done.planId}`, JSON.stringify(updated));
+        }
+      }
+
       toast.success(`Zapisano trening u ${done.clientName}`);
       void navigate({ to: "/plany" });
     } catch (e) {
       console.error(e);
       toast.error("Nie udało się zapisać");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   if (!ready || authLoading) {
