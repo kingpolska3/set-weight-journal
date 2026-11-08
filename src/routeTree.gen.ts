@@ -14,7 +14,9 @@ import { Route as HistoriaRouteImport } from './routes/historia'
 import { Route as NarzedziaRouteImport } from './routes/narzedzia'
 import { Route as PlanyRouteImport } from './routes/plany'
 import { Route as ProfilRouteImport } from './routes/profil'
+import { Route as TreningPodopiecznyRouteImport } from './routes/trening-podopieczny'
 import { Route as VsRouteImport } from './routes/vs'
+import { Route as PlanyTreningRouteImport } from './routes/plany.trening'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -41,52 +43,93 @@ const ProfilRoute = ProfilRouteImport.update({
   path: '/profil',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TreningPodopiecznyRoute = TreningPodopiecznyRouteImport.update({
+  id: '/trening-podopieczny',
+  path: '/trening-podopieczny',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VsRoute = VsRouteImport.update({
   id: '/vs',
   path: '/vs',
   getParentRoute: () => rootRouteImport,
+} as any)
+const PlanyTreningRoute = PlanyTreningRouteImport.update({
+  id: '/trening',
+  path: '/trening',
+  getParentRoute: () => PlanyRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/historia': typeof HistoriaRoute
   '/narzedzia': typeof NarzedziaRoute
-  '/plany': typeof PlanyRoute
+  '/plany': typeof PlanyRouteWithChildren
   '/profil': typeof ProfilRoute
+  '/trening-podopieczny': typeof TreningPodopiecznyRoute
   '/vs': typeof VsRoute
+  '/plany/trening': typeof PlanyTreningRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/historia': typeof HistoriaRoute
   '/narzedzia': typeof NarzedziaRoute
-  '/plany': typeof PlanyRoute
+  '/plany': typeof PlanyRouteWithChildren
   '/profil': typeof ProfilRoute
+  '/trening-podopieczny': typeof TreningPodopiecznyRoute
   '/vs': typeof VsRoute
+  '/plany/trening': typeof PlanyTreningRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/historia': typeof HistoriaRoute
   '/narzedzia': typeof NarzedziaRoute
-  '/plany': typeof PlanyRoute
+  '/plany': typeof PlanyRouteWithChildren
   '/profil': typeof ProfilRoute
+  '/trening-podopieczny': typeof TreningPodopiecznyRoute
   '/vs': typeof VsRoute
+  '/plany/trening': typeof PlanyTreningRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/historia' | '/narzedzia' | '/plany' | '/profil' | '/vs'
+  fullPaths:
+    | '/'
+    | '/historia'
+    | '/narzedzia'
+    | '/plany'
+    | '/profil'
+    | '/trening-podopieczny'
+    | '/vs'
+    | '/plany/trening'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/historia' | '/narzedzia' | '/plany' | '/profil' | '/vs'
+  to:
+    | '/'
+    | '/historia'
+    | '/narzedzia'
+    | '/plany'
+    | '/profil'
+    | '/trening-podopieczny'
+    | '/vs'
+    | '/plany/trening'
   id:
-    '__root__' | '/' | '/historia' | '/narzedzia' | '/plany' | '/profil' | '/vs'
+    | '__root__'
+    | '/'
+    | '/historia'
+    | '/narzedzia'
+    | '/plany'
+    | '/profil'
+    | '/trening-podopieczny'
+    | '/vs'
+    | '/plany/trening'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   HistoriaRoute: typeof HistoriaRoute
   NarzedziaRoute: typeof NarzedziaRoute
-  PlanyRoute: typeof PlanyRoute
+  PlanyRoute: typeof PlanyRouteWithChildren
   ProfilRoute: typeof ProfilRoute
+  TreningPodopiecznyRoute: typeof TreningPodopiecznyRoute
   VsRoute: typeof VsRoute
 }
 
@@ -127,6 +170,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfilRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/trening-podopieczny': {
+      id: '/trening-podopieczny'
+      path: '/trening-podopieczny'
+      fullPath: '/trening-podopieczny'
+      preLoaderRoute: typeof TreningPodopiecznyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/vs': {
       id: '/vs'
       path: '/vs'
@@ -134,15 +184,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/plany/trening': {
+      id: '/plany/trening'
+      path: '/trening'
+      fullPath: '/plany/trening'
+      preLoaderRoute: typeof PlanyTreningRouteImport
+      parentRoute: typeof PlanyRoute
+    }
   }
 }
+
+interface PlanyRouteChildren {
+  PlanyTreningRoute: typeof PlanyTreningRoute
+}
+
+const PlanyRouteChildren: PlanyRouteChildren = {
+  PlanyTreningRoute: PlanyTreningRoute,
+}
+
+const PlanyRouteWithChildren = PlanyRoute._addFileChildren(PlanyRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   HistoriaRoute: HistoriaRoute,
   NarzedziaRoute: NarzedziaRoute,
-  PlanyRoute: PlanyRoute,
+  PlanyRoute: PlanyRouteWithChildren,
   ProfilRoute: ProfilRoute,
+  TreningPodopiecznyRoute: TreningPodopiecznyRoute,
   VsRoute: VsRoute,
 }
 export const routeTree = rootRouteImport
