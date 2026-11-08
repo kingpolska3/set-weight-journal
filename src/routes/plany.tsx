@@ -206,8 +206,7 @@ function PlansPage() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, loading, unlocked]);
+  }, [user?.id, loading, unlocked, linkToken, navigate]);
 
   useEffect(() => {
     if (ready && !user && unlocked) localStorage.setItem(LOCAL_KEY, JSON.stringify(plans.map((p) => p.data)));
@@ -462,7 +461,6 @@ function ShareDialog({
   const reload = () => listShares(row.id).then(setShares).catch(() => {});
   useEffect(() => {
     void reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [row.id]);
 
   const changeLink = async (a: LinkAccess) => {
@@ -729,7 +727,6 @@ function ClientEditor({
     };
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [row.id, user?.id]);
 
   return (
@@ -1098,6 +1095,6 @@ function ClientEditor({
           <Plus className="h-4 w-4" /> Dodaj dzień treningowy
         </button>
       ) : null}
-    </main>
+    </div>
   );
 }
