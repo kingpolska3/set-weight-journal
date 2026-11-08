@@ -274,3 +274,58 @@ function CoachWorkoutPage() {
             sessions={history}
             onChange={(updated) => patchExercise(i, updated)}
             onRemove={() => removeExercise(i)}
+            onMoveUp={() => moveExercise(i, -1)}
+            onMoveDown={() => moveExercise(i, 1)}
+            canMoveUp={i > 0}
+            canMoveDown={i < session.exercises.length - 1}
+          />
+        ))}
+
+        <button
+          type="button"
+          onClick={addExercise}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-primary/50 py-3 text-sm font-medium text-primary"
+        >
+          <Plus className="h-4 w-4" /> Dodaj ćwiczenie
+        </button>
+
+        <label className="block rounded-2xl border border-border bg-card p-3">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Notatka do treningu
+          </span>
+          <textarea
+            value={session.note || ""}
+            onChange={(e) => setSession({ ...session, note: e.target.value })}
+            rows={3}
+            placeholder="Samopoczucie, technika, plan na następny raz…"
+            className="mt-2 w-full resize-none rounded-xl border border-input bg-secondary px-3 py-2 text-sm outline-none focus:border-primary"
+          />
+        </label>
+
+        <button
+          type="button"
+          disabled={saving}
+          onClick={() => void finish()}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+        >
+          <Save className="h-4 w-4" />
+          {saving
+            ? "Zapisywanie…"
+            : sessionId
+            ? "Zapisz zmiany w treningu"
+            : "Zakończ i zapisz u podopiecznego"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => void navigate({ to: "/plany" })}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border py-2.5 text-xs text-muted-foreground"
+        >
+          <Square className="h-3.5 w-3.5" /> Anuluj bez zapisu
+        </button>
+      </section>
+
+      <AppNav />
+    </main>
+  );
+}
