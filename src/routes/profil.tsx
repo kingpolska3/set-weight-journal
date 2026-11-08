@@ -52,11 +52,36 @@ export const Route = createFileRoute("/profil")({
   component: ProfilePage,
 });
 
+const RANDOM_USERNAMES = [
+  "ironwolf",
+  "fitdzik",
+  "powerking",
+  "gymshark",
+  "beastmode",
+  "fitqueen",
+  "muscledragon",
+  "strongtitan",
+  "swiftrunner",
+  "heavyLifter",
+  "alphaflex",
+  "gymbro",
+  "fitninja",
+  "ironmaiden",
+  "corechampion",
+];
+
+function getRandomUsername() {
+  const index = Math.floor(Math.random() * RANDOM_USERNAMES.length);
+  const suffix = Math.floor(100 + Math.random() * 900);
+  return `${RANDOM_USERNAMES[index]}${suffix}`;
+}
+
 function ProfilePage() {
   const { user, loading } = useAuth();
   const [busy, setBusy] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
+  const [randomPlaceholder, setRandomPlaceholder] = useState("np. kingpolska");
   const [usernameState, setUsernameState] = useState<"idle" | "checking" | "free" | "taken" | "invalid">(
     "idle",
   );
@@ -78,6 +103,7 @@ function ProfilePage() {
     setShareUrl(window.location.origin);
     setSessions(loadSessions());
     setWeekPlan(loadPlan());
+    setRandomPlaceholder(getRandomUsername());
   }, []);
 
   useEffect(() => {
@@ -274,7 +300,7 @@ function ProfilePage() {
         </header>
 
         <div className="space-y-4">
-                          <section aria-labelledby="account-stats">
+          <section aria-labelledby="account-stats">
             <p id="account-stats" className="text-xs font-semibold uppercase tracking-wide text-primary">
               Statystyki konta
             </p>
@@ -314,7 +340,7 @@ function ProfilePage() {
                 </div>
               </>
             )}
-          </section>    
+          </section>
 
           {loading ? (
             <p className="text-sm text-muted-foreground">Ładowanie…</p>
@@ -346,21 +372,30 @@ function ProfilePage() {
                   onChange={(e) => setDisplayName(e.target.value)}
                   className="rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
                 />
-                <label className="text-xs text-muted-foreground" htmlFor="username">
-                  Nazwa użytkownika (unikalna, opcjonalnie)
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs text-muted-foreground" htmlFor="username">
+                    Nazwa użytkownika (unikalna, opcjonalnie)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setRandomPlaceholder(getRandomUsername())}
+                    className="text-[11px] text-primary hover:underline"
+                  >
+                    Losuj propozycję
+                  </button>
+                </div>
                 <div className="relative">
                   <input
                     id="username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="np. kingpolska"
+                    placeholder={randomPlaceholder}
                     className={`w-full rounded-lg border bg-background px-3 py-2 pr-9 text-sm text-foreground ${
                       usernameState === "free"
                         ? "border-success"
                         : usernameState === "taken" || usernameState === "invalid"
-                          ? "border-destructive"
-                          : "border-input"
+                        ? "border-destructive"
+                        : "border-input"
                     }`}
                   />
                   <span className="absolute right-2.5 top-1/2 -translate-y-1/2">
@@ -377,10 +412,10 @@ function ProfilePage() {
                   {usernameState === "free"
                     ? "Nazwa jest wolna — możesz ją zapisać."
                     : usernameState === "taken"
-                      ? "Ta nazwa jest już zajęta."
-                      : usernameState === "invalid"
-                        ? "3–20 znaków: małe litery, cyfry oraz . _ -"
-                        : "Po nazwie użytkownika znajomi znajdą Cię w zakładce VS."}
+                    ? "Ta nazwa jest już zajęta."
+                    : usernameState === "invalid"
+                    ? "3–20 znaków: małe litery, cyfry oraz . _ -"
+                    : `Podpowiedź: ${randomPlaceholder} — po nazwie użytkownika znajomi znajdą Cię w zakładce VS.`}
                 </p>
                 <button
                   onClick={() => void saveProfile()}
