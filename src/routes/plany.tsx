@@ -633,82 +633,55 @@ function SetChip({
 }) {
   const parsed = parseRepsOrTime(s.reps);
   return (
-    <div className="flex flex-col gap-1 rounded-xl border border-border bg-secondary/50 p-2 text-xs">
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          disabled={readOnly}
-          onClick={() => onPatch({ warmup: !s.warmup })}
-          title={
-            s.warmup
-              ? "Seria rozgrzewkowa – kliknij, by zmienić na roboczą"
-              : "Oznacz jako rozgrzewkową"
-          }
-          className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold uppercase ${
-            s.warmup
-              ? "bg-secondary text-muted-foreground border border-muted-foreground/30"
-              : "bg-primary/15 text-primary"
-          }`}
-        >
-          {s.warmup ? <Flame className="h-3 w-3" /> : null}
-          {s.warmup ? "W-up" : label}
-        </button>
-
-        <div className="flex items-center gap-1">
-          <input
-            readOnly={readOnly}
-            value={s.reps}
-            onChange={(e) => onPatch({ reps: e.target.value })}
-            placeholder="np. 8-12 / 40s"
-            aria-label="Zakres powtórzeń lub czas"
-            title="Powtórzenia, zakres lub czas (np. 8-12, 40s, 1:20)"
-            className="w-24 rounded-lg border border-input bg-card px-2 py-1 text-center text-xs tabular-nums text-foreground outline-none focus:border-primary"
-          />
-          {parsed.timeSec ? <Timer className="h-3 w-3 text-primary" /> : null}
-          <span className="text-muted-foreground">×</span>
-          <input
-            readOnly={readOnly}
-            value={s.weight}
-            onChange={(e) => onPatch({ weight: e.target.value })}
-            placeholder="kg / —"
-            aria-label="Ciężar"
-            className="w-16 rounded-lg border border-input bg-card px-2 py-1 text-center text-xs tabular-nums text-foreground outline-none focus:border-primary"
-          />
-          <span className="text-muted-foreground">kg</span>
-        </div>
-
-        <div className="flex items-center gap-1 ml-auto">
-          <input
-            readOnly={readOnly}
-            value={s.restSec ? String(s.restSec) : ""}
-            onChange={(e) => onPatch({ restSec: e.target.value ? Number(e.target.value) : undefined })}
-            placeholder="przerwa (s)"
-            title="Czas przerwy w sekundach (np. 90)"
-            className="w-20 rounded-lg border border-input bg-card px-2 py-1 text-center text-xs tabular-nums text-foreground outline-none focus:border-primary"
-          />
-          <span className="text-[10px] text-muted-foreground">s</span>
-        </div>
-
-        {!readOnly ? (
-          <button
-            type="button"
-            onClick={onRemove}
-            aria-label="Usuń serię"
-            className="rounded-md p-1 text-muted-foreground hover:text-danger"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        ) : null}
-      </div>
-
+    <div
+      className={`flex items-center gap-1 rounded-lg px-2 py-1 text-xs ${
+        s.warmup
+          ? "border border-dashed border-muted-foreground/40 bg-transparent"
+          : "bg-secondary"
+      }`}
+    >
+      <button
+        disabled={readOnly}
+        onClick={() => onPatch({ warmup: !s.warmup })}
+        title={
+          s.warmup
+            ? "Seria rozgrzewkowa – kliknij, by zmienić na roboczą"
+            : "Oznacz jako rozgrzewkową"
+        }
+        className={`inline-flex items-center gap-0.5 font-semibold ${
+          s.warmup ? "text-muted-foreground" : "text-primary"
+        }`}
+      >
+        {s.warmup ? <Flame className="h-3 w-3" /> : null}
+        {label}
+      </button>
       <input
         readOnly={readOnly}
-        value={s.note ?? ""}
-        onChange={(e) => onPatch({ note: e.target.value })}
-        placeholder="notatka do serii (np. rir 2, dropset)"
-        maxLength={60}
-        className="w-full rounded-md border border-transparent bg-transparent px-1 py-0.5 text-[11px] text-muted-foreground outline-none focus:border-input focus:bg-card"
+        value={s.reps}
+        onChange={(e) => onPatch({ reps: e.target.value })}
+        placeholder="—"
+        aria-label="Powtórzenia / Czas"
+        className="w-12 bg-transparent text-center outline-none"
       />
+      {parsed.timeSec ? <Timer className="h-3 w-3 text-primary" /> : null}
+      <span className="text-muted-foreground">×</span>
+      <input
+        readOnly={readOnly}
+        value={s.weight}
+        onChange={(e) => onPatch({ weight: e.target.value })}
+        placeholder="—"
+        className="w-12 bg-transparent text-center outline-none"
+      />
+      <span className="text-muted-foreground">kg</span>
+      {!readOnly ? (
+        <button
+          onClick={onRemove}
+          aria-label="Usuń serię"
+          className="text-muted-foreground hover:text-danger"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -1003,7 +976,7 @@ function ClientEditor({
                   />
                 );
                 return (
-                  <div key={ex.id} className="rounded-xl border border-border p-3">
+                  <div key={ex.id} className="rounded-xl border border-border p-3 space-y-3">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-primary">{ei + 1}.</span>
                       <input
@@ -1033,13 +1006,41 @@ function ClientEditor({
                       ) : null}
                     </div>
 
-                    <div className="mt-2 space-y-2">
+                    {/* DWA POLA DLA CAŁEGO ĆWICZENIA: ZAKRES ORAZ CZAS PRZERWY */}
+                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/60">
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+                          Zakres (np. 8-12)
+                        </label>
+                        <input
+                          readOnly={readOnly}
+                          value={ex.coachRange ?? ""}
+                          onChange={(e) => patchEx({ coachRange: e.target.value })}
+                          placeholder="np. 8-12 / 45s"
+                          className="w-full rounded-lg border border-input bg-secondary px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+                          Czas przerwy
+                        </label>
+                        <input
+                          readOnly={readOnly}
+                          value={ex.coachRest ?? ""}
+                          onChange={(e) => patchEx({ coachRest: e.target.value })}
+                          placeholder="np. 90s lub 2 min"
+                          className="w-full rounded-lg border border-input bg-secondary px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
                       {warm.length ? (
                         <div>
                           <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                             Rozgrzewka
                           </p>
-                          <div className="flex flex-col gap-1.5">
+                          <div className="flex flex-wrap gap-1.5">
                             {warm.map((item, wi) =>
                               renderSet(item, `R${wi + 1}`),
                             )}
@@ -1052,7 +1053,7 @@ function ClientEditor({
                             Serie robocze
                           </p>
                         ) : null}
-                        <div className="flex flex-col gap-1.5">
+                        <div className="flex flex-wrap gap-1.5">
                           {work.map((item, wi) =>
                             renderSet(item, `${wi + 1}`),
                           )}
@@ -1064,17 +1065,16 @@ function ClientEditor({
                                   sets: [
                                     ...ex.sets,
                                     {
-                                      reps: last?.reps ?? "8-12",
+                                      reps: last?.reps ?? "10",
                                       weight: last?.weight ?? "",
-                                      restSec: last?.restSec ?? 90,
                                       warmup: false,
                                     },
                                   ],
                                 });
                               }}
-                              className="inline-flex items-center justify-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:border-primary hover:text-primary mt-1"
+                              className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-xs text-muted-foreground hover:border-primary hover:text-primary"
                             >
-                              <Plus className="h-3.5 w-3.5" /> Dodaj serię
+                              <Plus className="h-3 w-3" /> Seria
                             </button>
                           ) : null}
                         </div>
@@ -1094,8 +1094,9 @@ function ClientEditor({
                         {
                           id: uid(),
                           name: "",
-                          note: "",
-                          sets: [{ reps: "8-12", weight: "", restSec: 90, warmup: false }],
+                          sets: [{ reps: "10", weight: "", warmup: false }],
+                          coachRange: "",
+                          coachRest: "",
                         },
                       ],
                     })
