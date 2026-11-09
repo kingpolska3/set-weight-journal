@@ -1006,7 +1006,7 @@ function ClientEditor({
                       ) : null}
                     </div>
 
-                    {/* DWA POLA DLA CAŁEGO ĆWICZENIA: ZAKRES ORAZ CZAS PRZERWY */}
+                    {/* POLE ZAKRESU ORAZ CZASU PRZERWY DLA CAŁEGO ĆWICZENIA */}
                     <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/60">
                       <div>
                         <label className="block text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
@@ -1032,6 +1032,20 @@ function ClientEditor({
                           className="w-full rounded-lg border border-input bg-secondary px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary"
                         />
                       </div>
+                    </div>
+
+                    {/* DODATKOWE POLE NA UWAGI / NOTATKĘ DLA PODOPIECZNEGO */}
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+                        Uwagi dla podopiecznego
+                      </label>
+                      <input
+                        readOnly={readOnly}
+                        value={ex.coachNote ?? ""}
+                        onChange={(e) => patchEx({ coachNote: e.target.value })}
+                        placeholder="np. wolna faza negatywna, pełen zakres ruchu"
+                        className="w-full rounded-lg border border-input bg-secondary px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary"
+                      />
                     </div>
 
                     <div className="space-y-2">
@@ -1097,6 +1111,7 @@ function ClientEditor({
                           sets: [{ reps: "10", weight: "", warmup: false }],
                           coachRange: "",
                           coachRest: "",
+                          coachNote: "",
                         },
                       ],
                     })
