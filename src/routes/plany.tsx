@@ -633,56 +633,82 @@ function SetChip({
 }) {
   const parsed = parseRepsOrTime(s.reps);
   return (
-    <div
-      className={`flex items-center gap-1 rounded-lg px-2 py-1 text-xs ${
-        s.warmup
-          ? "border border-dashed border-muted-foreground/40 bg-transparent"
-          : "bg-secondary"
-      }`}
-    >
-      <button
-        disabled={readOnly}
-        onClick={() => onPatch({ warmup: !s.warmup })}
-        title={
-          s.warmup
-            ? "Seria rozgrzewkowa – kliknij, by zmienić na roboczą"
-            : "Oznacz jako rozgrzewkową"
-        }
-        className={`inline-flex items-center gap-0.5 font-semibold ${
-          s.warmup ? "text-muted-foreground" : "text-primary"
-        }`}
-      >
-        {s.warmup ? <Flame className="h-3 w-3" /> : null}
-        {label}
-      </button>
-      <input
-        readOnly={readOnly}
-        value={s.reps}
-        onChange={(e) => onPatch({ reps: e.target.value })}
-        placeholder="—"
-        aria-label="Powtórzenia / Czas"
-        title="Powtórzenia lub czas (np. 12, 40s, 1:20)"
-        className="w-12 bg-transparent text-center outline-none"
-      />
-      {parsed.timeSec ? <Timer className="h-3 w-3 text-primary" /> : null}
-      <span className="text-muted-foreground">×</span>
-      <input
-        readOnly={readOnly}
-        value={s.weight}
-        onChange={(e) => onPatch({ weight: e.target.value })}
-        placeholder="—"
-        className="w-12 bg-transparent text-center outline-none"
-      />
-      <span className="text-muted-foreground">kg</span>
-      {!readOnly ? (
+    <div className="flex flex-col gap-1 rounded-xl border border-border bg-secondary/50 p-2 text-xs">
+      <div className="flex flex-wrap items-center gap-2">
         <button
-          onClick={onRemove}
-          aria-label="Usuń serię"
-          className="text-muted-foreground hover:text-danger"
+          type="button"
+          disabled={readOnly}
+          onClick={() => onPatch({ warmup: !s.warmup })}
+          title={
+            s.warmup
+              ? "Seria rozgrzewkowa – kliknij, by zmienić na roboczą"
+              : "Oznacz jako rozgrzewkową"
+          }
+          className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold uppercase ${
+            s.warmup
+              ? "bg-secondary text-muted-foreground border border-muted-foreground/30"
+              : "bg-primary/15 text-primary"
+          }`}
         >
-          <X className="h-3 w-3" />
+          {s.warmup ? <Flame className="h-3 w-3" /> : null}
+          {s.warmup ? "W-up" : label}
         </button>
-      ) : null}
+
+        <div className="flex items-center gap-1">
+          <input
+            readOnly={readOnly}
+            value={s.reps}
+            onChange={(e) => onPatch({ reps: e.target.value })}
+            placeholder="np. 8-12 / 40s"
+            aria-label="Zakres powtórzeń lub czas"
+            title="Powtórzenia, zakres lub czas (np. 8-12, 40s, 1:20)"
+            className="w-24 rounded-lg border border-input bg-card px-2 py-1 text-center text-xs tabular-nums text-foreground outline-none focus:border-primary"
+          />
+          {parsed.timeSec ? <Timer className="h-3 w-3 text-primary" /> : null}
+          <span className="text-muted-foreground">×</span>
+          <input
+            readOnly={readOnly}
+            value={s.weight}
+            onChange={(e) => onPatch({ weight: e.target.value })}
+            placeholder="kg / —"
+            aria-label="Ciężar"
+            className="w-16 rounded-lg border border-input bg-card px-2 py-1 text-center text-xs tabular-nums text-foreground outline-none focus:border-primary"
+          />
+          <span className="text-muted-foreground">kg</span>
+        </div>
+
+        <div className="flex items-center gap-1 ml-auto">
+          <input
+            readOnly={readOnly}
+            value={s.restSec ? String(s.restSec) : ""}
+            onChange={(e) => onPatch({ restSec: e.target.value ? Number(e.target.value) : undefined })}
+            placeholder="przerwa (s)"
+            title="Czas przerwy w sekundach (np. 90)"
+            className="w-20 rounded-lg border border-input bg-card px-2 py-1 text-center text-xs tabular-nums text-foreground outline-none focus:border-primary"
+          />
+          <span className="text-[10px] text-muted-foreground">s</span>
+        </div>
+
+        {!readOnly ? (
+          <button
+            type="button"
+            onClick={onRemove}
+            aria-label="Usuń serię"
+            className="rounded-md p-1 text-muted-foreground hover:text-danger"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        ) : null}
+      </div>
+
+      <input
+        readOnly={readOnly}
+        value={s.note ?? ""}
+        onChange={(e) => onPatch({ note: e.target.value })}
+        placeholder="notatka do serii (np. rir 2, dropset)"
+        maxLength={60}
+        className="w-full rounded-md border border-transparent bg-transparent px-1 py-0.5 text-[11px] text-muted-foreground outline-none focus:border-input focus:bg-card"
+      />
     </div>
   );
 }
@@ -1013,7 +1039,7 @@ function ClientEditor({
                           <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                             Rozgrzewka
                           </p>
-                          <div className="flex flex-wrap gap-1.5">
+                          <div className="flex flex-col gap-1.5">
                             {warm.map((item, wi) =>
                               renderSet(item, `R${wi + 1}`),
                             )}
@@ -1026,7 +1052,7 @@ function ClientEditor({
                             Serie robocze
                           </p>
                         ) : null}
-                        <div className="flex flex-wrap gap-1.5">
+                        <div className="flex flex-col gap-1.5">
                           {work.map((item, wi) =>
                             renderSet(item, `${wi + 1}`),
                           )}
@@ -1038,16 +1064,17 @@ function ClientEditor({
                                   sets: [
                                     ...ex.sets,
                                     {
-                                      reps: last?.reps ?? "10",
+                                      reps: last?.reps ?? "8-12",
                                       weight: last?.weight ?? "",
+                                      restSec: last?.restSec ?? 90,
                                       warmup: false,
                                     },
                                   ],
                                 });
                               }}
-                              className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-xs text-muted-foreground hover:border-primary hover:text-primary"
+                              className="inline-flex items-center justify-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:border-primary hover:text-primary mt-1"
                             >
-                              <Plus className="h-3 w-3" /> Seria
+                              <Plus className="h-3.5 w-3.5" /> Dodaj serię
                             </button>
                           ) : null}
                         </div>
@@ -1067,7 +1094,7 @@ function ClientEditor({
                         {
                           id: uid(),
                           name: "",
-                          sets: [{ reps: "10", weight: "", warmup: false }],
+                          sets: [{ reps: "8-12", weight: "", restSec: 90, warmup: false }],
                         },
                       ],
                     })
