@@ -4,6 +4,8 @@ export type PlanSet = {
   reps: string;       // "8-10", "15", "5 min", "12-15"
   weight: string;     // kg albo puste
   warmup?: boolean;   // seria rozgrzewkowa
+  restSec?: number | undefined;
+  note?: string;
 };
 
 export type PlanExercise = {

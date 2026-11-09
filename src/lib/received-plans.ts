@@ -78,7 +78,7 @@ export function parseRestToSeconds(raw?: string): number | undefined {
   if (colon) return Number(colon[1]) * 60 + Number(colon[2]);
 
   const min = t.match(/(\d+(?:\.\d+)?)\s*min/);
-  if (min) return Math.round(parseFloat(min[1]) * 60);
+  if (min?.[1]) return Math.round(parseFloat(min[1]) * 60);
 
   const sec = t.match(/(\d+)\s*(s|sek|sec)\b/);
   if (sec) return Number(sec[1]);
@@ -87,14 +87,14 @@ export function parseRestToSeconds(raw?: string): number | undefined {
   if (both?.length) {
     for (const part of both) {
       const m = part.match(/(\d+(?:\.\d+)?)\s*min/);
-      if (m) return Math.round(parseFloat(m[1]) * 60);
+      if (m?.[1]) return Math.round(parseFloat(m[1]) * 60);
       const s = part.match(/(\d+)\s*(s|sek|sec)/);
       if (s) return Number(s[1]);
     }
   }
 
   const only = t.match(/^(\d+(?:\.\d+)?)$/);
-  if (only) {
+  if (only?.[1]) {
     const n = parseFloat(only[1]);
     return n >= 30 ? Math.round(n) : Math.round(n * 60);
   }
@@ -107,7 +107,7 @@ function planSetToEntry(s: PlanSet): SetEntry {
   const weight = Number(String(s.weight || "0").replace(",", ".")) || 0;
 
   const minMatch = repsRaw.match(/^(\d+(?:[.,]\d+)?)\s*min/);
-  if (minMatch) {
+  if (minMatch?.[1]) {
     const mins = parseFloat(minMatch[1].replace(",", "."));
     return { reps: 0, weight, timeSec: Math.round(mins * 60), warmup: !!s.warmup };
   }
@@ -151,9 +151,11 @@ function exerciseSetsFromPlan(ex: PlanExercise): SetEntry[] {
   if (extra && sets.length) {
     const idx = sets.findIndex((s) => !s.warmup);
     const target = idx >= 0 ? idx : 0;
+    const targetSet = sets[target];
+    if (!targetSet) return sets;
     sets[target] = {
-      ...sets[target],
-      note: [sets[target].note, extra].filter(Boolean).join(" · "),
+      ...targetSet,
+      note: [targetSet.note, extra].filter(Boolean).join(" · "),
     };
   }
   return sets;
@@ -260,7 +262,7 @@ export function activateReceivedPlan(plan: ReceivedPlan): {
     };
     const all = loadSessions();
     const list = all.some((s) => s.date === today)
-      ? all.map((s) => (s.date === today ? { ...session, note: s.note || session.note } : s))
+      ? all.map((s) => (s.date === today ? { ...session, note: s.note || exNoteFromDay(todayPlanDay) } : s))
       : [...all, session];
     saveSessions(list.sort((a, b) => (a.date < b.date ? 1 : -1)));
     todayFilled = true;
@@ -269,7 +271,7 @@ export function activateReceivedPlan(plan: ReceivedPlan): {
   return { weekPlan, todayFilled };
 }
 
-function exNoteFromDay(day: PlanDay): string | undefined {
+function exNoteFromDay(day: PlanDay): string {
   return `Plan: ${day.name}`;
 }
 
@@ -280,11 +282,11 @@ export function clientToReceivedPlan(
 ): ReceivedPlan {
   return {
     id: planId,
-    token: opts?.token,
+    ...(opts?.token !== undefined ? { token: opts.token } : {}),
     name: data.name || "Plan treningowy",
     receivedAt: new Date().toISOString(),
     trainingDays: data.trainingDays ?? data.days.map((d) => d.weekday || "").filter(Boolean),
     days: data.days ?? [],
-    sourceLabel: opts?.sourceLabel,
+    ...(opts?.sourceLabel !== undefined ? { sourceLabel: opts.sourceLabel } : {}),
   };
 }

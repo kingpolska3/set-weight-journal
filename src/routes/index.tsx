@@ -169,6 +169,7 @@ function Index() {
     }
     const obs = new IntersectionObserver(
       ([entry]) => {
+        if (!entry) return;
         setShowFloatingTimer(!entry.isIntersecting);
       },
       { threshold: 0, rootMargin: "0px" },
@@ -740,7 +741,7 @@ function Stat({
   label: string;
   value: string;
   tone?: string;
-  sub?: string;
+  sub?: string | undefined;
   subTone?: string;
 }) {
   return (

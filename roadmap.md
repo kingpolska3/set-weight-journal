@@ -5,7 +5,7 @@
 - [ ] Generowanie planu z danych podopiecznego i podgląd przed zatwierdzeniem
 - [ ] Profil: cztery statystyki ze streakiem i dowolny kolor akcentu
 - [ ] Atlas: zwijanie i poprawiony podział pośladków; VS: usunięcie zaproszenia
-- [ ] Naprawa błędu kompilacji blokującego publikację
+- [x] Naprawa błędu kompilacji blokującego publikację
 - [ ] Weryfikacja zmian i kluczowych przepływów
 
 - [x] Profil: przeniesione sekcje wyglądu i udostępniania, dostępność nazwy, potwierdzenie usunięcia konta

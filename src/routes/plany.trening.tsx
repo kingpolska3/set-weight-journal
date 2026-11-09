@@ -17,12 +17,12 @@ import {
 import { LOCAL_KEY, fetchPlans, type PlanRow } from "@/lib/trainer-plans";
 import { daySummary, todayISO, uid, type Exercise, type Session } from "@/lib/workout-store";
 
-type Search = { plan?: string; day?: string };
+type Search = { plan?: string | undefined; day?: string | undefined };
 
 export const Route = createFileRoute("/plany/trening")({
   validateSearch: (s: Record<string, unknown>): Search => ({
-    plan: typeof s.plan === "string" ? s.plan : undefined,
-    day: typeof s.day === "string" ? s.day : undefined,
+    plan: typeof s["plan"] === "string" ? s["plan"] : undefined,
+    day: typeof s["day"] === "string" ? s["day"] : undefined,
   }),
   head: () => ({
     meta: [
@@ -31,6 +31,10 @@ export const Route = createFileRoute("/plany/trening")({
         name: "description",
         content: "Prowadź trening podopiecznego i zapisuj postępy w jego historii.",
       },
+      { property: "og:title", content: "Trening z podopiecznym — dziennik trenera" },
+      { property: "og:description", content: "Zapisuj serie i postępy podopiecznego podczas treningu z jego planu." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: CoachWorkoutPage,
@@ -130,7 +134,8 @@ function CoachWorkoutPage() {
 
   const summary = useMemo(() => {
     if (!session) return null;
-    return daySummary(clientSessionAsSession(session), history);
+    const current = clientSessionAsSession(session);
+    return daySummary([...history.filter((s) => s.date !== current.date), current], current.date);
   }, [session, history]);
 
   const patchExercise = (index: number, ex: Exercise) => {
@@ -154,7 +159,11 @@ function CoachWorkoutPage() {
       const next = [...s.exercises];
       const j = index + dir;
       if (j < 0 || j >= next.length) return s;
-      [next[index], next[j]] = [next[j], next[index]];
+      const current = next[index];
+      const target = next[j];
+      if (!current || !target) return s;
+      next[index] = target;
+      next[j] = current;
       return { ...s, exercises: next };
     });
   };

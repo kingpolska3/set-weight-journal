@@ -176,7 +176,7 @@ function planSetToEntry(s: PlanSet, rangeHint: string, restSec?: number): SetEnt
   const weightNum = Number(String(s.weight || "0").replace(",", ".")) || 0;
 
   const minMatch = repsRaw.match(/^(\d+(?:[.,]\d+)?)\s*min/);
-  if (minMatch) {
+  if (minMatch?.[1]) {
     const mins = parseFloat(minMatch[1].replace(",", "."));
     return {
       reps: 0,
@@ -287,6 +287,6 @@ export function clientSessionAsSession(s: ClientSession): Session {
   return {
     date: s.date,
     exercises: s.exercises,
-    note: s.note,
+    ...(s.note !== undefined ? { note: s.note } : {}),
   };
 }

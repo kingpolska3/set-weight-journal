@@ -17,21 +17,25 @@ import {
 import { LOCAL_KEY, fetchPlans, type PlanRow } from "@/lib/trainer-plans";
 import { todayISO, uid, volume, type Exercise, type Session } from "@/lib/workout-store";
 
-type Search = { plan?: string; day?: string; session?: string };
+type Search = { plan?: string | undefined; day?: string | undefined; session?: string | undefined };
 
 export const Route = createFileRoute("/trening-podopieczny")({
   validateSearch: (s: Record<string, unknown>): Search => ({
-    plan: typeof s.plan === "string" ? s.plan : undefined,
-    day: typeof s.day === "string" ? s.day : undefined,
-    session: typeof s.session === "string" ? s.session : undefined,
+    plan: typeof s["plan"] === "string" ? s["plan"] : undefined,
+    day: typeof s["day"] === "string" ? s["day"] : undefined,
+    session: typeof s["session"] === "string" ? s["session"] : undefined,
   }),
   head: () => ({
     meta: [
-      { title: "Trening z podopiecznym" },
+      { title: "Sesja podopiecznego — zapis treningu" },
       {
         name: "description",
         content: "Prowadź trening podopiecznego i zapisuj postępy w jego historii.",
       },
+      { property: "og:title", content: "Sesja podopiecznego — zapis treningu" },
+      { property: "og:description", content: "Uzupełniaj wyniki ćwiczeń i zapisuj sesję podopiecznego w dzienniku trenera." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: CoachWorkoutPage,
@@ -168,7 +172,11 @@ function CoachWorkoutPage() {
       const next = [...s.exercises];
       const j = index + dir;
       if (j < 0 || j >= next.length) return s;
-      [next[index], next[j]] = [next[j], next[index]];
+      const current = next[index];
+      const target = next[j];
+      if (!current || !target) return s;
+      next[index] = target;
+      next[j] = current;
       return { ...s, exercises: next };
     });
   };

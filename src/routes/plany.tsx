@@ -1094,6 +1094,7 @@ function ClientEditor({
                         {
                           id: uid(),
                           name: "",
+                          note: "",
                           sets: [{ reps: "8-12", weight: "", restSec: 90, warmup: false }],
                         },
                       ],
