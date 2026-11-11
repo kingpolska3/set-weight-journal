@@ -127,9 +127,24 @@ export const ATLAS_DATA: Record<string, { groups: AtlasGroup[]; note: string }> 
     "label": "Ćwiczenia na maszynach",
     "exercises": [
      {
-      "name": "Ściąganie drążka z góry (Lat Pulldown) – szeroki, wąski, podchwyt, neutralny",
-      "desc": "To ćwiczenie buduje szerokość pleców, angażując głównie najszersze mięśnie grzbietu. Różne chwyty akcentują różne części tych mięśni oraz bicepsy.",
-      "tips": "Zawsze ściągaj drążek, aktywując łopatki i używając siły pleców, unikając nadmiernego bujania tułowiem."
+      "name": "Ściąganie drążka z góry (Lat Pulldown) – szeroki",
+    "desc": "Klasyczny wariant szerokiego chwytu maksymalnie angażuje najszersze mięśnie grzbietu w ich zewnętrznym obrysie, budując tzw. „skrzydła” i optycznie poszerzając sylwetkę.",
+    "tips": "Chwyć drążek szerzej niż szerokość barków. Prowadź łokcie w dół i do boków, ściągając drążek do górnej części klatki piersiowej."
+  },
+  {
+    "name": "Ściąganie drążka z góry (Lat Pulldown) – wąski",
+    "desc": "Wąski chwyt (neutralny lub nachwyt) pozwala na uzyskanie większego zakresu ruchu i mocniejsze zaangażowanie dolnej oraz środkowej części najszerszych mięśni grzbietu.",
+    "tips": "Trzymaj dłonie blisko siebie. Skup się na mocnym spięciu pleców w dolnej fazie ruchu i nie pozwalaj barkom unosić się do uszu."
+  },
+  {
+    "name": "Ściąganie drążka z góry (Lat Pulldown) – podchwyt",
+    "desc": "Chwyt supnowany (podchwyt) mocniej aktywuje mięśnie dwugłowe ramion (bicepsy) oraz dolne rejony najszerszych mięśni grzbietu, pozwalając na użycie nieco większego ciężaru.",
+    "tips": "Ustaw dłonie na szerokość barków wnętrzem do siebie. Trzymaj klatkę piersiową wypukłą i prowadź łokcie blisko tułowia."
+  },
+  {
+    "name": "Ściąganie drążka z góry (Lat Pulldown) – neutralny",
+    "desc": "Chwyt neutralny (równoległy, najczęściej przy użyciu specjalnych uchwytów w kształcie litery V) jest niezwykle przyjazny dla stawów barkowych i świetnie stymuluje grubość pleców.",
+    "tips": "Trzymaj tułów lekko odchylony do tyłu (ok. 10–15 stopni), a ruch inicjuj poprzez zdecydowane ściągnięcie łopatek w dół."
      },
      {
       "name": "Wiosłowanie siedząc na maszynie (Seated Row / Lever Row)",
@@ -237,9 +252,29 @@ export const ATLAS_DATA: Record<string, { groups: AtlasGroup[]; note: string }> 
     "label": "Ćwiczenia z masą ciała (Bodyweight)",
     "exercises": [
      {
-      "name": "Podciąganie na drążku (Pull-Ups) – szeroki, wąski, neutralny",
-      "desc": "Jedno z najlepszych ćwiczeń na budowanie szerokości pleców, angażujące najszersze mięśnie grzbietu, bicepsy i mięśnie czworoboczne. Różne chwyty akcentują różne obszary.",
-      "tips": "Zawsze zaczynaj od zwisu, aktywuj łopatki i ściągaj je w dół, podciągając się siłą pleców do klatki piersiowej."
+      "name": "Podciąganie na drążku (Pull-Ups) – szeroki nachwyt",
+    "desc": "Podstawowy wariant podciągania nachwytem z szerokim rozstawem dłoni. Maksymalnie angażuje najszerszy grzbietu w jego górnym i zewnętrznym obrysie, optycznie poszerzając plecy.",
+    "tips": "Chwyć drążek szerzej niż na szerokość barków. Inicjuj ruch od ściągnięcia łopatek w dół i ciągnij klatkę piersiową do drążka, nie podciągaj się samymi ramionami."
+  },
+  {
+    "name": "Podciąganie na drążku (Pull-Ups) – wąski nachwyt",
+    "desc": "Podciąganie nachwytem z dłońmi rozstawionymi wąsko. Większy zakres ruchu przekłada się na mocniejszą pracę dolnych włókien najszerszego grzbietu oraz mięśni czworobocznych.",
+    "tips": "Rozstaw dłonie nieco węziej niż szerokość barków. Kontroluj ruch opuszczania i unikaj bujania tułowiem."
+  },
+  {
+    "name": "Podciąganie na drążku (Chin-Ups) – podchwyt",
+    "desc": "Podciąganie podchwytem bardzo mocno angażuje bicepsy oraz dolne partie pleców. Pozwala zazwyczaj na użycie większego obciążenia lub wykonanie większej liczby powtórzeń.",
+    "tips": "Chwyć drążek na szerokość barków dłońmi skierowanymi do siebie. Trzymaj klatkę wypchniętą w górę i prowadź łokcie blisko tułowia."
+  },
+  {
+    "name": "Podciąganie na drążku – chwyt neutralny wąski",
+    "desc": "Podciąganie z dłońmi skierowanymi do siebie w wąskim rozstawie (np. na uchwycie V lub blisko rozstawionych rączkach). Angażuje mocno środkową część najszerszego grzbietu, mięsień ramienny oraz przedramiona, oszczędzając nadgarstki i barki.",
+    "tips": "Trzymaj dłonie blisko siebie i podciągaj się, prowadząc łokcie przy tułowiu. W górnej fazie mocno dopnij plecy i zatrzymaj ruch na ułamek sekundy."
+  },
+  {
+    "name": "Podciąganie na drążku – chwyt neutralny szeroki",
+    "desc": "Wariant na rączkach równoległych w szerokim rozstawie. Łączy zalety budowania szerokości pleców (jak w szerokim nachwycie) z ergonomicznym, bezpiecznym dla stawów barkowych ułożeniem dłoni.",
+    "tips": "Chwyć rączki na szerokości barków lub nieco szerzej. Prowadź łokcie w dół i do tyłu, starając się dotknąć klatką piersiową wysokości uchwytów."
      },
      {
       "name": "Chin-Ups (podchwyt)",
