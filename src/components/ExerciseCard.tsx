@@ -173,22 +173,27 @@ export function ExerciseCard({
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   const progress = computeProgress(sessions, date, exercise);
+  // Pełna historia do wykresu (z deloadami); do planu i "Ostatnio" i tak bierzemy normalne dni
   const history = useMemo(
+    () => exerciseHistory(sessions, exercise.name, { includeAll: true }),
+    [sessions, exercise.name],
+  );
+  const historyNormal = useMemo(
     () => exerciseHistory(sessions, exercise.name),
     [sessions, exercise.name],
   );
   const pr = prFlags(sessions, date, exercise);
 
-  // Pobieramy poprzednią sesję tego ćwiczenia
+  // Poprzednia NORMALNA sesja (bez deload/rest) – od niej liczymy plan
   const previousSession = useMemo(() => {
-    const pastSessions = history.filter((h) => h.date < date);
+    const pastSessions = historyNormal.filter((h) => h.date < date);
     return pastSessions.length > 0 ? pastSessions[pastSessions.length - 1] : null;
-  }, [history, date]);
+  }, [historyNormal, date]);
 
-  // Pobieramy oryginalne sugestie progresji z store
+  // Sugestie progresji – uwzględniają też serie już wpisane dziś
   const suggestions = useMemo(
-    () => nextSessionSuggestions(sessions, date, exercise.name),
-    [sessions, date, exercise.name],
+    () => nextSessionSuggestions(sessions, date, exercise.name, undefined, exercise.sets),
+    [sessions, date, exercise.name, exercise.sets],
   );
 
   const best30 = bestInWindow(sessions, date, exercise.name, 30);
@@ -547,9 +552,6 @@ export function ExerciseCard({
                 {workingSets(previousSession.sets)
                   .map((s, idx) => `${idx + 1}) ${formatRepsOrTime(s)}×${s.weight} kg`)
                   .join(" · ")}
-                {previousSession.sets.some((s) => s.warmup)
-                  ? ` (+ ${previousSession.sets.filter((s) => s.warmup).length} rozgrzewkowe)`
-                  : ""}
               </p>
               {suggestions.length > 0 ? (
                 <ul className="space-y-1">
