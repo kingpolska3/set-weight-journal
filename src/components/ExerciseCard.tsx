@@ -530,7 +530,7 @@ export function ExerciseCard({
         </span>
       </div>
 
-      {/* SEKCJA: NA DZISIEJSZY TRENING Z OZNACZENIAMI W ORAZ INTELIGENTNĄ PROGRESJĄ */}
+      {/* SEKCJA: NA DZISIEJSZY TRENING */}
       {exercise.name.trim() ? (
         <div className="mt-3 space-y-1.5 rounded-xl border border-border bg-secondary/50 p-3">
           <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
@@ -538,22 +538,40 @@ export function ExerciseCard({
           </p>
           {!previousSession ? (
             <p className="text-xs leading-snug text-foreground">
-              To Twoje pierwsze podejście do tego ćwiczenia. Daj z siebie wszystko, a na następnym treningu dostaniesz podpowiedź odnośnie progresji.
+              To Twoje pierwsze podejście do tego ćwiczenia. Zapisz serie, a następnym razem dostaniesz konkretną podpowiedź progresji.
             </p>
           ) : (
-            <div className="space-y-1 text-xs leading-snug text-foreground">
-              <p>
-                Ostatnio ({shortDatePL(previousSession.date)}) zrobiłeś{" "}
-                {previousSession.sets
-                  .map((s, idx) => `[${idx + 1}${s.warmup ? "W" : ""}]:-${formatRepsOrTime(s)}×${s.weight}kg`)
-                  .join(", ")}{" "}
-                w zaplanowanym zakresie.
+            <div className="space-y-1.5 text-xs leading-snug text-foreground">
+              <p className="text-muted-foreground">
+                Ostatnio ({shortDatePL(previousSession.date)}):{" "}
+                {workingSets(previousSession.sets)
+                  .map((s, idx) => `${idx + 1}) ${formatRepsOrTime(s)}×${s.weight} kg`)
+                  .join(" · ")}
+                {previousSession.sets.some((s) => s.warmup)
+                  ? ` (+ ${previousSession.sets.filter((s) => s.warmup).length} rozgrzewkowe)`
+                  : ""}
               </p>
-              {suggestions.map((s, i) => (
-                <p key={i} className="font-semibold text-primary">
-                  Plan na dziś: {s.text}
-                </p>
-              ))}
+              {suggestions.length > 0 ? (
+                <ul className="space-y-1">
+                  {suggestions.map((s, i) => (
+                    <li
+                      key={i}
+                      className={
+                        i === 0
+                          ? "font-semibold text-primary"
+                          : s.tone === "warn"
+                            ? "text-amber-400/90"
+                            : "text-muted-foreground"
+                      }
+                    >
+                      {i === 0 ? "→ " : "• "}
+                      {s.text}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-muted-foreground">Brak danych do wygenerowania planu.</p>
+              )}
             </div>
           )}
         </div>
