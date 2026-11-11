@@ -271,12 +271,24 @@ export function normalizeName(name: string) {
   return name.trim().toLowerCase();
 }
 
-/** Wszystkie wystąpienia ćwiczenia posortowane rosnąco po dacie. */
-export function exerciseHistory(sessions: Session[], name: string): ExerciseStat[] {
+/** Sesja normalnego treningu (nie rest / nie deload). */
+export function isNormalTrainingSession(s: Session): boolean {
+  return !s.rest && !s.deload;
+}
+
+/** Wszystkie wystąpienia ćwiczenia posortowane rosnąco po dacie.
+ *  domyślnie pomija dni rest/deload – do wykresów przekaż { includeAll: true }. */
+export function exerciseHistory(
+  sessions: Session[],
+  name: string,
+  opts?: { includeAll?: boolean },
+): ExerciseStat[] {
   const norm = normalizeName(name);
   if (!norm) return [];
+  const includeAll = opts?.includeAll === true;
   const out: ExerciseStat[] = [];
   for (const s of sessions) {
+    if (!includeAll && !isNormalTrainingSession(s)) continue;
     for (const ex of s.exercises) {
       if (normalizeName(ex.name) !== norm) continue;
       if (workingSets(ex.sets).length === 0) continue;
@@ -297,10 +309,12 @@ export function previousExercise(
   sessions: Session[],
   date: string,
   name: string,
+  opts?: { includeAll?: boolean },
 ): { session: Session; exercise: Exercise } | null {
   const norm = normalizeName(name);
+  const includeAll = opts?.includeAll === true;
   const earlier = sessions
-    .filter((s) => s.date < date)
+    .filter((s) => s.date < date && (includeAll || isNormalTrainingSession(s)))
     .sort((a, b) => (a.date < b.date ? 1 : -1));
   for (const s of earlier) {
     const ex = s.exercises.find(
@@ -428,39 +442,45 @@ export function exerciseProfile(name: string): ExerciseProfile {
   const n = name.toLowerCase();
   const unilateral = has(n, "jednorącz", "jednonóż");
 
-  // Smith – traktujemy jak sztangę (precyzyjny skok 2.5 / 5 kg)
+  // Smith – jak sztanga
   if (has(n, "smith")) {
     if (has(n, "przysiad", "hack", "wypychanie"))
       return { kind: "przysiad/martwy ciąg", repRange: [6, 10], step: 5, unilateral };
-    if (has(n, "wyciskanie", "ława", "ławka", "military", "ohp", "decline", "skośn"))
+    if (has(n, "wyciskanie", "ława", "ławka", "military", "ohp", "decline", "skośn", "płask"))
       return { kind: "wyciskanie", repRange: [6, 10], step: 2.5, unilateral };
   }
 
   if (has(n, "brzuch", "spięcia", "plank", "deska", "allahy", "nogi w zwisie", "russian"))
     return { kind: "brzuch", repRange: [12, 20], step: 2.5, unilateral };
+
+  // Wyciąg / brama / butterfly – zanim złapie ogólne "ściąganie"
+  if (has(n, "wyciąg", "brama", "bram", "butterfly", "pec deck", "peck", "maszyn"))
+    return { kind: "maszyna/wyciąg", repRange: [10, 15], step: 2.5, unilateral };
+
   if (has(n, "przysiad", "martwy", "hack", "wykrok", "suwnic", "prostowanie nóg", "uginanie nóg", "wypychanie"))
     return { kind: "przysiad/martwy ciąg", repRange: [6, 10], step: 5, unilateral };
   if (has(n, "wyciskanie", "ława", "ławka", "military", "ohp", "pompki"))
     return { kind: "wyciskanie", repRange: [6, 10], step: 2.5, unilateral };
   if (has(n, "wiosłowanie", "podciąganie", "ściąganie", "przyciąganie"))
     return { kind: "wiosłowanie/podciąganie", repRange: [8, 12], step: 2.5, unilateral };
-  if (has(n, "wyciąg", "maszyn", "butterfly", "peck", "brama"))
-    return { kind: "maszyna/wyciąg", repRange: [10, 14], step: 2.5, unilateral };
+
   return { kind: "izolacja", repRange: [10, 15], step: 2.5, unilateral };
 }
 
 /**
- * Podpowiedzi na następny trening – double progression dopasowana do
- * charakteru ruchu i sprzętu (sztanga / Smith, hantle, wyciąg, maszyna).
- * Zwraca max 2–3 sensowne wskazówki, z jedną główną akcją.
+ * Podpowiedzi na dzisiejszy trening.
+ * Bazuje na ostatniej sesji + (opcjonalnie) tym, co już wpisano dziś.
+ * Jedna główna akcja + max 1–2 wskazówki.
  */
 export function nextSessionSuggestions(
   sessions: Session[],
   date: string,
   name: string,
   repRange?: [number, number],
+  /** Serie już wpisane dziś – pozwala dać feedback na żywo. */
+  todaySets?: SetEntry[],
 ): Suggestion[] {
-  // Tylko poprzednie sesje – nie bierzemy bieżącego dnia
+  // Tylko normalne treningi (bez deload / rest) – deload nie ustala planu na zwykły dzień
   const hist = exerciseHistory(sessions, name).filter((h) => h.date < date);
   const last = hist[hist.length - 1];
   if (!last) return [];
@@ -468,7 +488,6 @@ export function nextSessionSuggestions(
   const prof = exerciseProfile(name);
   const [lo, hi] = repRange ?? prof.repRange;
   const eqType = detectEquipmentType(name);
-  // Skok dostosowany do sprzętu
   const step =
     eqType === "cable_stack"
       ? Math.max(prof.step, 3.75)
@@ -476,76 +495,144 @@ export function nextSessionSuggestions(
         ? Math.max(prof.step, 2)
         : prof.step;
 
-  const out: Suggestion[] = [];
-  const sets = workingSets(last.sets);
-  const count = sets.length;
-  if (count === 0) return [];
+  const lastSets = workingSets(last.sets);
+  const lastCount = lastSets.length;
+  if (lastCount === 0) return [];
 
-  const minReps = Math.min(...sets.map((s) => s.reps || 0));
-  const maxReps = Math.max(...sets.map((s) => s.reps || 0));
-  const topW = last.top;
+  const lastMinReps = Math.min(...lastSets.map((s) => s.reps || 0));
+  const lastMaxReps = Math.max(...lastSets.map((s) => s.reps || 0));
+  const lastTop = last.top;
   const perSide = prof.unilateral ? " (na stronę)" : "";
-  const allAtTop = sets.every((s) => (s.reps || 0) >= hi);
+  const lastAllAtTop = lastSets.every((s) => (s.reps || 0) >= hi);
 
-  // ——— GŁÓWNA AKCJA (tylko jedna) ———
-  if (allAtTop) {
-    const nextW = roundToGymEquipment(topW + step, eqType);
-    const altW =
-      eqType === "cable_stack" ? roundToGymEquipment(topW + 7.5, eqType) : null;
+  // Co już jest dziś
+  const todayWorking = todaySets ? workingSets(todaySets) : [];
+  const todayFilled = todayWorking.filter(
+    (s) => (s.reps || 0) > 0 && (s.weight || 0) > 0,
+  );
+  const hasToday = todayFilled.length > 0;
+  const todayTop = hasToday ? Math.max(...todayFilled.map((s) => s.weight || 0)) : 0;
+  const todayMinReps = hasToday
+    ? Math.min(...todayFilled.map((s) => s.reps || 0))
+    : 0;
+  const todayCount = todayFilled.length;
 
-    out.push({
-      tone: "up",
-      text: `Górny zakres (${lo}–${hi}) domknięty we wszystkich seriach. Dziś: ${count}×${lo}@${nextW} kg${perSide}${
-        altW && altW !== nextW ? ` (lub odważniejszy skok na ${altW} kg)` : ""
-      }.`,
-    });
-  } else if (minReps < lo) {
-    const downW = roundToGymEquipment(Math.max(0, topW - step), eqType);
-    out.push({
-      tone: "warn",
-      text: `Najsłabsza seria miała tylko ${minReps} powt. (poniżej ${lo}). Zejdź na ${downW} kg${perSide} i trzymaj ${count}×${lo}–${hi}.`,
-    });
-  } else if (maxReps >= hi && minReps < hi) {
-    out.push({
-      tone: "info",
-      text: `Pierwsza seria już w górnym zakresie (${maxReps}), a najsłabsza ma ${minReps}. Zostań na ${topW} kg${perSide} i wyrównaj wszystkie serie do ${hi} powt., dopiero potem +${step} kg.`,
-    });
+  const out: Suggestion[] = [];
+
+  // ——— PLAN Z POPRZEDNIEGO TRENINGU ———
+  let planText = "";
+  let planTone: Suggestion["tone"] = "info";
+  let plannedWeight = lastTop;
+  let plannedReps = lastMinReps;
+  let plannedSets = lastCount;
+
+  if (lastAllAtTop) {
+    plannedWeight = roundToGymEquipment(lastTop + step, eqType);
+    plannedReps = lo;
+    plannedSets = lastCount;
+    planTone = "up";
+    planText = `Plan: ${plannedSets}×${plannedReps}@${plannedWeight} kg${perSide} (górny zakres ${lo}–${hi} był domknięty – czas na +ciężar).`;
+  } else if (lastMinReps < lo) {
+    plannedWeight = roundToGymEquipment(Math.max(0, lastTop - step), eqType);
+    plannedReps = lo;
+    plannedSets = Math.max(lastCount, 3);
+    planTone = "warn";
+    planText = `Plan: ${plannedSets}×${plannedReps}–${hi}@${plannedWeight} kg${perSide} (ostatnio ${lastMinReps} powt. poniżej zakresu ${lo}–${hi}).`;
+  } else if (lastMaxReps >= hi && lastMinReps < hi) {
+    plannedWeight = lastTop;
+    plannedReps = hi;
+    plannedSets = lastCount;
+    planTone = "info";
+    planText = `Plan: wyrównaj do ${plannedSets}×${hi}@${plannedWeight} kg${perSide}, potem +${step} kg.`;
   } else {
-    const targetReps = Math.min(minReps + 1, hi);
-    out.push({
-      tone: "info",
-      text: `Cel na dziś: ${count}×${targetReps}@${topW} kg${perSide} (zakres ${lo}–${hi} dla ${prof.kind}).`,
-    });
+    plannedWeight = lastTop;
+    plannedReps = Math.min(lastMinReps + 1, hi);
+    plannedSets = lastCount;
+    planTone = "info";
+    planText = `Plan: ${plannedSets}×${plannedReps}@${plannedWeight} kg${perSide} (zakres ${lo}–${hi}).`;
   }
 
-  // ——— DODATKOWE WSKAZÓWKI (max 1–2) ———
-  const prev = hist[hist.length - 2];
-  if (prev) {
-    const prevMin = Math.min(...workingSets(prev.sets).map((x) => x.reps || 0));
-    const sameWeight = last.top === prev.top;
-    const sameReps = minReps === prevMin;
+  // ——— FEEDBACK NA ŻYWO, GDY SĄ JUŻ SERIE DZIŚ ———
+  if (hasToday) {
+    const weightUp = todayTop > lastTop + 0.05;
+    const weightSame = Math.abs(todayTop - lastTop) < 0.05;
+    const weightDown = todayTop < lastTop - 0.05;
+    const bigJump = todayTop >= lastTop * 1.4 && lastTop > 0;
 
-    if (sameWeight && sameReps && Math.abs(last.e1rm - prev.e1rm) < 0.8) {
+    if (bigJump) {
       out.push({
-        tone: "info",
-        text: `Dwa identyczne wyniki z rzędu – dorzuć 4. serię albo zwolnij ekscentrykę (3 s), żeby ruszyć z miejsca.`,
+        tone: "up",
+        text: `Duży skok ciężaru (${lastTop} → ${todayTop} kg). Trzymaj technikę; jeśli wszystkie serie ≥${lo} powt., zostaw ten ciężar na kolejny raz.`,
       });
-    } else if (last.volume > prev.volume && last.top < prev.top) {
+    } else if (weightUp && todayMinReps >= lo) {
+      out.push({
+        tone: "up",
+        text: `Lepszy ciężar niż ostatnio (${lastTop} → ${todayTop} kg) przy min. ${todayMinReps} powt. Dobry progres – domknij pozostałe serie w zakresie ${lo}–${hi}.`,
+      });
+    } else if (weightUp && todayMinReps < lo) {
       out.push({
         tone: "warn",
-        text: `Objętość wzrosła, ale ciężar spadł (${prev.top} → ${last.top} kg). Wróć do ${prev.top} kg i dołóż 1–2 powtórzenia.`,
+        text: `Ciężar wyższy (${todayTop} kg), ale najsłabsza seria ma tylko ${todayMinReps} powt. Lepiej ${roundToGymEquipment(todayTop - step, eqType)} kg i pełny zakres ${lo}–${hi}.`,
+      });
+    } else if (weightSame && todayMinReps >= hi) {
+      const nextW = roundToGymEquipment(todayTop + step, eqType);
+      out.push({
+        tone: "up",
+        text: `Zakres domknięty na ${todayTop} kg. Na kolejny raz: ${todayCount}×${lo}@${nextW} kg${perSide}.`,
+      });
+    } else if (weightSame && todayMinReps >= plannedReps) {
+      out.push({
+        tone: "up",
+        text: `Idziesz zgodnie z planem (lub lepiej). Cel do końca: wszystkie serie ≥${Math.min(todayMinReps + (todayMinReps < hi ? 1 : 0), hi)}@${todayTop} kg.`,
+      });
+    } else if (weightSame) {
+      out.push({
+        tone: "info",
+        text: `Na ${todayTop} kg celuj w ${plannedReps}+ powt. we wszystkich seriach (zakres ${lo}–${hi}).`,
+      });
+    } else if (weightDown) {
+      out.push({
+        tone: "warn",
+        text: `Dziś lżej niż ostatnio (${todayTop} vs ${lastTop} kg). Jeśli to nie deload – wróć do ${lastTop} kg.`,
+      });
+    }
+
+    // Mało serii dziś
+    if (todayCount < 3 && prof.kind !== "brzuch") {
+      out.push({
+        tone: "info",
+        text: `Masz ${todayCount} ${todayCount === 1 ? "serię" : "serie"} – dla ${prof.kind} lepiej 3–4 serie robocze.`,
+      });
+    }
+  } else {
+    // Brak dzisiejszych serii – pokaż sam plan
+    out.push({ tone: planTone, text: planText });
+
+    // Dodatkowe wskazówki tylko gdy nie ma jeszcze dzisiejszych danych
+    const prev = hist[hist.length - 2];
+    if (prev && lastAllAtTop === false) {
+      const prevMin = Math.min(...workingSets(prev.sets).map((x) => x.reps || 0));
+      if (
+        last.top === prev.top &&
+        lastMinReps === prevMin &&
+        Math.abs(last.e1rm - prev.e1rm) < 0.8
+      ) {
+        out.push({
+          tone: "info",
+          text: `Dwa identyczne wyniki z rzędu – dorzuć serię albo zwolnij ekscentrykę (3 s).`,
+        });
+      }
+    }
+
+    if (lastCount < 3 && prof.kind !== "brzuch") {
+      out.push({
+        tone: "info",
+        text: `Ostatnio tylko ${lastCount} ${lastCount === 1 ? "seria" : "serie"} – celuj w 3–4 serie robocze.`,
       });
     }
   }
 
-  if (count < 3 && prof.kind !== "brzuch" && out.length < 2) {
-    out.push({
-      tone: "info",
-      text: `Tylko ${count} ${count === 1 ? "seria robocza" : "serie robocze"} – dla tego ruchu lepiej 3–4 serie.`,
-    });
-  }
-
-  // Regresja 3+ treningów z rzędu
+  // Regresja długoterminowa – zawsze warto ostrzec
   const tail = hist.slice(-4);
   let streak = 0;
   for (let i = tail.length - 1; i > 0; i--) {
@@ -554,10 +641,10 @@ export function nextSessionSuggestions(
     if (a && b && a.volume < b.volume && a.e1rm <= b.e1rm) streak++;
     else break;
   }
-  if (streak >= 3) {
+  if (streak >= 3 && out.length < 3) {
     out.push({
       tone: "warn",
-      text: `To już ${streak}. trening z regresją – zrób deload (${roundToGymEquipment(topW * 0.9, eqType)} kg przez tydzień) albo zmień wariant.`,
+      text: `${streak} treningi z regresją z rzędu – rozważ deload (~${roundToGymEquipment(lastTop * 0.9, eqType)} kg) albo zmianę wariantu.`,
     });
   }
 
