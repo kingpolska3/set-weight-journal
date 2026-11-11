@@ -332,17 +332,17 @@ export const ATLAS_DATA: Record<string, { groups: AtlasGroup[]; note: string }> 
       "tips": "Utrzymaj sztangę blisko ciała podczas wyciskania i opuszczania, aktywując core dla stabilności."
      },
      {
-      "name": "Wyciskanie sztangi siedząc",
+      "name": "Wyciskanie sztangi nad głowę siedząc",
       "desc": "Ćwiczenie izolujące mięśnie naramienne, głównie akton przedni i środkowy, minimalizując udział nóg. Pozwala na większe skupienie się na pracy barków.",
       "tips": "Oprzyj plecy o oparcie, aby ustabilizować tułów i zapobiec bujaniu, co pozwoli na czystszą pracę barków."
      },
      {
-      "name": "Wyciskanie sztangi zza karku (Behind-the-Neck Press)",
+      "name": "Wyciskanie sztangi nad głowę zza karku (Behind-the-Neck Press)",
       "desc": "Ćwiczenie angażujące głównie środkowy i tylny akton barków. Wymaga dużej mobilności barków i może być kontuzjogenne dla niektórych osób.",
       "tips": "Użyj lżejszego ciężaru i skup się na pełnym zakresie ruchu, unikając nadmiernego cofania głowy i nadmiernego rozciągania stawu barkowego."
      },
      {
-      "name": "Push Press / Jerk",
+      "name": "Push Press / Jerk nad głowę",
       "desc": "Dynamiczne ćwiczenie angażujące całe ciało, głównie przednie i środkowe aktony barków oraz tricepsy, z wykorzystaniem pędu z nóg. Buduje siłę eksplozywną i moc.",
       "tips": "Wykorzystaj mocny 'dip' i 'drive' z nóg do wygenerowania pędu, a następnie szybko zablokuj ramiona nad głową."
      },
@@ -357,13 +357,13 @@ export const ATLAS_DATA: Record<string, { groups: AtlasGroup[]; note: string }> 
       "tips": "Kontroluj ruch zarówno w górę, jak i w dół, unikając bujania tułowiem i unoszenia sztangi wyżej niż poziom barków."
      },
      {
-      "name": "Landmine Press",
+      "name": "Landmine Press nad głowę",
       "desc": "Unikalne ćwiczenie wyciskające angażujące głównie przedni akton barków i tricepsy, ale w bardziej naturalnym łuku ruchu. Redukuje obciążenie stawu barkowego.",
       "tips": "Skup się na kontrolowanym ruchu i utrzymaniu stabilnej pozycji korpusu, wyciskając sztangę do pełnego wyprostu ramienia."
      },
      {
       "name": "Bradford Press",
-      "desc": "Nietypowe ćwiczenie na barki, polegające na wyciskaniu sztangi z przodu za głowę i z powrotem. Angażuje głównie przedni i środkowy akton barków.",
+      "desc": "Nietypowe ćwiczenie na barki, polegające na wyciskaniu sztangi (przenoszenie sztangi z klatki nad głową na kark i z powrotem tuż nad głową na klatkę). Angażuje głównie przedni i środkowy akton barków.",
       "tips": "Użyj lżejszego ciężaru, aby utrzymać płynny, kontrolowany ruch w pełnym zakresie, bez zatrzymywania się w górnej pozycji."
      },
      {
@@ -377,19 +377,39 @@ export const ATLAS_DATA: Record<string, { groups: AtlasGroup[]; note: string }> 
     "label": "Ćwiczenia z hantlami (Dumbbell)",
     "exercises": [
      {
-      "name": "Wyciskanie hantli nad głowę stojąc / siedząc",
-      "desc": "Skuteczne ćwiczenie na barki, głównie aktony przednie i środkowe, z dodatkową korzyścią wzmacniania stabilizatorów. Wersja stojąca angażuje więcej core.",
-      "tips": "Kontroluj hantle przez cały zakres ruchu, unikając zderzania ich w górnej fazie i utrzymując stabilny korpus."
+      "name": "Wyciskanie hantli nad głowę – stojąc",
+    "desc": "Wersja stojąca pionowego wyciskania angażuje nie tylko barki (przednie i środkowe aktony), ale także mocno zmusza do pracy mięśnie głębokie brzucha i pośladki jako stabilizatory całego ciała.",
+    "tips": "Napnij mocno brzuch i pośladki, stój stabilnie. Unikaj przeprostowywania odcinka lędźwiowego podczas wyciskania ciężaru nad głowę."
+  },
+  {
+    "name": "Wyciskanie hantli nad głowę – siedząc bez oparcia",
+    "desc": "Wyciskanie w siadzie wolnym eliminuje pracę nóg, a brak oparcia zmusza mięśnie tułowia do ciągłej pracy stabilizacyjnej przy zachowaniu pełnej izolacji górnej połowy ciała.",
+    "tips": "Usiądź stabilnie na ławce, stopy mocno oprzyj o podłogę. Trzymaj klatkę piersiową dumnie wypukłą przez cały czas."
+  },
+  {
+    "name": "Wyciskanie hantli nad głowę – siedząc z oparciem",
+    "desc": "Najbezpieczniejszy wariant do użycia większego obciążenia lub pracy do zaangażowania mięśniowego bez obaw o utratę równowagi. Oparcie pozwala w pełni skupić się na pracy barków.",
+    "tips": "Ustaw ławkę pionowo lub pod lekkim kątem (ok. 75–80 stopni). Plecy i pośladki trzymaj cały czas mocno dociśnięte do oparcia."
      },
      {
-      "name": "Arnold Press",
+      "name": "Arnold Press (wyciskanie nad głowę Arnolda)",
       "desc": "Wielopłaszczyznowe ćwiczenie na barki, angażujące wszystkie trzy aktony mięśnia naramiennego. Ruch obrotowy zwiększa zakres pracy mięśni.",
       "tips": "Rozpocznij z dłońmi skierowanymi do siebie, a w trakcie wyciskania obróć hantle, aby dłonie skierowały się do przodu w górnej pozycji."
      },
      {
-      "name": "Wznosy bokiem (Lateral Raise) – stojąc, siedząc, w wychyleniu",
-      "desc": "Ćwiczenie izolujące środkowy akton mięśnia naramiennego, kluczowe dla budowania szerokości barków. Różne warianty pozwalają na lepszą izolację.",
-      "tips": "Prowadź ruch łokciami, unosząc hantle tylko do wysokości barków, unikając bujania i używania ciężaru zbyt dużego."
+      "name": "Wznosy bokiem z hantlami – stojąc",
+    "desc": "Klasyczne i najbardziej uniwersalne ćwiczenie izolujące środkowy akton mięśnia naramiennego. Pozwala na zaangażowanie całego ciała do lekkiego wypchnięcia, choć najlepiej skupić się na czystej pracy mięśnia.",
+    "tips": "Lekko ugnij łokcie i prowadź ruch właśnie nimi, wyobrażając sobie, że wylewasz wodę z dzbanków w najwyższym punkcie. Unikaj bujania tułowiem."
+  },
+  {
+    "name": "Wznosy bokiem z hantlami – siedząc",
+    "desc": "Wersja siedząca całkowicie eliminuje możliwość tzw. „oszukiwania” (bujania ciałem/nogami), dzięki czemu środkowy akton barku wykonuje 100% pracy.",
+    "tips": "Usiądź na ławce, trzymając hantle po bokach tułowia lub schowane za nią. Unosząc hantle, nie odchylaj tułowia do tyłu."
+  },
+  {
+    "name": "Wznosy bokiem z hantlami – w wychyleniu (pochyleniu trzymając się stojaka)",
+    "desc": "Wariant z jednostronnym trzymaniem się stabilnego elementu (np. słupka maszyny lub stojaka) i odchyleniem ciała pod kątem. Zmienia krzywą oporu, dając maksymalne napięcie w dolnej i środkowej fazie ruchu.",
+    "tips": "Trzymaj się mocno wolną ręką, odsuń stopy od punktu trzymania, tworząc skośną linię ciała. Wykonuj kontrolowany, powolny ruch."
      },
      {
       "name": "Wznosy przodem (Front Raise)",
@@ -412,7 +432,7 @@ export const ATLAS_DATA: Record<string, { groups: AtlasGroup[]; note: string }> 
       "tips": "Wykonuj ruchy powoli i kontrolując, skupiając się na wewnętrznej i zewnętrznej rotacji, z niewielkim ciężarem."
      },
      {
-      "name": "One-Arm Dumbbell Press",
+      "name": "One-Arm Dumbbell Press nad głowę",
       "desc": "Wyciskanie hantli jedną ręką, angażujące głównie przedni i środkowy akton barków, z silnym aspektem stabilizacji core. Wyrównuje dysproporcje siłowe.",
       "tips": "Mocno aktywuj mięśnie brzucha i korpusu, aby utrzymać stabilną pozycję i zapobiec rotacji tułowia podczas wyciskania."
      },
@@ -432,12 +452,12 @@ export const ATLAS_DATA: Record<string, { groups: AtlasGroup[]; note: string }> 
     "label": "Ćwiczenia na maszynach",
     "exercises": [
      {
-      "name": "Shoulder Press Machine (wyciskanie na maszynie)",
+      "name": "Shoulder Press Machine (wyciskanie na maszynie nad głowę)",
       "desc": "Bezpieczne i izolujące ćwiczenie na przedni i środkowy akton barków, minimalizujące potrzebę stabilizacji. Idealne dla początkujących.",
       "tips": "Ustaw siedzisko tak, aby uchwyty były na wysokości barków, i skup się na płynnym, kontrolowanym wyciskaniu bez szarpania."
      },
      {
-      "name": "Iso-Lateral / Hammer Strength Shoulder Press",
+      "name": "Iso-Lateral / Hammer Strength Shoulder Press nad głowę",
       "desc": "Maszyna umożliwiająca niezależne wyciskanie każdej ręki, angażująca głównie przedni i środkowy akton barków. Pomaga w wyrównaniu dysproporcji.",
       "tips": "Wyciskaj każdą stronę niezależnie lub jednocześnie, skupiając się na pełnym zakresie ruchu i kontrolowanym opuszczaniu ciężaru."
      },
@@ -452,7 +472,7 @@ export const ATLAS_DATA: Record<string, { groups: AtlasGroup[]; note: string }> 
       "tips": "Ustaw siedzisko tak, aby uchwyty były na wysokości barków, i skup się na ściąganiu łopatek, prowadząc ruch łokciami."
      },
      {
-      "name": "Smith Machine Overhead Press",
+      "name": "Smith Machine Overhead Press nad głowę",
       "desc": "Wyciskanie nad głowę na maszynie Smitha, angażujące przedni i środkowy akton barków, z większą stabilizacją. Pozwala na bezpieczne podnoszenie większych ciężarów.",
       "tips": "Ustaw ławkę tak, aby sztanga poruszała się w naturalnym łuku dla Twoich barków, i kontroluj ciężar przez cały ruch."
      },
@@ -477,9 +497,19 @@ export const ATLAS_DATA: Record<string, { groups: AtlasGroup[]; note: string }> 
     "label": "Ćwiczenia na wyciągu / bramie (Cable)",
     "exercises": [
      {
-      "name": "Cable Lateral Raise (wznosy bokiem – jednorącz, oburącz, leaning)",
-      "desc": "Ćwiczenie izolujące środkowy akton mięśnia naramiennego, zapewniające stałe napięcie w całym zakresie ruchu. Wersje leaning zwiększają izolację.",
-      "tips": "Prowadź ruch łokciami, unosząc linkę tylko do wysokości barków, utrzymując kontrolę i unikając bujania tułowiem."
+      "name": "Cable Lateral Raise - Wznosy bokiem na wyciągu – jednorącz",
+    "desc": "Klasyczny wariant jednostronny, który pozwala na doskonałą izolację środkowego aktonu oraz łatwiejszą koncentrację na pracy pojedynczego mięśnia. Wyciąg zapewnia równomierny opór przez cały zakres ruchu.",
+    "tips": "Ustaw uchwyt na wysokości dolnego pulley (lub delikatnie nad). Stań bokiem do bramy, trzymaj się ramy wolną ręką dla stabilności i unoś rączkę do wysokości barku."
+  },
+  {
+    "name": "Cable Lateral Raise - Wznosy bokiem na wyciągu – oburącz",
+    "desc": "Wariant symetryczny (często wykonywany z linkami krzyżującymi się przed lub za tułowiem), który pozwala na oszczędność czasu i jednoczesną pracę obu barków ze stałym napięciem.",
+    "tips": "Ustaw dwa wyciągi dolne lub skrzyżuj linki przed sobą. Unikaj szarpania ciężarem i kontroluj fazę opuszczania."
+  },
+  {
+    "name": "Cable Lateral Raise - Wznosy bokiem na wyciągu – w wychyleniu (leaning)",
+    "desc": "Wersja z odchyleniem całego ciała od wyciągu (trzymając się dolnej części kolumny). Drastycznie zmienia krzywą oporu – daje maksymalne obciążenie w dolnej i środkowej fazie ruchu, gdzie zwykłe hantle mają najlżejszy punkt.",
+    "tips": "Chwyć rączkę wyciągu, odsuń stopy blisko kolumny maszyny i odchyl całe ciało na bok. Ręka z linką powinna swobodnie wisieć w pozycji rozciągniętej przed rozpoczęciem ruchu."
      },
      {
       "name": "Cable Front Raise",
