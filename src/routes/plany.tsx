@@ -1056,8 +1056,8 @@ function ClientEditor({
                         </label>
                         <input
                           readOnly={readOnly}
-                          value={ex.coachRange ?? ""}
-                          onChange={(e) => patchEx({ coachRange: e.target.value })}
+                          value={ex.range ?? ex.coachRange ?? ""}
+                          onChange={(e) => patchEx({ range: e.target.value })}
                           placeholder="np. 8-12 / 45s"
                           className="w-full rounded-lg border border-input bg-secondary px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary"
                         />
@@ -1068,8 +1068,8 @@ function ClientEditor({
                         </label>
                         <input
                           readOnly={readOnly}
-                          value={ex.coachRest ?? ""}
-                          onChange={(e) => patchEx({ coachRest: e.target.value })}
+                          value={ex.rest ?? ex.coachRest ?? ""}
+                          onChange={(e) => patchEx({ rest: e.target.value })}
                           placeholder="np. 90s lub 2 min"
                           className="w-full rounded-lg border border-input bg-secondary px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary"
                         />
@@ -1083,8 +1083,8 @@ function ClientEditor({
                       </label>
                       <input
                         readOnly={readOnly}
-                        value={ex.coachNote ?? ""}
-                        onChange={(e) => patchEx({ coachNote: e.target.value })}
+                        value={ex.note ?? ex.coachNote ?? ""}
+                        onChange={(e) => patchEx({ note: e.target.value })}
                         placeholder="np. wolna faza negatywna, pełen zakres ruchu"
                         className="w-full rounded-lg border border-input bg-secondary px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary"
                       />
