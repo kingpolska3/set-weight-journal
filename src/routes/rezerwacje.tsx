@@ -23,6 +23,7 @@ import {
   type TrainerAvailability,
   type WeeklySlot,
   cancelBooking,
+  deleteBooking,
   checkAndNotifyReminders,
   confirmBooking,
   createBookingRequest,
@@ -85,6 +86,7 @@ function BookingsPage() {
   const [selectedTrainerId, setSelectedTrainerId] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [note, setNote] = useState("");
+  const [selectedLocation, setSelectedLocation] = useState("");
 
   const userId = user?.id ?? "local-user";
   /** Nazwa wyświetlana z Profilu – nie prefix e-maila */
@@ -230,6 +232,7 @@ function BookingsPage() {
       date: selectedDate,
       startMin,
       note: note.trim() || undefined,
+      location: selectedLocation || undefined,
     });
     if (!res.ok) {
       toast.error(res.error);
@@ -383,6 +386,7 @@ function BookingsPage() {
                       onClick={() => {
                         setSelectedTrainerId(t.trainerId);
                         setSelectedDate("");
+                        setSelectedLocation("");
                       }}
                       className={`rounded-full px-3 py-1.5 text-sm ${
                         selectedTrainerId === t.trainerId
@@ -406,7 +410,13 @@ function BookingsPage() {
                 <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
                   <p className="text-sm text-foreground">
                     Sesja <strong>{selectedTrainer.sessionMinutes} min</strong>
-                    {selectedTrainer.location ? (
+                    {selectedTrainer.locations.length > 0 ? (
+                      <>
+                        {" "}
+                        · <MapPin className="inline h-3.5 w-3.5" />{" "}
+                        {selectedTrainer.locations.join(" · ")}
+                      </>
+                    ) : selectedTrainer.location ? (
                       <>
                         {" "}
                         · <MapPin className="inline h-3.5 w-3.5" /> {selectedTrainer.location}
@@ -426,46 +436,86 @@ function BookingsPage() {
                   {bookableDays.length === 0 ? (
                     <p className="text-sm text-muted-foreground">Brak wolnych dni w najbliższym czasie.</p>
                   ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {bookableDays.slice(0, 21).map((d) => (
+                    <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                      {bookableDays.slice(0, 28).map((d) => (
                         <button
                           key={d}
                           type="button"
                           onClick={() => setSelectedDate(d)}
-                          className={`rounded-xl px-2.5 py-2 text-xs font-medium ${
+                          className={`flex h-[4.25rem] w-full flex-col items-center justify-center rounded-xl px-1 py-2 text-xs font-medium tabular-nums ${
                             selectedDate === d
                               ? "bg-primary text-primary-foreground"
                               : "bg-secondary text-foreground"
                           }`}
                         >
-                          <span className="block text-[10px] opacity-80">{weekdayPL(d)}</span>
-                          {formatDatePL(d)}
+                          <span className="text-[10px] font-semibold uppercase opacity-80">
+                            {weekdayPL(d)}
+                          </span>
+                          <span className="leading-tight">{formatDatePL(d)}</span>
                         </button>
                       ))}
                     </div>
                   )}
                 </div>
 
+                {selectedTrainer.locations.length > 0 ? (
+                  <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Siłownia / miejsce
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Godziny są wspólne dla wszystkich lokalizacji – trener nie może mieć dwóch
+                      treningów o tej samej porze na różnych siłowniach.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedTrainer.locations.map((loc) => (
+                        <button
+                          key={loc}
+                          type="button"
+                          onClick={() => setSelectedLocation(loc)}
+                          className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+                            selectedLocation === loc
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-secondary text-foreground"
+                          }`}
+                        >
+                          {loc}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
                 {selectedDate ? (
                   <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                       Godzina · {weekdayPL(selectedDate)} {formatDatePL(selectedDate)}
                     </p>
+                    {selectedTrainer.locations.length > 1 && !selectedLocation ? (
+                      <p className="text-sm text-amber-400/90">
+                        Najpierw wybierz siłownię powyżej, potem godzinę.
+                      </p>
+                    ) : null}
                     {slotsForDay.length === 0 ? (
                       <p className="text-sm text-muted-foreground">Brak wolnych godzin tego dnia.</p>
                     ) : (
                       <div className="flex flex-wrap gap-2">
-                        {slotsForDay.map((s) => (
+                        {slotsForDay.map((s) => {
+                          const needLoc =
+                            selectedTrainer.locations.length > 1 && !selectedLocation;
+                          return (
                           <button
                             key={s.startMin}
                             type="button"
+                            disabled={needLoc}
                             onClick={() => requestSlot(s.startMin)}
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-secondary px-3 py-2 text-sm font-medium text-foreground hover:border-primary"
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-secondary px-3 py-2 text-sm font-medium text-foreground hover:border-primary disabled:opacity-40 disabled:pointer-events-none"
                           >
                             <Clock className="h-3.5 w-3.5 text-primary" />
                             {s.label}
                           </button>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                     <label className="block">
@@ -627,15 +677,56 @@ function BookingsPage() {
                       />
                     </label>
                   </div>
-                  <label className="block text-xs">
-                    Miejsce treningu
-                    <input
-                      value={avail.location || ""}
-                      onChange={(e) => patchAvail({ location: e.target.value })}
-                      placeholder="np. Siłownia X, sala 2"
-                      className="mt-1 w-full rounded-lg border border-input bg-secondary px-2 py-1.5 text-sm"
-                    />
-                  </label>
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-foreground">Siłownie / miejsca treningu</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Możesz dodać kilka lokalizacji. Terminy i tak nie kolidują – o danej godzinie
+                      możliwa jest tylko jedna rezerwacja (niezależnie od siłowni).
+                    </p>
+                    <ul className="space-y-1.5">
+                      {avail.locations.map((loc, i) => (
+                        <li key={`${loc}-${i}`} className="flex items-center gap-2">
+                          <input
+                            value={loc}
+                            onChange={(e) => {
+                              const next = [...avail.locations];
+                              next[i] = e.target.value;
+                              patchAvail({
+                                locations: next,
+                                location: next.find((x) => x.trim()) || "",
+                              });
+                            }}
+                            className="min-w-0 flex-1 rounded-lg border border-input bg-secondary px-2 py-1.5 text-sm"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = avail.locations.filter((_, j) => j !== i);
+                              patchAvail({
+                                locations: next,
+                                location: next[0] || "",
+                              });
+                            }}
+                            className="p-1 text-muted-foreground hover:text-danger"
+                            aria-label="Usuń miejsce"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        patchAvail({
+                          locations: [...avail.locations, ""],
+                        })
+                      }
+                      className="text-[11px] font-medium text-primary"
+                    >
+                      + Dodaj siłownię
+                    </button>
+                  </div>
                 </div>
 
                 <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
@@ -711,7 +802,17 @@ function BookingsPage() {
                     trainerBookings
                       .filter((b) => b.status === "confirmed" || b.status === "pending")
                       .map((b) => (
-                        <BookingCard key={b.id} b={b} role="trainer" onCancel={onCancel} />
+                        <BookingCard
+                          key={b.id}
+                          b={b}
+                          role="trainer"
+                          onCancel={onCancel}
+                          onDelete={(id) => {
+                            deleteBooking(id);
+                            toast.message("Usunięto z listy");
+                            refresh();
+                          }}
+                        />
                       ))
                   )}
                 </div>
@@ -736,10 +837,12 @@ function BookingCard({
   b,
   role,
   onCancel,
+  onDelete,
 }: {
   b: Booking;
   role: "client" | "trainer";
   onCancel: (id: string) => void;
+  onDelete?: (id: string) => void;
 }) {
   const statusColor =
     b.status === "confirmed"
@@ -795,6 +898,16 @@ function BookingCard({
             Anuluj
           </button>
         )}
+        {(b.status === "declined" || b.status === "cancelled" || b.status === "completed") &&
+        onDelete ? (
+          <button
+            type="button"
+            onClick={() => onDelete(b.id)}
+            className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground hover:text-danger"
+          >
+            <Trash2 className="h-3 w-3" /> Usuń
+          </button>
+        ) : null}
       </div>
     </div>
   );
