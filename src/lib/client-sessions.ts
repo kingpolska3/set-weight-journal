@@ -242,10 +242,12 @@ function exerciseFromPlan(ex: PlanExercise): Exercise {
   const restLabel = (ex.rest || "").trim();
   const noteHint = (ex.note || "").trim();
   const restSec = parseRestToSeconds(ex.rest);
+
+  // Serie z planu; gdy puste – jedna pusta seria robocza (wynik wpiszesz na treningu)
   const baseSets =
     ex.sets.length > 0
       ? ex.sets
-      : [{ reps: rangeHint || "", weight: "", warmup: false }];
+      : [{ reps: "", weight: "", warmup: false }];
 
   const sets = baseSets.map((s) => planSetToEntry(s, rangeHint, restSec));
 
@@ -254,8 +256,8 @@ function exerciseFromPlan(ex: PlanExercise): Exercise {
 
   return {
     id: uid(),
-    name: ex.name || "Ćwiczenie",
-    sets,
+    name: (ex.name || "").trim() || "Ćwiczenie",
+    sets: sets.length > 0 ? sets : [{ reps: 0, weight: 0 }],
     ...(rangeHint ? { coachRange: rangeHint } : {}),
     ...(restLabel ? { coachRest: restLabel } : {}),
     ...(noteHint ? { coachNote: noteHint } : {}),
