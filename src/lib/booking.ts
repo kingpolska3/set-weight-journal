@@ -47,8 +47,10 @@ export type TrainerAvailability = {
   minNoticeHours: number;
   weekly: WeeklySlot[];
   overrides: DateOverride[];
-  /** Miejsce domyślne */
+  /** @deprecated – używaj locations */
   location?: string;
+  /** Lista siłowni / miejsc, w których trener prowadzi zajęcia */
+  locations: string[];
   updatedAt: string;
 };
 
@@ -150,7 +152,23 @@ export function defaultAvailability(trainerId: string, trainerName: string): Tra
     ],
     overrides: [],
     location: "",
+    locations: [],
     updatedAt: new Date().toISOString(),
+  };
+}
+
+function normalizeAvailability(a: TrainerAvailability): TrainerAvailability {
+  const locations = Array.isArray(a.locations)
+    ? a.locations.map((x) => String(x).trim()).filter(Boolean)
+    : [];
+  // migracja ze starego pola location
+  if (!locations.length && a.location?.trim()) {
+    locations.push(a.location.trim());
+  }
+  return {
+    ...a,
+    locations,
+    location: locations[0] || a.location || "",
   };
 }
 
@@ -161,7 +179,8 @@ export function loadAvailability(trainerId: string): TrainerAvailability | null 
       string,
       TrainerAvailability
     >;
-    return all[trainerId] ?? null;
+    const row = all[trainerId];
+    return row ? normalizeAvailability(row) : null;
   } catch {
     return null;
   }
@@ -174,7 +193,8 @@ export function saveAvailability(a: TrainerAvailability): void {
       string,
       TrainerAvailability
     >;
-    all[a.trainerId] = { ...a, updatedAt: new Date().toISOString() };
+    const norm = normalizeAvailability({ ...a, updatedAt: new Date().toISOString() });
+    all[a.trainerId] = norm;
     localStorage.setItem(AVAIL_KEY, JSON.stringify(all));
   } catch {
     /* quota */
@@ -190,11 +210,13 @@ export function listPublicTrainers(): TrainerAvailability[] {
     >;
     return Object.values(all)
       .filter((a) => a.weekly.length > 0)
-      .map((a) => ({
-        ...a,
-        trainerName: (a.trainerName || "").trim() || "Trener",
-      }))
-      .sort((a, b) => a.trainerName.localeCompare(b.trainerName, "pl"));
+      .map((a) =>
+        normalizeAvailability({
+          ...a,
+          trainerName: (a.trainerName || "").trim() || "Trener",
+        }),
+      )
+      .sort((x, y) => x.trainerName.localeCompare(y.trainerName, "pl"));
   } catch {
     return [];
   }
@@ -324,13 +346,19 @@ export function createBookingRequest(input: {
   date: string;
   startMin: number;
   note?: string;
+  /** Wybrana siłownia – termin i tak blokuje WSZYSTKIE lokalizacje (trener jest jedna osoba). */
+  location?: string;
 }): { ok: true; booking: Booking } | { ok: false; error: string } {
-  const { availability: a, clientId, clientName, date, startMin, note } = input;
+  const { availability: a, clientId, clientName, date, startMin, note, location } = input;
   const endMin = startMin + a.sessionMinutes;
 
+  // Konflikty liczone po czasie trenera – niezależnie od siłowni
   const slots = getBookableSlots(a, date);
   if (!slots.some((s) => s.startMin === startMin)) {
-    return { ok: false, error: "Ten termin jest już niedostępny. Wybierz inny." };
+    return {
+      ok: false,
+      error: "Ten termin jest już zajęty (także na innej siłowni). Wybierz inną godzinę.",
+    };
   }
 
   const now = new Date();
@@ -344,6 +372,17 @@ export function createBookingRequest(input: {
     };
   }
 
+  const locs = a.locations?.length ? a.locations : a.location ? [a.location] : [];
+  const chosen =
+    (location || "").trim() ||
+    (locs.length === 1 ? locs[0] : "") ||
+    a.location ||
+    "";
+
+  if (locs.length > 1 && !chosen) {
+    return { ok: false, error: "Wybierz siłownię / miejsce treningu." };
+  }
+
   const booking: Booking = {
     id: uid(),
     trainerId: a.trainerId,
@@ -355,7 +394,7 @@ export function createBookingRequest(input: {
     endMin,
     status: "pending",
     note,
-    location: a.location,
+    location: chosen || undefined,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     reminderSent: false,
@@ -374,6 +413,14 @@ export function declineBooking(id: string): Booking | null {
   const b = loadAllBookings().find((x) => x.id === id);
   if (!b || b.status !== "pending") return null;
   return upsertBooking({ ...b, status: "declined" });
+}
+
+export function deleteBooking(id: string): boolean {
+  const all = loadAllBookings();
+  const next = all.filter((x) => x.id !== id);
+  if (next.length === all.length) return false;
+  saveAllBookings(next);
+  return true;
 }
 
 export function cancelBooking(id: string): Booking | null {
