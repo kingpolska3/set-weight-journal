@@ -174,6 +174,7 @@ function planSetToEntry(s: PlanSet, rangeHint: string, restSec?: number): SetEnt
   const hint = explicit || (rangeHint || "").trim();
   const repsRaw = hint.toLowerCase();
   const weightNum = Number(String(s.weight || "0").replace(",", ".")) || 0;
+  const setNote = (s.note || "").trim();
 
   const minMatch = repsRaw.match(/^(\d+(?:[.,]\d+)?)\s*min/);
   if (minMatch?.[1]) {
@@ -185,6 +186,7 @@ function planSetToEntry(s: PlanSet, rangeHint: string, restSec?: number): SetEnt
       prevTimeSec: Math.round(mins * 60),
       ...(weightNum ? { prevWeight: weightNum } : {}),
       ...(restSec ? { restSec } : {}),
+      ...(setNote ? { note: setNote } : {}),
     };
   }
 
@@ -197,6 +199,7 @@ function planSetToEntry(s: PlanSet, rangeHint: string, restSec?: number): SetEnt
       prevTimeSec: (m || 0) * 60 + (sec || 0),
       ...(weightNum ? { prevWeight: weightNum } : {}),
       ...(restSec ? { restSec } : {}),
+      ...(setNote ? { note: setNote } : {}),
     };
   }
 
@@ -209,15 +212,27 @@ function planSetToEntry(s: PlanSet, rangeHint: string, restSec?: number): SetEnt
       prevTimeSec: n,
       ...(weightNum ? { prevWeight: weightNum } : {}),
       ...(restSec ? { restSec } : {}),
+      ...(setNote ? { note: setNote } : {}),
     };
   }
+
+  // Zakres "8-12" / "8–12" → podpowiedź górnej wartości; pojedyncza liczba → ta liczba
+  const rangeMatch = repsRaw.match(/(\d+)\s*[–\-]\s*(\d+)/);
+  const single = parseInt(repsRaw, 10);
+  const prevReps = rangeMatch
+    ? Number(rangeMatch[2])
+    : Number.isFinite(single) && single > 0
+      ? single
+      : undefined;
 
   return {
     reps: 0,
     weight: 0,
     warmup: !!s.warmup,
+    ...(prevReps ? { prevReps } : {}),
     ...(weightNum ? { prevWeight: weightNum } : {}),
     ...(restSec ? { restSec } : {}),
+    ...(setNote ? { note: setNote } : {}),
   };
 }
 
