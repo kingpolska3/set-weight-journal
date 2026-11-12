@@ -97,11 +97,8 @@ function CoachWorkoutPage() {
         setRow(found);
 
         if (found) {
-          const day =
-            (dayId ? found.data.days.find((d) => d.id === dayId) : null) ??
-            found.data.days.find((d) => d.exercises.length > 0) ??
-            found.data.days[0];
-
+          // dayId = Start konkretnego dnia; brak dayId = Wolny trening (pusta sesja)
+          const day = dayId ? found.data.days.find((d) => d.id === dayId) : null;
           const draft = day
             ? planDayToClientSession(found.id, found.data, day)
             : emptyClientSession(found.id, found.data);
