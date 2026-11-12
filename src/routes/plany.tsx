@@ -275,6 +275,35 @@ function PlansPage() {
     }, 600);
   };
 
+  const flushPlan = async (row: PlanRow, data: Client) => {
+    setPlans((l) => l.map((x) => (x.id === row.id ? { ...x, data } : x)));
+    clearTimeout(timers.current[row.id]);
+    if (row.access === "local") {
+      try {
+        const local = JSON.parse(localStorage.getItem(LOCAL_KEY) || "[]") as Client[];
+        const next = local.some((c) => c.id === data.id)
+          ? local.map((c) => (c.id === data.id ? data : c))
+          : [...local, data];
+        localStorage.setItem(LOCAL_KEY, JSON.stringify(next));
+      } catch { /* ignore */ }
+      return;
+    }
+    try {
+      await savePlanData(row.id, data);
+    } catch {
+      toast.error("Nie zapisano planu przed startem treningu");
+    }
+  };
+
+  const stashStartSnapshot = (planId: string, data: Client, dayId?: string) => {
+    try {
+      sessionStorage.setItem(
+        "trainer-start-snapshot-v1",
+        JSON.stringify({ planId, dayId: dayId ?? null, data, ts: Date.now() }),
+      );
+    } catch { /* ignore */ }
+  };
+
   const addClient = async () => {
     const name = newName.trim();
     if (!name) return;
@@ -425,6 +454,22 @@ function PlansPage() {
             onChange={(d) => patchPlan(active, d)}
             onRemove={() => void removeActive()}
             onShare={() => setShareOpen(true)}
+            onStartDay={async (dayId, data) => {
+              await flushPlan(active, data);
+              stashStartSnapshot(active.id, data, dayId);
+              void navigate({
+                to: "/trening-podopieczny",
+                search: { plan: active.id, day: dayId },
+              });
+            }}
+            onStartFree={async (data) => {
+              await flushPlan(active, data);
+              stashStartSnapshot(active.id, data);
+              void navigate({
+                to: "/trening-podopieczny",
+                search: { plan: active.id },
+              });
+            }}
           />
         ) : null}
         <ExerciseAtlas />
@@ -691,11 +736,15 @@ function ClientEditor({
   onChange,
   onRemove,
   onShare,
+  onStartDay,
+  onStartFree,
 }: {
   row: PlanRow;
   onChange: (c: Client) => void;
   onRemove: () => void;
   onShare: () => void;
+  onStartDay: (dayId: string, data: Client) => void | Promise<void>;
+  onStartFree: (data: Client) => void | Promise<void>;
 }) {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -778,12 +827,7 @@ function ClientEditor({
                   <button
                     key={d.id}
                     type="button"
-                    onClick={() =>
-                      void navigate({
-                        to: "/trening-podopieczny",
-                        search: { plan: row.id, day: d.id },
-                      })
-                    }
+                    onClick={() => void onStartDay(d.id, client)}
                     className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
                   >
                     Start: {d.name || d.weekday || "Dzień"}
@@ -791,12 +835,7 @@ function ClientEditor({
                 ))}
               <button
                 type="button"
-                onClick={() =>
-                  void navigate({
-                    to: "/trening-podopieczny",
-                    search: { plan: row.id },
-                  })
-                }
+                onClick={() => void onStartFree(client)}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-medium text-foreground hover:border-primary"
               >
                 Wolny trening
