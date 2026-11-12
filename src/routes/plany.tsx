@@ -766,7 +766,7 @@ function ClientEditor({
           </button>
         </div>
 
-        {!readOnly && client.days.some((d) => d.exercises.length > 0) ? (
+        {!readOnly ? (
           <div className="mt-3 space-y-2 border-t border-border pt-3">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               Trening z podopiecznym
@@ -802,6 +802,9 @@ function ClientEditor({
                 Wolny trening
               </button>
             </div>
+            <p className="text-[11px] text-muted-foreground">
+              Start ładuje ćwiczenia i cele z wybranego dnia planu. Wolny trening otwiera pustą sesję z pełnymi opcjami.
+            </p>
           </div>
         ) : null}
 
