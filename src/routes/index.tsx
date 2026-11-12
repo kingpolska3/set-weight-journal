@@ -620,7 +620,7 @@ function Index() {
           <h2 className="flex items-center gap-1.5 text-sm font-semibold text-primary">
             <Trophy className="h-4 w-4" /> Podsumowanie dnia
           </h2>
-          <ul className="mt-2 space-y-1.5">
+          <ul className="mt-3 space-y-2.5">
             {insights.map((line, i) => (
               <li
                 key={i}
@@ -632,6 +632,11 @@ function Index() {
                       : "text-foreground"
                 }`}
               >
+                {line.label ? (
+                  <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {line.label}
+                  </span>
+                ) : null}
                 {line.text}
               </li>
             ))}
