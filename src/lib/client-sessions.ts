@@ -238,10 +238,16 @@ function planSetToEntry(s: PlanSet, rangeHint: string, restSec?: number): SetEnt
 
 
 function exerciseFromPlan(ex: PlanExercise): Exercise {
-  const rangeHint = (ex.range || "").trim();
-  const restLabel = (ex.rest || "").trim();
-  const noteHint = (ex.note || "").trim();
-  const restSec = parseRestToSeconds(ex.rest);
+  // Kompatybilność: edytor wcześniej zapisywał coachRange/coachRest/coachNote
+  const legacy = ex as PlanExercise & {
+    coachRange?: string;
+    coachRest?: string;
+    coachNote?: string;
+  };
+  const rangeHint = (ex.range || legacy.coachRange || "").trim();
+  const restLabel = (ex.rest || legacy.coachRest || "").trim();
+  const noteHint = (ex.note || legacy.coachNote || "").trim();
+  const restSec = parseRestToSeconds(restLabel);
 
   // Serie z planu; gdy puste – jedna pusta seria robocza (wynik wpiszesz na treningu)
   const baseSets =
