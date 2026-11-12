@@ -158,18 +158,28 @@ export function defaultAvailability(trainerId: string, trainerName: string): Tra
 }
 
 function normalizeAvailability(a: TrainerAvailability): TrainerAvailability {
-  const locations = Array.isArray(a.locations)
-    ? a.locations.map((x) => String(x).trim()).filter(Boolean)
+  let locations = Array.isArray(a.locations)
+    ? a.locations.map((x) => String(x ?? ""))
     : [];
   // migracja ze starego pola location
   if (!locations.length && a.location?.trim()) {
-    locations.push(a.location.trim());
+    locations = [a.location.trim()];
   }
+  const firstNamed = locations.map((x) => x.trim()).find(Boolean) || a.location || "";
   return {
     ...a,
     locations,
-    location: locations[0] || a.location || "",
+    location: firstNamed,
   };
+}
+
+/** Siłownie bez pustych wpisów (do rezerwacji / wyświetlania). */
+export function activeLocations(a: TrainerAvailability): string[] {
+  const locs = Array.isArray(a.locations) ? a.locations : [];
+  const named = locs.map((x) => String(x).trim()).filter(Boolean);
+  if (named.length) return named;
+  if (a.location?.trim()) return [a.location.trim()];
+  return [];
 }
 
 export function loadAvailability(trainerId: string): TrainerAvailability | null {
@@ -194,6 +204,13 @@ export function saveAvailability(a: TrainerAvailability): void {
       TrainerAvailability
     >;
     const norm = normalizeAvailability({ ...a, updatedAt: new Date().toISOString() });
+    const seen = new Set<string>();
+    norm.weekly = (norm.weekly || []).filter((w) => {
+      const k = `${w.dayOfWeek}:${w.startMin}:${w.endMin}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
     all[a.trainerId] = norm;
     localStorage.setItem(AVAIL_KEY, JSON.stringify(all));
   } catch {
@@ -295,19 +312,31 @@ export function getBookableSlots(
       (b) => b.date === date && (b.status === "pending" || b.status === "confirmed"),
     );
 
-  const ranges = rangesForDate(a, date);
-  const step = a.sessionMinutes;
-  const buffer = a.bufferMinutes;
-  const out: BookableSlot[] = [];
+  // Unikalne przedziały (duplikaty w weekly nie mnożą godzin)
+  const rawRanges = rangesForDate(a, date);
+  const rangeKey = new Set<string>();
+  const ranges: { startMin: number; endMin: number }[] = [];
+  for (const r of rawRanges) {
+    const k = `${r.startMin}-${r.endMin}`;
+    if (rangeKey.has(k)) continue;
+    rangeKey.add(k);
+    ranges.push(r);
+  }
+
+  const step = Math.max(15, a.sessionMinutes || 60);
+  const buffer = Math.max(0, a.bufferMinutes || 0);
+  const byStart = new Map<number, BookableSlot>();
 
   for (const range of ranges) {
+    if (range.endMin <= range.startMin) continue;
     for (let t = range.startMin; t + step <= range.endMin; t += step + buffer) {
+      if (byStart.has(t)) continue;
       const end = t + step;
       const conflict = bookings.some(
         (b) => !(end + buffer <= b.startMin || t >= b.endMin + buffer),
       );
       if (!conflict) {
-        out.push({
+        byStart.set(t, {
           date,
           startMin: t,
           endMin: end,
@@ -316,7 +345,7 @@ export function getBookableSlots(
       }
     }
   }
-  return out;
+  return [...byStart.values()].sort((x, y) => x.startMin - y.startMin);
 }
 
 /** Lista dni z ≥1 wolnym slotem w oknie bookAheadDays. */
@@ -372,11 +401,10 @@ export function createBookingRequest(input: {
     };
   }
 
-  const locs = a.locations?.length ? a.locations : a.location ? [a.location] : [];
+  const locs = activeLocations(a);
   const chosen =
     (location || "").trim() ||
     (locs.length === 1 ? locs[0] : "") ||
-    a.location ||
     "";
 
   if (locs.length > 1 && !chosen) {
