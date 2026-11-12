@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { AppNav } from "@/components/AppNav";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import {
   BOOKING_STATUS_LABEL,
   type Booking,
@@ -41,6 +42,9 @@ import {
   uid,
   weekdayPL,
 } from "@/lib/booking";
+
+const TRAINER_AUTH_KEY = "trainer-auth-unlocked-v1";
+const CORRECT_PIN = "trener personalny";
 
 export const Route = createFileRoute("/rezerwacje")({
   head: () => ({
@@ -73,6 +77,9 @@ function BookingsPage() {
   const [trainerBookings, setTrainerBookings] = useState<Booking[]>([]);
   const [myBookings, setMyBookings] = useState<Booking[]>([]);
   const [trainers, setTrainers] = useState<TrainerAvailability[]>([]);
+  const [trainerUnlocked, setTrainerUnlocked] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [displayName, setDisplayName] = useState("");
 
   // client booking flow
   const [selectedTrainerId, setSelectedTrainerId] = useState<string>("");
@@ -80,18 +87,58 @@ function BookingsPage() {
   const [note, setNote] = useState("");
 
   const userId = user?.id ?? "local-user";
+  /** Nazwa wyświetlana z Profilu – nie prefix e-maila */
   const userName =
-    (user?.user_metadata?.display_name as string | undefined) ||
+    displayName.trim() ||
+    (user?.user_metadata?.full_name as string | undefined)?.trim() ||
+    (user?.user_metadata?.display_name as string | undefined)?.trim() ||
     user?.email?.split("@")[0] ||
     "Użytkownik";
 
   const refresh = () => {
     const a = loadAvailability(userId);
-    setAvail(a);
+    // Utrzymaj aktualną nazwę wyświetlaną przy odświeżeniu listy
+    if (a && userName && a.trainerName !== userName) {
+      const fixed = { ...a, trainerName: userName };
+      saveAvailability(fixed);
+      setAvail(fixed);
+    } else {
+      setAvail(a);
+    }
     setTrainerBookings(loadBookingsForTrainer(userId));
     setMyBookings(loadBookingsForClient(userId));
     setTrainers(listPublicTrainers());
   };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setTrainerUnlocked(window.localStorage.getItem(TRAINER_AUTH_KEY) === "true");
+  }, []);
+
+  useEffect(() => {
+    if (loading || !user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("profiles")
+          .select("display_name")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (cancelled) return;
+        const name =
+          (data?.display_name as string | undefined)?.trim() ||
+          (user.user_metadata?.full_name as string | undefined)?.trim() ||
+          "";
+        setDisplayName(name);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, user?.id]);
 
   useEffect(() => {
     if (loading) return;
@@ -105,7 +152,7 @@ function BookingsPage() {
         );
       }
     });
-  }, [loading, userId]);
+  }, [loading, userId, displayName]);
 
   const selectedTrainer = useMemo(
     () => trainers.find((t) => t.trainerId === selectedTrainerId) ?? null,
@@ -129,12 +176,13 @@ function BookingsPage() {
 
   // ——— Trainer: init / save availability ———
   const ensureAvailability = () => {
-    const current = loadAvailability(userId) ?? defaultAvailability(userId, userName);
-    current.trainerName = userName;
+    const name = userName.trim() || "Trener";
+    const current = loadAvailability(userId) ?? defaultAvailability(userId, name);
+    current.trainerName = name;
     saveAvailability(current);
     setAvail(current);
     refresh();
-    toast.success("Włączono kalendarz dostępności (szablon Pn–Pt)");
+    toast.success(`Włączono dostępność jako „${name}”`);
   };
 
   const patchAvail = (patch: Partial<TrainerAvailability>) => {
@@ -249,7 +297,9 @@ function BookingsPage() {
             [
               ["book", "Rezerwuj"],
               ["mine", "Moje terminy"],
-              ["manage", "Dostępność (trener)"],
+              ...(trainerUnlocked
+                ? ([["manage", "Dostępność (trener)"]] as const)
+                : ([] as const)),
             ] as const
           ).map(([id, label]) => (
             <button
@@ -269,6 +319,43 @@ function BookingsPage() {
             </button>
           ))}
         </div>
+        {!trainerUnlocked ? (
+          <form
+            className="mt-3 rounded-2xl border border-border bg-card p-3 space-y-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (pinInput.trim().toLowerCase() === CORRECT_PIN) {
+                setTrainerUnlocked(true);
+                window.localStorage.setItem(TRAINER_AUTH_KEY, "true");
+                setTab("manage");
+                toast.success("Odblokowano panel trenera");
+                setPinInput("");
+              } else {
+                toast.error("Nieprawidłowy kod trenera");
+              }
+            }}
+          >
+            <p className="text-[11px] text-muted-foreground">
+              Zakładka „Dostępność (trener)” jest tylko dla trenera personalnego. Wpisz kod jak w
+              Dzienniku trenera.
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={pinInput}
+                onChange={(e) => setPinInput(e.target.value)}
+                placeholder="Kod trenera…"
+                className="min-w-0 flex-1 rounded-xl border border-input bg-secondary px-3 py-2 text-sm outline-none focus:border-primary"
+              />
+              <button
+                type="submit"
+                className="rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
+              >
+                Odblokuj
+              </button>
+            </div>
+          </form>
+        ) : null}
       </div>
 
       <section className="mx-auto max-w-2xl space-y-4 px-4 py-5">
@@ -285,7 +372,11 @@ function BookingsPage() {
                 </p>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  {trainers.map((t) => (
+                  {trainers.map((t) => {
+                    const label =
+                      (t.trainerName || "").trim() ||
+                      "Trener";
+                    return (
                     <button
                       key={t.trainerId}
                       type="button"
@@ -299,9 +390,13 @@ function BookingsPage() {
                           : "bg-secondary text-foreground"
                       }`}
                     >
-                      {t.trainerName}
+                      {label}
+                      {t.trainerId === userId ? (
+                        <span className="ml-1 opacity-70">(Ty)</span>
+                      ) : null}
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -416,7 +511,7 @@ function BookingsPage() {
         ) : null}
 
         {/* ——— DOSTĘPNOŚĆ TRENERA ——— */}
-        {tab === "manage" ? (
+        {tab === "manage" && trainerUnlocked ? (
           <div className="space-y-4">
             {!avail ? (
               <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
