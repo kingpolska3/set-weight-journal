@@ -65,6 +65,34 @@ function CoachWorkoutPage() {
       try {
         let found: PlanRow | null = null;
 
+        // 1) Najświeższy snapshot z ekranu planu (to, co właśnie edytowałeś)
+        let snapshotData: PlanRow["data"] | null = null;
+        let snapshotDayId: string | null = dayId ?? null;
+        try {
+          const raw = sessionStorage.getItem("trainer-start-snapshot-v1");
+          if (raw) {
+            const snap = JSON.parse(raw) as {
+              planId?: string;
+              dayId?: string | null;
+              data?: PlanRow["data"];
+              ts?: number;
+            };
+            // ważne max 2 min – potem i tak bierzemy z API/local
+            if (
+              snap.planId === planId &&
+              snap.data &&
+              typeof snap.ts === "number" &&
+              Date.now() - snap.ts < 2 * 60 * 1000
+            ) {
+              snapshotData = snap.data;
+              if (snap.dayId) snapshotDayId = snap.dayId;
+            }
+            sessionStorage.removeItem("trainer-start-snapshot-v1");
+          }
+        } catch {
+          /* ignore */
+        }
+
         if (user) {
           const rows = await fetchPlans(user.id);
           found = rows.find((r) => r.id === planId) ?? null;
@@ -94,6 +122,20 @@ function CoachWorkoutPage() {
           }
         }
 
+        // Nadpisz data świeżym snapshotem (edycja w planie > stare API)
+        if (found && snapshotData) {
+          found = { ...found, data: snapshotData };
+        } else if (!found && snapshotData) {
+          found = {
+            id: planId,
+            owner_id: "",
+            data: snapshotData,
+            link_token: "",
+            link_access: "none",
+            access: "local",
+          };
+        }
+
         if (cancelled) return;
         setRow(found);
 
@@ -113,7 +155,7 @@ function CoachWorkoutPage() {
             setHistory(clientSessions.map(clientSessionAsSession));
           }
 
-          // Edycja istniejącej sesji
+          // Edycja istniejącej SESJI treningowej (historia) – tylko gdy session=
           if (sessionId) {
             const existing = clientSessions.find((s) => s.id === sessionId);
             if (existing) {
@@ -121,15 +163,16 @@ function CoachWorkoutPage() {
             } else {
               toast.error("Nie znaleziono sesji do edycji");
             }
-          } else if (dayId) {
-            // Start: konkretny dzień planu → przenieś ćwiczenia / serie / zakresy / przerwy
-            const day = found.data.days.find((d) => d.id === dayId);
+          } else if (snapshotDayId || dayId) {
+            // Start: zawsze buduj z AKTUALNEGO dnia planu, nigdy ze starej sesji
+            const useDayId = snapshotDayId || dayId;
+            const day = found.data.days.find((d) => d.id === useDayId);
             const draft = day
               ? planDayToClientSession(found.id, found.data, day)
               : emptyClientSession(found.id, found.data);
             setSession(draft);
           } else {
-            // Wolny trening → pusta sesja (jak zwykły trening, bez szablonu dnia)
+            // Wolny trening
             setSession(emptyClientSession(found.id, found.data));
           }
         }
