@@ -188,7 +188,13 @@ export function listPublicTrainers(): TrainerAvailability[] {
       string,
       TrainerAvailability
     >;
-    return Object.values(all).filter((a) => a.weekly.length > 0);
+    return Object.values(all)
+      .filter((a) => a.weekly.length > 0)
+      .map((a) => ({
+        ...a,
+        trainerName: (a.trainerName || "").trim() || "Trener",
+      }))
+      .sort((a, b) => a.trainerName.localeCompare(b.trainerName, "pl"));
   } catch {
     return [];
   }
@@ -537,4 +543,3 @@ export const BOOKING_STATUS_LABEL: Record<BookingStatus, string> = {
   cancelled: "Anulowany",
   completed: "Odbyty",
 };
-
