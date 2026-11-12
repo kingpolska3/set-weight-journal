@@ -113,7 +113,7 @@ function CoachWorkoutPage() {
             setHistory(clientSessions.map(clientSessionAsSession));
           }
 
-          // Jeśli przekazano sessionId – wczytaj istniejącą sesję do edycji
+          // Edycja istniejącej sesji
           if (sessionId) {
             const existing = clientSessions.find((s) => s.id === sessionId);
             if (existing) {
@@ -121,18 +121,16 @@ function CoachWorkoutPage() {
             } else {
               toast.error("Nie znaleziono sesji do edycji");
             }
-          } else {
-            // W przeciwnym razie stwórz nową sesję z szablonu planu
-            const day =
-              (dayId ? found.data.days.find((d) => d.id === dayId) : null) ??
-              found.data.days.find((d) => d.exercises.length > 0) ??
-              found.data.days[0];
-
+          } else if (dayId) {
+            // Start: konkretny dzień planu → przenieś ćwiczenia / serie / zakresy / przerwy
+            const day = found.data.days.find((d) => d.id === dayId);
             const draft = day
               ? planDayToClientSession(found.id, found.data, day)
               : emptyClientSession(found.id, found.data);
-
             setSession(draft);
+          } else {
+            // Wolny trening → pusta sesja (jak zwykły trening, bez szablonu dnia)
+            setSession(emptyClientSession(found.id, found.data));
           }
         }
       } catch (e) {
