@@ -17,6 +17,7 @@ import { AppNav } from "@/components/AppNav";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  activeLocations,
   BOOKING_STATUS_LABEL,
   type Booking,
   type DayOfWeek,
@@ -410,11 +411,11 @@ function BookingsPage() {
                 <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
                   <p className="text-sm text-foreground">
                     Sesja <strong>{selectedTrainer.sessionMinutes} min</strong>
-                    {selectedTrainer.locations.length > 0 ? (
+                    {activeLocations(selectedTrainer).length > 0 ? (
                       <>
                         {" "}
                         · <MapPin className="inline h-3.5 w-3.5" />{" "}
-                        {selectedTrainer.locations.join(" · ")}
+                        {activeLocations(selectedTrainer).join(" · ")}
                       </>
                     ) : selectedTrainer.location ? (
                       <>
@@ -458,7 +459,7 @@ function BookingsPage() {
                   )}
                 </div>
 
-                {selectedTrainer.locations.length > 0 ? (
+                {activeLocations(selectedTrainer).length > 0 ? (
                   <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                       Siłownia / miejsce
@@ -468,7 +469,7 @@ function BookingsPage() {
                       treningów o tej samej porze na różnych siłowniach.
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      {selectedTrainer.locations.map((loc) => (
+                      {activeLocations(selectedTrainer).map((loc) => (
                         <button
                           key={loc}
                           type="button"
@@ -491,7 +492,7 @@ function BookingsPage() {
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                       Godzina · {weekdayPL(selectedDate)} {formatDatePL(selectedDate)}
                     </p>
-                    {selectedTrainer.locations.length > 1 && !selectedLocation ? (
+                    {activeLocations(selectedTrainer).length > 1 && !selectedLocation ? (
                       <p className="text-sm text-amber-400/90">
                         Najpierw wybierz siłownię powyżej, potem godzinę.
                       </p>
@@ -502,7 +503,7 @@ function BookingsPage() {
                       <div className="flex flex-wrap gap-2">
                         {slotsForDay.map((s) => {
                           const needLoc =
-                            selectedTrainer.locations.length > 1 && !selectedLocation;
+                            activeLocations(selectedTrainer).length > 1 && !selectedLocation;
                           return (
                           <button
                             key={s.startMin}
@@ -684,27 +685,28 @@ function BookingsPage() {
                       możliwa jest tylko jedna rezerwacja (niezależnie od siłowni).
                     </p>
                     <ul className="space-y-1.5">
-                      {avail.locations.map((loc, i) => (
-                        <li key={`${loc}-${i}`} className="flex items-center gap-2">
+                      {(avail.locations ?? []).map((loc, i) => (
+                        <li key={`loc-${i}`} className="flex items-center gap-2">
                           <input
                             value={loc}
                             onChange={(e) => {
-                              const next = [...avail.locations];
+                              const next = [...(avail.locations ?? [])];
                               next[i] = e.target.value;
                               patchAvail({
                                 locations: next,
-                                location: next.find((x) => x.trim()) || "",
+                                location: next.map((x) => x.trim()).find(Boolean) || "",
                               });
                             }}
+                            placeholder="np. Endorfina Chrobrego"
                             className="min-w-0 flex-1 rounded-lg border border-input bg-secondary px-2 py-1.5 text-sm"
                           />
                           <button
                             type="button"
                             onClick={() => {
-                              const next = avail.locations.filter((_, j) => j !== i);
+                              const next = (avail.locations ?? []).filter((_, j) => j !== i);
                               patchAvail({
                                 locations: next,
-                                location: next[0] || "",
+                                location: next.map((x) => x.trim()).find(Boolean) || "",
                               });
                             }}
                             className="p-1 text-muted-foreground hover:text-danger"
@@ -717,11 +719,10 @@ function BookingsPage() {
                     </ul>
                     <button
                       type="button"
-                      onClick={() =>
-                        patchAvail({
-                          locations: [...avail.locations, ""],
-                        })
-                      }
+                      onClick={() => {
+                        const next = [...(avail.locations ?? []), ""];
+                        patchAvail({ locations: next });
+                      }}
                       className="text-[11px] font-medium text-primary"
                     >
                       + Dodaj siłownię
@@ -898,14 +899,16 @@ function BookingCard({
             Anuluj
           </button>
         )}
-        {(b.status === "declined" || b.status === "cancelled" || b.status === "completed") &&
-        onDelete ? (
+        {onDelete &&
+        (b.status === "declined" ||
+          b.status === "cancelled" ||
+          b.status === "completed") ? (
           <button
             type="button"
             onClick={() => onDelete(b.id)}
-            className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground hover:text-danger"
+            className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-semibold text-foreground hover:border-danger hover:text-danger"
           >
-            <Trash2 className="h-3 w-3" /> Usuń
+            <Trash2 className="h-3.5 w-3.5" /> Usuń z listy
           </button>
         ) : null}
       </div>
