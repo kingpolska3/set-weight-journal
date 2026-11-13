@@ -856,9 +856,133 @@ export type SummaryLine = {
   label?: string;
 };
 
+/** Główne grupy mięśniowe do analizy obciążenia. */
+export type MuscleGroup =
+  | "klatka"
+  | "plecy"
+  | "barki"
+  | "biceps"
+  | "triceps"
+  | "nogi"
+  | "pośladki"
+  | "brzuch"
+  | "łydki"
+  | "przedramiona"
+  | "cardio";
+
+const MUSCLE_LABEL: Record<MuscleGroup, string> = {
+  klatka: "Klatka",
+  plecy: "Plecy",
+  barki: "Barki",
+  biceps: "Biceps",
+  triceps: "Triceps",
+  nogi: "Nogi",
+  pośladki: "Pośladki",
+  brzuch: "Brzuch",
+  łydki: "Łydki",
+  przedramiona: "Przedramiona",
+  cardio: "Cardio",
+};
+
 /**
- * Inteligentne podsumowanie dnia – krótkie, priorytetowe wnioski zamiast ściany liczb.
- * Kolejność: werdykt → objętość vs poprzedni → rekordy/skoki → czas → wskazówki.
+ * Mapowanie nazwy ćwiczenia → grupy mięśniowe (wagi względne 0–1).
+ * Suma wag nie musi być 1 – normalizujemy przy agregacji.
+ */
+export function musclesForExercise(name: string): Partial<Record<MuscleGroup, number>> {
+  const n = name.toLowerCase();
+  const has = (...ws: string[]) => ws.some((w) => n.includes(w));
+
+  if (has("rower", "bieg", "bieżni", "elipty", "cardio", "skakan", "orbiter"))
+    return { cardio: 1 };
+  if (has("brzuch", "plank", "deska", "allah", "crunch", "spinanie", "spięcia", "russian"))
+    return { brzuch: 1 };
+  if (has("łydk", "wspięcia")) return { łydki: 1 };
+
+  // Nogi / pośladki
+  if (has("przysiad", "squat", "hack", "wypychanie nóg", "leg press"))
+    return { nogi: 0.7, pośladki: 0.3 };
+  if (has("martwy", "deadlift", "rumuński", "rdl"))
+    return { nogi: 0.4, pośladki: 0.35, plecy: 0.25 };
+  if (has("wykrok", "lunge", "split squat", "bułgarsk", "goblet"))
+    return { nogi: 0.55, pośladki: 0.45 };
+  if (has("prostowanie nóg", "leg extension")) return { nogi: 1 };
+  if (has("uginanie nóg", "leg curl", "uda")) return { nogi: 1 };
+  if (has("hip thrust", "glute", "poślad")) return { pośladki: 0.85, nogi: 0.15 };
+  if (has("suwnica", "adduk", "przywodz", "odwodz")) return { nogi: 0.7, pośladki: 0.3 };
+
+  // Klatka
+  if (has("wyciskanie", "bench", "ław", "pompki", "push-up", "klat", "rozpięt", "butterfly", "pec")) {
+    if (has("bark", "military", "ohp", "nad głow", "arnold"))
+      return { barki: 0.7, triceps: 0.3 };
+    return { klatka: 0.7, triceps: 0.2, barki: 0.1 };
+  }
+
+  // Barki
+  if (has("wznos", "lateral", "face pull", "opress", "ohp", "military", "arnold", "bark"))
+    return { barki: 0.85, triceps: 0.15 };
+  if (has("szrugs", "kaptur")) return { barki: 0.6, plecy: 0.4 };
+
+  // Plecy
+  if (has("wiosłow", "podciągan", "ściągan", "pull", "lat", "przyciągan", "pendlay", "t-bar"))
+    return { plecy: 0.75, biceps: 0.25 };
+  if (has("hiper", "prostowan", "good morning")) return { plecy: 0.6, pośladki: 0.4 };
+
+  // Ramiona
+  if (has("biceps", "uginanie", "curl", "młotk", "młot ")) return { biceps: 0.9, przedramiona: 0.1 };
+  if (has("triceps", "prostowanie rą", "francusk", "kickback", "wąskim"))
+    return { triceps: 1 };
+  if (has("przedram", "nadgarst", "farmer")) return { przedramiona: 1 };
+
+  // Fallback wg profilu ruchu
+  const prof = exerciseProfile(name);
+  if (prof.kind === "wyciskanie") return { klatka: 0.55, barki: 0.25, triceps: 0.2 };
+  if (prof.kind === "wiosłowanie/podciąganie") return { plecy: 0.7, biceps: 0.3 };
+  if (prof.kind === "przysiad/martwy ciąg") return { nogi: 0.55, pośladki: 0.3, plecy: 0.15 };
+  if (prof.kind === "brzuch") return { brzuch: 1 };
+  return { barki: 0.3, plecy: 0.3, nogi: 0.2, klatka: 0.2 };
+}
+
+export type MuscleLoad = {
+  group: MuscleGroup;
+  label: string;
+  volume: number;
+  sets: number;
+  share: number; // 0–1
+};
+
+/** Rozkład objętości i serii po grupach mięśniowych w sesji. */
+export function analyzeMuscleLoad(session: Session): MuscleLoad[] {
+  const acc = new Map<MuscleGroup, { volume: number; sets: number }>();
+  for (const ex of session.exercises) {
+    const sets = workingSets(ex.sets);
+    if (!sets.length) continue;
+    const vol = volume(ex.sets, ex.name);
+    const map = musclesForExercise(ex.name);
+    const weightSum = Object.values(map).reduce((a, b) => a + (b || 0), 0) || 1;
+    for (const [g, w] of Object.entries(map) as [MuscleGroup, number][]) {
+      const share = (w || 0) / weightSum;
+      const cur = acc.get(g) ?? { volume: 0, sets: 0 };
+      cur.volume += vol * share;
+      cur.sets += sets.length * share;
+      acc.set(g, cur);
+    }
+  }
+  const totalVol = [...acc.values()].reduce((a, b) => a + b.volume, 0) || 1;
+  return [...acc.entries()]
+    .map(([group, v]) => ({
+      group,
+      label: MUSCLE_LABEL[group],
+      volume: v.volume,
+      sets: v.sets,
+      share: v.volume / totalVol,
+    }))
+    .filter((x) => x.share >= 0.03 || x.sets >= 1)
+    .sort((a, b) => b.volume - a.volume);
+}
+
+/**
+ * Inteligentne podsumowanie dnia.
+ * Werdykt → objętość → rekordy → obciążenie mięśni → rekomendacje.
  */
 export function daySummaryInsights(
   sessions: Session[],
@@ -877,6 +1001,11 @@ export function daySummaryInsights(
         text: "Dzień bez treningu – celowo. Nie wpływa na porównania progresu.",
         tone: "info",
       },
+      {
+        label: "Rekomendacja",
+        text: "Spacer, mobilność lub sen dłuższy o 30–60 min – jutro wrócisz mocniejszy.",
+        tone: "info",
+      },
     ];
   }
   if (session?.deload) {
@@ -884,11 +1013,12 @@ export function daySummaryInsights(
     return [
       {
         label: "Deload",
-        text: `Lżejszy dzień regeneracyjny: ${Math.round(vol)} kg w ${session.exercises.length} ćwiczeniach. Bez presji na progres.`,
+        text: `Lżejszy dzień regeneracyjny: ${Math.round(vol)} kg w ${session.exercises.length} ćwiczeniach.`,
         tone: "info",
       },
       {
-        text: "Trzymaj ok. 50% ciężaru i zapas w seriach – to buduje formę na kolejny blok.",
+        label: "Rekomendacja",
+        text: "Trzymaj ok. 50% ciężaru i duży zapas w seriach – nie gonij rekordów w deloadzie.",
         tone: "info",
       },
     ];
@@ -900,7 +1030,6 @@ export function daySummaryInsights(
   const filled = session.exercises.filter((e) => workingSets(e.sets).length > 0);
   const empty = session.exercises.length - filled.length;
 
-  // ——— Per-exercise deltas ———
   const changes = filled
     .map((ex) => {
       const prev = previousExercise(sessions, date, ex.name);
@@ -908,12 +1037,12 @@ export function daySummaryInsights(
       const now = volume(ex.sets, ex.name);
       const before = volume(prev.exercise.sets, ex.name);
       if (before <= 0 && now <= 0) return null;
-      const pct = before > 0 ? ((now - before) / before) * 100 : now > 0 ? 100 : 0;
+      const pctChange = before > 0 ? ((now - before) / before) * 100 : now > 0 ? 100 : 0;
       const topNow = topWeight(ex.sets);
       const topPrev = topWeight(prev.exercise.sets);
       return {
         name: ex.name.trim() || "Ćwiczenie",
-        pct,
+        pct: pctChange,
         now,
         before,
         topNow,
@@ -933,42 +1062,40 @@ export function daySummaryInsights(
   const regressed = changes.filter((c) => c.pct < -0.5).length;
   const weightPRs = changes.filter((c) => c.weightUp).length;
 
-  // ——— 1. Werdykt dnia ———
-  let verdict: SummaryLine;
+  // ——— 1. Werdykt ———
   if (s.pct != null && s.pct >= 8 && (prNames.length >= 2 || improved >= Math.ceil(filled.length * 0.5))) {
-    verdict = {
+    lines.push({
       label: "Werdykt",
       text: `Mocny trening „${s.planName}” – wyraźny progres objętości i wyników.`,
       tone: "good",
-    };
+    });
   } else if (s.pct != null && s.pct >= 0 && regressed <= 1) {
-    verdict = {
+    lines.push({
       label: "Werdykt",
       text: `Solidny trening „${s.planName}” – utrzymujesz lub budujesz formę.`,
       tone: "good",
-    };
+    });
   } else if (s.pct != null && s.pct < -8) {
-    verdict = {
+    lines.push({
       label: "Werdykt",
-      text: `Lżejszy dzień „${s.planName}” (${s.pct.toFixed(0)}% objętości). OK przy zmęczeniu lub deloadzie – nie zaniżaj techniki.`,
+      text: `Lżejszy dzień „${s.planName}” (${s.pct.toFixed(0)}% objętości). OK przy zmęczeniu – nie zaniżaj techniki.`,
       tone: "bad",
-    };
+    });
   } else if (s.pct == null) {
-    verdict = {
+    lines.push({
       label: "Werdykt",
       text: `Pierwszy zapisany „${s.planName}” – to baza do kolejnych porównań.`,
       tone: "info",
-    };
+    });
   } else {
-    verdict = {
+    lines.push({
       label: "Werdykt",
       text: `Stabilny trening „${s.planName}” – bez dużych wahań objętości.`,
       tone: "info",
-    };
+    });
   }
-  lines.push(verdict);
 
-  // ——— 2. Objętość (jedna zwięzła linia) ———
+  // ——— 2. Objętość ———
   const volMain = `${Math.round(s.volume).toLocaleString("pl-PL")} kg · ${s.sets} serii · ${filled.length} ćw.`;
   if (s.pct != null && s.prevDate) {
     const diff = Math.round(s.volume - s.prevVolume);
@@ -981,46 +1108,85 @@ export function daySummaryInsights(
     lines.push({ label: "Objętość", text: `${volMain}.`, tone: "info" });
   }
 
-  // ——— 3. Rekordy i wyróżniki ———
+  // ——— 3. Rekordy / forma ———
   if (prNames.length > 0) {
-    const shown = prNames.slice(0, 4);
     lines.push({
       label: "Rekordy",
-      text: `${prNames.length}× PR: ${shown.join(", ")}${prNames.length > 4 ? "…" : ""}.`,
+      text: `${prNames.length}× PR: ${prNames.slice(0, 4).join(", ")}${prNames.length > 4 ? "…" : ""}.`,
       tone: "good",
     });
   }
-
   const top = changes[0];
   if (top && top.pct >= 3) {
     lines.push({
       label: "Forma",
-      text: `Największy skok: ${top.name} (${top.pct >= 0 ? "+" : ""}${top.pct.toFixed(0)}% objętości${
+      text: `Największy skok: ${top.name} (${top.pct >= 0 ? "+" : ""}${top.pct.toFixed(0)}%${
         top.weightUp ? `, ciężar ${top.topPrev}→${top.topNow} kg` : ""
       }).`,
       tone: "good",
     });
   }
-
   const worst = changes.length ? changes[changes.length - 1] : null;
   if (worst && worst !== top && worst.pct <= -5) {
     lines.push({
       label: "Uwaga",
-      text: `Spadek: ${worst.name} (${worst.pct.toFixed(0)}%). Sprawdź sen, przerwy i czy ciężar nie był za wysoki.`,
+      text: `Spadek: ${worst.name} (${worst.pct.toFixed(0)}%). Sprawdź sen, przerwy i dobór ciężaru.`,
       tone: "bad",
     });
   }
 
-  if (changes.length >= 2 && improved > 0) {
+  // ——— 4. Obciążenie mięśniowe ———
+  const load = analyzeMuscleLoad(session).filter((x) => x.group !== "cardio");
+  if (load.length > 0) {
+    const top3 = load.slice(0, 3);
+    const parts = top3.map(
+      (m) => `${m.label} ${Math.round(m.share * 100)}%`,
+    );
     lines.push({
-      text: `Progres objętości w ${improved} z ${changes.length} porównywalnych ćwiczeń${
-        weightPRs > 0 ? ` · wyższy ciężar w ${weightPRs}` : ""
-      }.`,
-      tone: improved >= regressed ? "good" : "info",
+      label: "Obciążenie mięśni",
+      text: `Głównie: ${parts.join(" · ")} (${Math.round(top3.reduce((a, m) => a + m.share, 0) * 100)}% sesji).`,
+      tone: "info",
     });
+
+    // Nierównowaga push/pull lub góra/dół
+    const share = (g: MuscleGroup) => load.find((x) => x.group === g)?.share ?? 0;
+    const push = share("klatka") + share("barki") + share("triceps");
+    const pull = share("plecy") + share("biceps");
+    const legs = share("nogi") + share("pośladki") + share("łydki");
+    const upper = push + pull;
+    if (push > 0.15 && pull > 0.05 && push / Math.max(pull, 0.01) >= 2) {
+      lines.push({
+        label: "Balans",
+        text: `Dominacja push (${Math.round(push * 100)}%) vs pull (${Math.round(pull * 100)}%). Warto dodać wiosłowanie / ściąganie w tym tygodniu.`,
+        tone: "bad",
+      });
+    } else if (pull > 0.15 && push > 0.05 && pull / Math.max(push, 0.01) >= 2) {
+      lines.push({
+        label: "Balans",
+        text: `Dominacja pull (${Math.round(pull * 100)}%) vs push (${Math.round(push * 100)}%). Uzupełnij wyciskaniem lub barkami.`,
+        tone: "info",
+      });
+    } else if (upper > 0.7 && legs < 0.1 && !/nog|leg|poślad/i.test(s.planName)) {
+      // tylko informacja gdy plan nie jest "tylko góra"
+      lines.push({
+        label: "Balans",
+        text: "Sesja mocno górna – upewnij się, że w tygodniu masz solidny dzień nóg.",
+        tone: "info",
+      });
+    }
+
+    // Wysoka objętość na jedną grupę
+    const heavy = load[0];
+    if (heavy && heavy.share >= 0.45 && heavy.sets >= 10) {
+      lines.push({
+        label: "Obciążenie",
+        text: `${heavy.label}: ~${Math.round(heavy.sets)} serii roboczych (${Math.round(heavy.share * 100)}% dnia) – daj tej grupie 48–72 h regeneracji.`,
+        tone: "info",
+      });
+    }
   }
 
-  // ——— 4. Czas / tempo ———
+  // ——— 5. Czas ———
   const dur =
     session.durationSec ??
     (session.startTime && session.endTime
@@ -1042,31 +1208,82 @@ export function daySummaryInsights(
     });
   }
 
-  // ——— 5. Wskazówki tylko gdy mają sens ———
+  // ——— 6. Rekomendacje (1–2 konkretne) ———
+  const recs: SummaryLine[] = [];
+
   if (empty > 0) {
-    lines.push({
-      text: `${empty} ćwiczeń bez serii roboczych – uzupełnij, żeby statystyki były pełne.`,
+    recs.push({
+      label: "Rekomendacja",
+      text: `Uzupełnij ${empty} ćwiczeń bez serii – bez tego progres i obciążenie mięśni są zaniżone.`,
       tone: "info",
     });
   }
 
   const gap = s.prevDate ? daysBetween(s.prevDate, date) : 0;
   if (gap >= 10) {
-    lines.push({
-      text: `${gap} dni od ostatniego „${s.planName}” – rozważ lżejsze pierwsze serie po przerwie.`,
+    recs.push({
+      label: "Rekomendacja",
+      text: `${gap} dni od ostatniego „${s.planName}” – kolejne 1–2 sesje zacznij ostrożniej (90–95% ciężaru).`,
       tone: "info",
     });
   }
 
   if (s.pct != null && s.pct > 25 && gap > 0 && gap < 7) {
-    lines.push({
-      text: "Duży skok objętości w krótkim czasie – pilnuj regeneracji przed kolejną sesją.",
+    recs.push({
+      label: "Rekomendacja",
+      text: "Duży skok objętości w <7 dni – zaplanuj lżejszy dzień lub dłuższą regenerację przed powtórzeniem tego bloku.",
       tone: "info",
     });
   }
 
-  // Max ~7 linii – czytelność ponad kompletność
-  return lines.slice(0, 7);
+  if (prNames.length >= 3 && (s.pct == null || s.pct >= 0)) {
+    recs.push({
+      label: "Rekomendacja",
+      text: "Seria rekordów – na kolejnej sesji tego typu trzymaj ciężar i domykaj zakres powtórzeń, zamiast znów mocno podbijać obciążenie.",
+      tone: "good",
+    });
+  }
+
+  if (worst && worst.pct <= -10) {
+    recs.push({
+      label: "Rekomendacja",
+      text: `Przy ${worst.name} zejdź o 1 serię lub −5–10% ciężaru i dopnij technikę – odbicie objętości przyjdzie szybciej.`,
+      tone: "info",
+    });
+  }
+
+  // Brak brzucha przy długiej sesji siłowej
+  const hasCore = load.some((m) => m.group === "brzuch" && m.sets >= 2);
+  if (!hasCore && s.sets >= 15 && dur >= 45 * 60) {
+    recs.push({
+      label: "Rekomendacja",
+      text: "Brak pracy core w tej sesji – 2–3 serie deski / spięć na koniec poprawią stabilizację na kolejnych treningach.",
+      tone: "info",
+    });
+  }
+
+  // Domyślna rekomendacja gdy brak innych
+  if (recs.length === 0) {
+    if (s.pct != null && s.pct >= 0 && improved >= 1) {
+      recs.push({
+        label: "Rekomendacja",
+        text: "Kontynuuj double progression: gdy wszystkie serie w górnym zakresie powtórzeń – dołóż najmniejszy możliwy skok ciężaru.",
+        tone: "good",
+      });
+    } else {
+      recs.push({
+        label: "Rekomendacja",
+        text: "Na kolejny raz zapisz te same ćwiczenia i celuj w +1 powtórzenie lub równe serie – mały, stały progres bije jednorazowe skoki.",
+        tone: "info",
+      });
+    }
+  }
+
+  // Max 2 rekomendacje
+  lines.push(...recs.slice(0, 2));
+
+  // Czytelność: nie więcej niż 10 linii
+  return lines.slice(0, 10);
 }
 
 /** Rozpoznaje powtórzenia lub czas: "12", "40s", "40 sek", "1:20", "1min 20s". */
