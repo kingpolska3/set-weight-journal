@@ -2,11 +2,15 @@ import { registerSW } from "virtual:pwa-register";
 
 const APP_SW_PATH = "/sw.js";
 
+/** Preview / iframe Lovable – bez SW, żeby nie psuć edytora. */
 function isPreviewContext() {
+  if (typeof window === "undefined") return true;
   const hostname = window.location.hostname;
   return (
     !import.meta.env.PROD ||
     window.self !== window.top ||
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
     hostname.startsWith("id-preview--") ||
     hostname.startsWith("preview--") ||
     hostname === "lovableproject.com" ||
@@ -25,18 +29,49 @@ async function unregisterAppWorker() {
   await Promise.all(
     registrations
       .filter((registration) => {
-        const scriptURL = registration.active?.scriptURL ?? registration.waiting?.scriptURL ?? "";
-        return scriptURL.endsWith(APP_SW_PATH);
+        const scriptURL =
+          registration.active?.scriptURL ??
+          registration.waiting?.scriptURL ??
+          registration.installing?.scriptURL ??
+          "";
+        return scriptURL.includes("sw.js") || scriptURL.includes("service-worker");
       })
       .map((registration) => registration.unregister()),
   );
 }
 
+/**
+ * Rejestruje Service Worker (produkcja) albo czyści stary SW (preview).
+ * Wywołuj raz przy starcie aplikacji (np. w __root.tsx).
+ */
 export async function registerOfflineSupport() {
-  if (!("serviceWorker" in navigator)) return;
+  if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+
   if (isPreviewContext()) {
     await unregisterAppWorker();
     return;
   }
-  registerSW({ immediate: true });
+
+  try {
+    registerSW({
+      immediate: true,
+      onRegisteredSW(swUrl, registration) {
+        if (import.meta.env.DEV) {
+          console.info("[PWA] SW registered", swUrl, registration?.scope);
+        }
+      },
+      onRegisterError(error) {
+        console.warn("[PWA] SW register failed", error);
+      },
+    });
+  } catch (e) {
+    console.warn("[PWA] registerSW error", e);
+  }
+}
+
+export function isStandaloneDisplay(): boolean {
+  if (typeof window === "undefined") return false;
+  const mq = window.matchMedia("(display-mode: standalone)").matches;
+  const ios = ("standalone" in navigator && (navigator as Navigator & { standalone?: boolean }).standalone) === true;
+  return mq || ios;
 }
