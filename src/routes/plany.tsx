@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import {
+  ChevronDown,
+  ChevronRight,
   ArrowLeft,
   ClipboardList,
   Copy,
@@ -755,6 +757,10 @@ function ClientEditor({
 
   const [clientHistory, setClientHistory] = useState<ClientSession[]>([]);
   const [openHistoryId, setOpenHistoryId] = useState<string | null>(null);
+  /** Zwijanie dni planu – true = zwinięty */
+  const [collapsedDays, setCollapsedDays] = useState<Record<string, boolean>>({});
+  const toggleDay = (dayId: string) =>
+    setCollapsedDays((prev) => ({ ...prev, [dayId]: !prev[dayId] }));
 
   const refreshHistory = async () => {
     if (user) {
@@ -967,18 +973,33 @@ function ClientEditor({
           (sum, ex) => sum + ex.sets.reduce((a, s) => a + setTonnage(s), 0),
           0,
         );
+        const collapsed = Boolean(collapsedDays[d.id]);
         return (
           <article key={d.id} className="rounded-2xl border border-border bg-card p-4">
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => toggleDay(d.id)}
+                aria-label={collapsed ? "Rozwiń dzień" : "Zwiń dzień"}
+                aria-expanded={!collapsed}
+                className="shrink-0 rounded-lg p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              >
+                {collapsed ? (
+                  <ChevronRight className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </button>
               <input
                 readOnly={readOnly}
                 value={d.name}
                 onChange={(e) => patchDay({ ...d, name: e.target.value })}
+                onDoubleClick={() => toggleDay(d.id)}
                 placeholder="Nazwa dnia (np. Pon – Push)"
                 className="min-w-0 flex-1 bg-transparent font-semibold text-foreground outline-none"
               />
               <span className="text-[11px] tabular-nums text-muted-foreground">
-                {Math.round(dayTonnage)} kg
+                {d.exercises.length} ćw. · {Math.round(dayTonnage)} kg
               </span>
               {!readOnly ? (
                 <button
@@ -991,6 +1012,7 @@ function ClientEditor({
               ) : null}
             </div>
 
+            {!collapsed ? (
             <div className="mt-3 space-y-3">
               {d.exercises.map((ex, ei) => {
                 const patchEx = (p: Partial<PlanExercise>) =>
@@ -1164,6 +1186,7 @@ function ClientEditor({
                 </button>
               ) : null}
             </div>
+            ) : null}
           </article>
         );
       })}
