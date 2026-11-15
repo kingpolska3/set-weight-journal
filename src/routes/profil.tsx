@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Check,
   CloudUpload,
@@ -19,15 +19,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/hooks/useAuth";
 import { syncNow } from "@/lib/cloud-sync";
-import {
-  createAutoBackup,
-  downloadBackup,
-  formatBackupDate,
-  getAutoBackupMeta,
-  listAutoBackups,
-  restoreAutoBackupSlot,
-  restoreBackupFromFile,
-} from "@/lib/local-backup";
 import { loadPlan, loadSessions, type Session, type WeekPlan, DEFAULT_DAY_PLAN } from "@/lib/workout-store";
 import { accountStats } from "@/lib/account-stats";
 import { Button } from "@/components/ui/button";
@@ -101,11 +92,6 @@ function ProfilePage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteEmail, setDeleteEmail] = useState("");
   const [shareUrl, setShareUrl] = useState("");
-  const [autoBackups, setAutoBackups] = useState<
-    { slot: number; createdAt: string; keyCount: number }[]
-  >([]);
-  const [backupMeta, setBackupMeta] = useState(getAutoBackupMeta());
-  const backupFileRef = useRef<HTMLInputElement>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [weekPlan, setWeekPlan] = useState<WeekPlan>(DEFAULT_DAY_PLAN);
   const stats = accountStats(sessions, weekPlan);
@@ -169,15 +155,6 @@ function ProfilePage() {
     }, 450);
     return () => window.clearTimeout(t);
   }, [username, user]);
-
-  const refreshBackups = useCallback(() => {
-    setAutoBackups(listAutoBackups());
-    setBackupMeta(getAutoBackupMeta());
-  }, []);
-
-  useEffect(() => {
-    refreshBackups();
-  }, [refreshBackups]);
 
   const runSync = useCallback(
     async (silent = false) => {
@@ -451,106 +428,6 @@ function ProfilePage() {
           )}
 
           <div className="rounded-xl border border-border bg-card p-4">
-            
-        <section className="mt-6 rounded-2xl border border-border bg-card p-4 space-y-3">
-          <h2 className="text-sm font-semibold text-foreground">Backup lokalny</h2>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Automatyczne migawki na tym urządzeniu (do 5 szt.) oraz eksport pliku JSON.
-            Przywróć backup, gdy dane znikną lub zmieniasz telefon bez chmury.
-          </p>
-          {backupMeta?.lastAt ? (
-            <p className="text-[11px] text-muted-foreground">
-              Ostatni auto-backup: {formatBackupDate(backupMeta.lastAt)} · łącznie {backupMeta.count}
-            </p>
-          ) : (
-            <p className="text-[11px] text-muted-foreground">Brak auto-backupu – utworzy się przy użyciu aplikacji.</p>
-          )}
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
-              onClick={() => {
-                downloadBackup();
-                toast.success("Pobrano plik backupu");
-              }}
-            >
-              Pobierz backup (.json)
-            </button>
-            <button
-              type="button"
-              className="rounded-xl border border-border px-3 py-2 text-xs font-medium text-foreground"
-              onClick={() => {
-                createAutoBackup(true);
-                refreshBackups();
-                toast.success("Zapisano migawkę lokalną");
-              }}
-            >
-              Zapisz migawkę teraz
-            </button>
-            <button
-              type="button"
-              className="rounded-xl border border-border px-3 py-2 text-xs font-medium text-foreground"
-              onClick={() => backupFileRef.current?.click()}
-            >
-              Przywróć z pliku
-            </button>
-            <input
-              ref={backupFileRef}
-              type="file"
-              accept="application/json,.json"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                e.target.value = "";
-                if (!file) return;
-                void (async () => {
-                  const mode = window.confirm(
-                    "OK = nadpisz dane aplikacji z pliku\nAnuluj = połącz (merge) z obecnymi",
-                  )
-                    ? "replace"
-                    : "merge";
-                  const res = await restoreBackupFromFile(file, mode);
-                  if (!res.ok) {
-                    toast.error(res.error || "Nie udało się przywrócić");
-                    return;
-                  }
-                  toast.success(`Przywrócono ${res.restored} klucz(y) – odświeżam…`);
-                  window.setTimeout(() => window.location.reload(), 600);
-                })();
-              }}
-            />
-          </div>
-          {autoBackups.length > 0 ? (
-            <ul className="space-y-1.5 pt-1">
-              {autoBackups.map((b) => (
-                <li
-                  key={b.slot}
-                  className="flex items-center justify-between gap-2 rounded-xl bg-secondary/50 px-3 py-2 text-xs"
-                >
-                  <span className="text-muted-foreground">
-                    Slot {b.slot + 1} · {formatBackupDate(b.createdAt)} · {b.keyCount} pól
-                  </span>
-                  <button
-                    type="button"
-                    className="font-semibold text-primary"
-                    onClick={() => {
-                      if (!window.confirm("Przywrócić tę migawkę? Obecne dane aplikacji zostaną nadpisane.")) return;
-                      const res = restoreAutoBackupSlot(b.slot, "replace");
-                      if (!res.ok) {
-                        toast.error(res.error || "Błąd");
-                        return;
-                      }
-                      toast.success("Przywrócono migawkę – odświeżam…");
-                      window.setTimeout(() => window.location.reload(), 600);
-                    }}
-                  >
-                    Przywróć
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </section>
 
         <div className="flex items-center gap-2">
               <Palette className="h-4 w-4 text-primary" />
