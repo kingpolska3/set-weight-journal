@@ -50,10 +50,7 @@ export type Template = {
 const KEY = "trening-dziennik-v1";
 const TEMPLATE_KEY = "trening-szablony-v1";
 
-/** Jednorazowe czyszczenie danych – nowy, pusty start aplikacji. */
 const FRESH_KEY = "trening-czysty-start-v1";
-export const CLOUD_WIPE_PENDING = "trening-czysty-start-chmura";
-
 export const EXAMPLE_TEMPLATE: Template = {
   id: "przyklad",
   name: "Przykładowy szablon (możesz usunąć)",
