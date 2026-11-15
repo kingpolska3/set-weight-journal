@@ -156,6 +156,7 @@ function ProfilePage() {
     return () => window.clearTimeout(t);
   }, [username, user]);
 
+
   const runSync = useCallback(
     async (silent = false) => {
       if (!user) return;
