@@ -28,10 +28,10 @@ import {
   syncNow,
   attachAutoSync,
   flushSync,
-  } from "@/lib/cloud-sync";
+} from "@/lib/cloud-sync";
 import { ExerciseCard } from "@/components/ExerciseCard";
 import {
-    DAY_NAMES,
+  DAY_NAMES,
   DEFAULT_DAY_PLAN,
   daySummary,
   ensureFreshStart,
