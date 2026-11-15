@@ -14,9 +14,7 @@ import {
   Square,
   Timer,
   Trophy,
-  X,
-  ChevronLeft,
-  ChevronRight,
+  X
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppNav } from "@/components/AppNav";
