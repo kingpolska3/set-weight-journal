@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { applyTheme, loadTheme } from "../lib/theme";
 import { registerOfflineSupport } from "../lib/pwa";
+import { attachAutoBackup } from "@/lib/local-backup";
 
 function NotFoundComponent() {
   return (
@@ -145,6 +146,8 @@ function RootComponent() {
   useEffect(() => {
     applyTheme(loadTheme());
     void registerOfflineSupport();
+    const stopBackup = attachAutoBackup();
+    return () => stopBackup();
   }, []);
 
   return (
