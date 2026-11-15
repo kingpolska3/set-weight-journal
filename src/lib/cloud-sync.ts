@@ -3,11 +3,14 @@ import type { Json } from "@/integrations/supabase/types";
 import {
   loadPlan,
   loadSessions,
+  loadTemplates,
   savePlan,
   saveSessions,
+  saveTemplates,
   sessionVolume,
   workingSets,
   type Session,
+  type Template,
   type WeekPlan,
 } from "./workout-store";
 
@@ -31,8 +34,56 @@ function sessionSetCount(session: Session): number {
 
 type CloudRow = { date: string; data: Record<string, unknown>; updated_at: string };
 
-/** Dwukierunkowa synchronizacja: nowszy zapis (lokalny lub w chmurze) wygrywa. */
+const LAST_SYNC_KEY = "trening-last-cloud-sync-v1";
+const SETTINGS_UPDATED_KEY = "trening-settings-updated-v1";
+
+export function getLastSyncAt(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(LAST_SYNC_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function setLastSyncAt() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+  } catch {
+    /* ignore */
+  }
+}
+
+function getSettingsUpdatedLocal(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    return window.localStorage.getItem(SETTINGS_UPDATED_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function setSettingsUpdatedLocal(iso: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(SETTINGS_UPDATED_KEY, iso);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Wywołaj po lokalnej zmianie planu/szablonów. */
+export function touchSettingsLocal() {
+  setSettingsUpdatedLocal(new Date().toISOString());
+}
+
+/** Dwukierunkowa synchronizacja: nowszy zapis (lokalny lub chmura) wygrywa. */
 export async function syncNow(userId: string): Promise<{ pulled: number; pushed: number }> {
+  if (typeof navigator !== "undefined" && !navigator.onLine) {
+    return { pulled: 0, pushed: 0 };
+  }
+
   const local = loadSessions();
   const { data, error } = await supabase
     .from("workout_days")
@@ -69,6 +120,7 @@ export async function syncNow(userId: string): Promise<{ pulled: number; pushed:
     const cs = cloudStamp.get(s.date);
     return !cs || stamp(s) > cs;
   });
+
   if (toPush.length > 0) {
     const { error: pushError } = await supabase.from("workout_days").upsert(
       toPush.map((s) => ({
@@ -79,39 +131,75 @@ export async function syncNow(userId: string): Promise<{ pulled: number; pushed:
           volume: sessionVolume(s),
           sets: sessionSetCount(s),
         } as unknown as Json,
-        updated_at: new Date().toISOString(),
+        updated_at: stamp(s) || new Date().toISOString(),
       })),
       { onConflict: "user_id,date" },
     );
     if (pushError) throw pushError;
   }
 
-  await syncPlan(userId);
+  await syncPlanAndTemplates(userId);
+  setLastSyncAt();
   emit();
   return { pulled, pushed: toPush.length };
 }
 
-async function syncPlan(userId: string) {
+async function syncPlanAndTemplates(userId: string) {
   const localPlan = loadPlan();
+  const localTemplates = loadTemplates();
+  const localUpdated = getSettingsUpdatedLocal();
+
   const { data } = await supabase
     .from("user_settings")
-    .select("week_plan, updated_at")
+    .select("*")
     .eq("user_id", userId)
     .maybeSingle();
-  const cloudPlan = (data?.week_plan ?? null) as WeekPlan | null;
-  if (cloudPlan && Object.keys(cloudPlan).length > 0) {
-    savePlan({ ...localPlan, ...cloudPlan });
-  } else {
-    await supabase
-      .from("user_settings")
-      .upsert(
-        { user_id: userId, week_plan: localPlan as unknown as Json, updated_at: new Date().toISOString() },
-        { onConflict: "user_id" },
-      );
+
+  const row = data as {
+    week_plan?: WeekPlan | null;
+    templates?: Template[] | null;
+    updated_at?: string | null;
+  } | null;
+
+  const cloudUpdated = row?.updated_at ?? "";
+  const cloudPlan = (row?.week_plan ?? null) as WeekPlan | null;
+  const cloudTemplates = (row?.templates ?? null) as Template[] | null;
+
+  if (cloudUpdated && (!localUpdated || cloudUpdated > localUpdated)) {
+    if (cloudPlan && Object.keys(cloudPlan).length > 0) {
+      savePlan({ ...localPlan, ...cloudPlan });
+    }
+    if (Array.isArray(cloudTemplates)) {
+      saveTemplates(cloudTemplates);
+    }
+    setSettingsUpdatedLocal(cloudUpdated);
+    return;
   }
+
+  const now = new Date().toISOString();
+  const { error } = await supabase.from("user_settings").upsert(
+    {
+      user_id: userId,
+      week_plan: localPlan as unknown as Json,
+      templates: localTemplates as unknown as Json,
+      updated_at: now,
+    },
+    { onConflict: "user_id" },
+  );
+  if (error) {
+    await supabase.from("user_settings").upsert(
+      {
+        user_id: userId,
+        week_plan: localPlan as unknown as Json,
+        updated_at: now,
+      },
+      { onConflict: "user_id" },
+    );
+  }
+  setSettingsUpdatedLocal(now);
 }
 
-/** Usuwa wszystkie treningi użytkownika z chmury (czysty start). */
+/** Tylko na wyraźne żądanie użytkownika – NIGDY automatycznie na nowym telefonie. */
 export async function wipeCloudWorkouts(userId: string) {
   const { error } = await supabase.from("workout_days").delete().eq("user_id", userId);
   if (error) throw error;
@@ -120,12 +208,66 @@ export async function wipeCloudWorkouts(userId: string) {
 }
 
 export async function pushPlan(userId: string, plan: WeekPlan) {
-  await supabase.from("user_settings").upsert(
+  touchSettingsLocal();
+  savePlan(plan);
+  const now = new Date().toISOString();
+  const { error } = await supabase.from("user_settings").upsert(
     {
       user_id: userId,
       week_plan: plan as unknown as Json,
-      updated_at: new Date().toISOString(),
+      templates: loadTemplates() as unknown as Json,
+      updated_at: now,
     },
     { onConflict: "user_id" },
   );
+  if (error) {
+    await supabase.from("user_settings").upsert(
+      {
+        user_id: userId,
+        week_plan: plan as unknown as Json,
+        updated_at: now,
+      },
+      { onConflict: "user_id" },
+    );
+  }
+  setSettingsUpdatedLocal(now);
+}
+
+export async function flushSync(userId: string | undefined | null) {
+  if (!userId) return;
+  if (typeof navigator !== "undefined" && !navigator.onLine) return;
+  try {
+    await syncNow(userId);
+  } catch {
+    /* offline / RLS */
+  }
+}
+
+export function attachAutoSync(userId: string): () => void {
+  let cancelled = false;
+  let timer: ReturnType<typeof setInterval> | undefined;
+
+  const run = () => {
+    if (cancelled) return;
+    void flushSync(userId);
+  };
+
+  run();
+  window.addEventListener("online", run);
+
+  const onVis = () => {
+    run();
+  };
+  document.addEventListener("visibilitychange", onVis);
+  window.addEventListener("pagehide", run);
+
+  timer = setInterval(run, 3 * 60 * 1000);
+
+  return () => {
+    cancelled = true;
+    window.removeEventListener("online", run);
+    document.removeEventListener("visibilitychange", onVis);
+    window.removeEventListener("pagehide", run);
+    if (timer) clearInterval(timer);
+  };
 }
