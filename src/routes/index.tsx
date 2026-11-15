@@ -26,12 +26,12 @@ import {
   pushPlan,
   stampSession,
   syncNow,
-  wipeCloudWorkouts,
-} from "@/lib/cloud-sync";
+  attachAutoSync,
+  flushSync,
+  } from "@/lib/cloud-sync";
 import { ExerciseCard } from "@/components/ExerciseCard";
 import {
-  CLOUD_WIPE_PENDING,
-  DAY_NAMES,
+    DAY_NAMES,
   DEFAULT_DAY_PLAN,
   daySummary,
   ensureFreshStart,
@@ -102,38 +102,27 @@ function Index() {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    const run = () => {
-      if (typeof navigator !== "undefined" && !navigator.onLine) return;
-      void (async () => {
-        try {
-          if (window.localStorage.getItem(CLOUD_WIPE_PENDING)) {
-            await wipeCloudWorkouts(user.id);
-            window.localStorage.removeItem(CLOUD_WIPE_PENDING);
-          }
-          await syncNow(user.id);
-        } catch {
-          /* offline lub brak dostępu */
-        }
-      })();
-    };
     const onUpdated = () => {
-      if (!cancelled) setSessions(loadSessions());
+      if (!cancelled) {
+        setSessions(loadSessions());
+        setPlan(loadPlan());
+      }
     };
     window.addEventListener(WORKOUTS_UPDATED, onUpdated);
-    window.addEventListener("online", run);
-    run();
+    // Auto-sync: start, online, pagehide, co 3 min – BEZ kasowania chmury
+    const stop = attachAutoSync(user.id);
     return () => {
       cancelled = true;
       window.removeEventListener(WORKOUTS_UPDATED, onUpdated);
-      window.removeEventListener("online", run);
+      stop();
     };
   }, [user]);
 
   useEffect(() => {
     if (!loaded || !user) return;
     const t = setTimeout(() => {
-      void syncNow(user.id).catch(() => undefined);
-    }, 2500);
+      void flushSync(user.id);
+    }, 1200);
     return () => clearTimeout(t);
   }, [sessions, loaded, user]);
 
