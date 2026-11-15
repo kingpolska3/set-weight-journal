@@ -64,16 +64,14 @@ export const EXAMPLE_TEMPLATE: Template = {
 };
 
 /**
- * Czyści historię i szablony przy pierwszym uruchomieniu nowej wersji,
- * zostawiając jeden przykładowy szablon do usunięcia.
+ * Jednorazowa migracja lokalna na urządzeniu.
+ * NIE czyści chmury – na nowym telefonie po zalogowaniu dane mają się POBRAĆ z konta.
  */
 export function ensureFreshStart() {
   if (typeof window === "undefined") return;
   try {
     if (window.localStorage.getItem(FRESH_KEY)) return;
-    window.localStorage.setItem(KEY, "[]");
-    window.localStorage.setItem(TEMPLATE_KEY, JSON.stringify([EXAMPLE_TEMPLATE]));
-    window.localStorage.setItem(CLOUD_WIPE_PENDING, "1");
+    // Tylko lokalny marker – bez kasowania historii i bez CLOUD_WIPE_PENDING
     window.localStorage.setItem(FRESH_KEY, new Date().toISOString());
   } catch {
     /* brak dostępu do pamięci */
