@@ -239,7 +239,7 @@ export async function flushSync(userId: string | undefined | null) {
   try {
     await syncNow(userId);
   } catch {
-    /* offline / RLS */
+    /* offline */
   }
 }
 
