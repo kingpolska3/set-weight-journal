@@ -33,7 +33,9 @@ import {
   downloadIcs,
   formatDatePL,
   getBookableDays,
+  getBookingDayOptions,
   getBookableSlots,
+  getOverrideForDate,
   googleCalendarLink,
   listPublicTrainers,
   loadAvailability,
@@ -184,9 +186,13 @@ function BookingsPage() {
     [trainers, selectedTrainerId],
   );
 
-  const bookableDays = useMemo(
-    () => (selectedTrainer ? getBookableDays(selectedTrainer) : []),
+  const dayOptions = useMemo(
+    () => (selectedTrainer ? getBookingDayOptions(selectedTrainer) : []),
     [selectedTrainer],
+  );
+  const selectedDayMeta = useMemo(
+    () => dayOptions.find((d) => d.date === selectedDate) ?? null,
+    [dayOptions, selectedDate],
   );
 
   const slotsForDay = useMemo(
@@ -466,27 +472,52 @@ function BookingsPage() {
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                     Dzień
                   </p>
-                  {bookableDays.length === 0 ? (
+                  {dayOptions.length === 0 ? (
                     <p className="text-sm text-muted-foreground">Brak wolnych dni w najbliższym czasie.</p>
                   ) : (
                     <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-                      {bookableDays.slice(0, 28).map((d) => (
-                        <button
-                          key={d}
-                          type="button"
-                          onClick={() => setSelectedDate(d)}
-                          className={`flex h-[4.25rem] w-full flex-col items-center justify-center rounded-xl px-1 py-2 text-xs font-medium tabular-nums ${
-                            selectedDate === d
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-secondary text-foreground"
-                          }`}
-                        >
-                          <span className="text-[10px] font-semibold uppercase opacity-80">
-                            {weekdayPL(d)}
-                          </span>
-                          <span className="leading-tight">{formatDatePL(d)}</span>
-                        </button>
-                      ))}
+                      {dayOptions.slice(0, 28).map((d) => {
+                        const active = selectedDate === d.date;
+                        return (
+                          <button
+                            key={d.date}
+                            type="button"
+                            onClick={() => setSelectedDate(d.date)}
+                            title={
+                              d.blocked
+                                ? d.reason
+                                  ? `Niedostępny: ${d.reason}`
+                                  : "Trener niedostępny w wybranym dniu"
+                                : undefined
+                            }
+                            className={`relative flex h-[4.25rem] w-full flex-col items-center justify-center rounded-xl px-1 py-2 text-xs font-medium tabular-nums ${
+                              d.blocked
+                                ? active
+                                  ? "border border-destructive/50 bg-destructive/15 text-destructive"
+                                  : "border border-dashed border-border bg-secondary/50 text-muted-foreground"
+                                : active
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-secondary text-foreground"
+                            }`}
+                          >
+                            <span
+                              className={`text-[10px] font-semibold uppercase opacity-80 ${
+                                d.blocked && !active ? "line-through" : ""
+                              }`}
+                            >
+                              {weekdayPL(d.date)}
+                            </span>
+                            <span className={`leading-tight ${d.blocked && !active ? "line-through" : ""}`}>
+                              {formatDatePL(d.date)}
+                            </span>
+                            {d.blocked ? (
+                              <span className="mt-0.5 text-[9px] font-bold uppercase tracking-wide text-destructive no-underline">
+                                off
+                              </span>
+                            ) : null}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -529,7 +560,16 @@ function BookingsPage() {
                         Najpierw wybierz siłownię powyżej, potem godzinę.
                       </p>
                     ) : null}
-                    {slotsForDay.length === 0 ? (
+                    {selectedDayMeta?.blocked ? (
+                      <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-3 text-sm text-foreground">
+                        <p className="font-semibold text-destructive">Trener niedostępny w wybranym dniu</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {selectedDayMeta.reason
+                            ? selectedDayMeta.reason
+                            : "Brak podanego powodu — termin jest wyłączony przez trenera."}
+                        </p>
+                      </div>
+                    ) : slotsForDay.length === 0 ? (
                       <p className="text-sm text-muted-foreground">Brak wolnych godzin tego dnia.</p>
                     ) : (
                       <div className="flex flex-wrap gap-2">
