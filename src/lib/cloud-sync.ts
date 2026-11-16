@@ -13,6 +13,7 @@ import {
   type Template,
   type WeekPlan,
 } from "./workout-store";
+import { syncTrainerCloud } from "./booking";
 
 export const WORKOUTS_UPDATED = "workouts-updated";
 
@@ -139,6 +140,11 @@ export async function syncNow(userId: string): Promise<{ pulled: number; pushed:
   }
 
   await syncPlanAndTemplates(userId);
+  try {
+    await syncTrainerCloud(userId);
+  } catch {
+    /* rezerwacje – opcjonalne kolumny */
+  }
   setLastSyncAt();
   emit();
   return { pulled, pushed: toPush.length };
