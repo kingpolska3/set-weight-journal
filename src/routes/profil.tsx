@@ -18,7 +18,7 @@ import { AppNav } from "@/components/AppNav";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/hooks/useAuth";
-import { syncNow } from "@/lib/cloud-sync";
+import { flushSync, syncNow, touchThemeLocal } from "@/lib/cloud-sync";
 import { loadPlan, loadSessions, type Session, type WeekPlan, DEFAULT_DAY_PLAN } from "@/lib/workout-store";
 import { accountStats } from "@/lib/account-stats";
 import { Button } from "@/components/ui/button";
@@ -182,6 +182,8 @@ function ProfilePage() {
   const updateTheme = (next: ThemeSettings) => {
     setTheme(next);
     saveTheme(next);
+    touchThemeLocal();
+    if (user?.id) void flushSync(user.id);
   };
 
   const signIn = async () => {
