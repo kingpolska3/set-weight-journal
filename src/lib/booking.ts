@@ -314,6 +314,13 @@ function rangesForDate(a: TrainerAvailability, date: string): { startMin: number
 }
 
 /** Krótki opis wykluczenia do UI. */
+export function getOverrideForDate(
+  a: TrainerAvailability,
+  date: string,
+): DateOverride | null {
+  return a.overrides.find((o) => overrideCoversDate(o, date)) ?? null;
+}
+
 export function formatOverrideLabel(o: DateOverride): string {
   const end = o.endDate && o.endDate > o.date ? o.endDate : null;
   const when = end ? `${o.date} → ${end}` : o.date;
@@ -377,18 +384,48 @@ export function getBookableSlots(
 
 /** Lista dni z ≥1 wolnym slotem w oknie bookAheadDays. */
 export function getBookableDays(a: TrainerAvailability, from = todayISO()): string[] {
-  const days: string[] = [];
+  return getBookingDayOptions(a, from)
+    .filter((d) => !d.blocked)
+    .map((d) => d.date);
+}
+
+export type BookingDayOption = {
+  date: string;
+  /** true = trener wykluczył ten dzień (urlop itd.) */
+  blocked: boolean;
+  /** Powód od trenera albo domyślny komunikat */
+  reason?: string;
+};
+
+/**
+ * Dni do siatki rezerwacji: wolne terminy + dni wykluczone (żeby było widać dlaczego brak godzin).
+ */
+export function getBookingDayOptions(
+  a: TrainerAvailability,
+  from = todayISO(),
+): BookingDayOption[] {
+  const days: BookingDayOption[] = [];
   const now = new Date();
   for (let i = 0; i <= a.bookAheadDays; i++) {
     const date = addDaysISO(from, i);
-    // min notice
+    const ov = getOverrideForDate(a, date);
+    if (ov?.unavailable) {
+      days.push({
+        date,
+        blocked: true,
+        reason: ov.note?.trim() || undefined,
+      });
+      continue;
+    }
     const slots = getBookableSlots(a, date).filter((s) => {
       const [y, m, d] = date.split("-").map(Number);
       const start = new Date(y!, m! - 1, d!, Math.floor(s.startMin / 60), s.startMin % 60);
       const hoursAhead = (start.getTime() - now.getTime()) / (1000 * 60 * 60);
       return hoursAhead >= a.minNoticeHours;
     });
-    if (slots.length) days.push(date);
+    if (slots.length) {
+      days.push({ date, blocked: false });
+    }
   }
   return days;
 }
