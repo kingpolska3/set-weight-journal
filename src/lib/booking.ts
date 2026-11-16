@@ -23,14 +23,18 @@ export type WeeklySlot = {
   endMin: number;
 };
 
-/** Jednorazowe wyłączenie / dodatkowy termin (urlop, wyjątek). */
+/** Wyłączenie dnia / okresu (urlop, wyjazd) albo jednorazowy inny zakres godzin. */
 export type DateOverride = {
   id: string;
-  date: string; // YYYY-MM-DD
-  /** true = niedostępny cały dzień; false = własny zakres godzin */
+  /** Początek okresu (YYYY-MM-DD) */
+  date: string;
+  /** Koniec okresu włącznie; brak = tylko dzień `date` */
+  endDate?: string;
+  /** true = niedostępny cały dzień/okres; false = własny zakres godzin (tylko pojedynczy dzień) */
   unavailable: boolean;
   startMin?: number;
   endMin?: number;
+  /** Powód, np. „wakacje”, „wyjazd służbowy” */
   note?: string;
 };
 
@@ -286,16 +290,39 @@ export function upsertBooking(b: Booking): Booking {
 
 // ——— Slot generation ———
 
+function overrideCoversDate(o: DateOverride, date: string): boolean {
+  const end = o.endDate && o.endDate >= o.date ? o.endDate : o.date;
+  return date >= o.date && date <= end;
+}
+
 function rangesForDate(a: TrainerAvailability, date: string): { startMin: number; endMin: number }[] {
-  const override = a.overrides.find((o) => o.date === date);
+  const override = a.overrides.find((o) => overrideCoversDate(o, date));
   if (override?.unavailable) return [];
-  if (override && !override.unavailable && override.startMin != null && override.endMin != null) {
+  if (
+    override &&
+    !override.unavailable &&
+    override.startMin != null &&
+    override.endMin != null &&
+    (!override.endDate || override.endDate === override.date)
+  ) {
     return [{ startMin: override.startMin, endMin: override.endMin }];
   }
   const dow = dayOfWeek(date);
   return a.weekly
     .filter((w) => w.dayOfWeek === dow)
     .map((w) => ({ startMin: w.startMin, endMin: w.endMin }));
+}
+
+/** Krótki opis wykluczenia do UI. */
+export function formatOverrideLabel(o: DateOverride): string {
+  const end = o.endDate && o.endDate > o.date ? o.endDate : null;
+  const when = end ? `${o.date} → ${end}` : o.date;
+  const why = o.note?.trim() ? ` — ${o.note.trim()}` : "";
+  if (o.unavailable) return `${when}${why}`;
+  if (o.startMin != null && o.endMin != null) {
+    return `${when} (tylko ${minutesToLabel(o.startMin)}–${minutesToLabel(o.endMin)})${why}`;
+  }
+  return `${when}${why}`;
 }
 
 /**
