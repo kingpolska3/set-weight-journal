@@ -41,6 +41,8 @@ import {
   loadBookingsForTrainer,
   minutesToLabel,
   saveAvailability,
+  syncTrainerCloud,
+  pushAvailabilityToCloud,
   uid,
   weekdayPL,
 } from "@/lib/booking";
@@ -145,17 +147,30 @@ function BookingsPage() {
 
   useEffect(() => {
     if (loading) return;
-    refresh();
-    void checkAndNotifyReminders().then((due) => {
-      if (due.length) {
+    let cancelled = false;
+    const run = async () => {
+      if (user?.id) {
+        try {
+          await syncTrainerCloud(user.id);
+        } catch {
+          /* offline */
+        }
+      }
+      if (!cancelled) refresh();
+      void checkAndNotifyReminders().then((due) => {
+        if (cancelled || !due.length) return;
         toast.message(
           due.length === 1
             ? "Masz trening jutro – przypomnienie"
             : `${due.length} treningi jutro – przypomnienia`,
         );
-      }
-    });
-  }, [loading, userId, displayName]);
+      });
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, userId, displayName, user?.id]);
 
   const selectedTrainer = useMemo(
     () => trainers.find((t) => t.trainerId === selectedTrainerId) ?? null,
@@ -182,18 +197,28 @@ function BookingsPage() {
     const name = userName.trim() || "Trener";
     const current = loadAvailability(userId) ?? defaultAvailability(userId, name);
     current.trainerName = name;
+    current.updatedAt = new Date().toISOString();
     saveAvailability(current);
     setAvail(current);
     refresh();
+    if (user?.id) void pushAvailabilityToCloud(current, user.id);
     toast.success(`Włączono dostępność jako „${name}”`);
   };
 
   const patchAvail = (patch: Partial<TrainerAvailability>) => {
     if (!avail) return;
-    const next = { ...avail, ...patch, trainerName: userName };
+    const next = {
+      ...avail,
+      ...patch,
+      trainerName: userName,
+      updatedAt: new Date().toISOString(),
+    };
     saveAvailability(next);
     setAvail(next);
     refresh();
+    if (user?.id) {
+      void pushAvailabilityToCloud(next, user.id);
+    }
   };
 
   const addWeeklySlot = (dayOfWeek: DayOfWeek) => {
