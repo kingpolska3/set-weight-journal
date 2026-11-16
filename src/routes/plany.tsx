@@ -22,6 +22,8 @@ import { AppNav } from "@/components/AppNav";
 import { ClientIntake } from "@/components/ClientIntake";
 import { ExerciseAtlas } from "@/components/ExerciseAtlas";
 import { useAuth } from "@/hooks/useAuth";
+import { getCollapsedPlanDays, setCollapsedPlanDay } from "@/lib/ui-prefs";
+import { flushSync, touchUiPrefsLocal } from "@/lib/cloud-sync";
 import { ATLAS_NAMES } from "@/lib/exercise-atlas";
 import {
   formatRepsOrTime,
@@ -757,10 +759,24 @@ function ClientEditor({
 
   const [clientHistory, setClientHistory] = useState<ClientSession[]>([]);
   const [openHistoryId, setOpenHistoryId] = useState<string | null>(null);
-  /** Zwijanie dni planu – true = zwinięty */
-  const [collapsedDays, setCollapsedDays] = useState<Record<string, boolean>>({});
-  const toggleDay = (dayId: string) =>
-    setCollapsedDays((prev) => ({ ...prev, [dayId]: !prev[dayId] }));
+  /** Zwijanie dni planu – true = zwinięty (persystencja + chmura) */
+  const [collapsedDays, setCollapsedDays] = useState<Record<string, boolean>>(() =>
+    getCollapsedPlanDays(row.id),
+  );
+
+  useEffect(() => {
+    setCollapsedDays(getCollapsedPlanDays(row.id));
+  }, [row.id]);
+
+  const toggleDay = (dayId: string) => {
+    setCollapsedDays((prev) => {
+      const nextCollapsed = !prev[dayId];
+      setCollapsedPlanDay(row.id, dayId, nextCollapsed);
+      touchUiPrefsLocal();
+      if (user?.id) void flushSync(user.id);
+      return { ...prev, [dayId]: nextCollapsed };
+    });
+  };
 
   const refreshHistory = async () => {
     if (user) {
