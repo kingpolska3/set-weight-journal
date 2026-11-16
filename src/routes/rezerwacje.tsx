@@ -93,6 +93,11 @@ function BookingsPage() {
   const [note, setNote] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("");
 
+  // wykluczenia dat (urlop / wyjazd) – formularz w zakładce Dostępność
+  const [overrideFrom, setOverrideFrom] = useState("");
+  const [overrideTo, setOverrideTo] = useState("");
+  const [overrideNote, setOverrideNote] = useState("");
+
   const userId = user?.id ?? "local-user";
   /** Nazwa wyświetlana z Profilu – nie prefix e-maila */
   const userName =
