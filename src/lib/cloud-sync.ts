@@ -14,6 +14,8 @@ import {
   type WeekPlan,
 } from "./workout-store";
 import { syncTrainerCloud } from "./booking";
+import { applyTheme, loadTheme, saveTheme, type ThemeSettings } from "./theme";
+import { loadUiPrefs, mergeUiPrefs, saveUiPrefs, type UiPrefs } from "./ui-prefs";
 
 export const WORKOUTS_UPDATED = "workouts-updated";
 
@@ -153,7 +155,12 @@ export async function syncNow(userId: string): Promise<{ pulled: number; pushed:
 async function syncPlanAndTemplates(userId: string) {
   const localPlan = loadPlan();
   const localTemplates = loadTemplates();
+  const localTheme = loadTheme();
+  const localUi = loadUiPrefs();
   const localUpdated = getSettingsUpdatedLocal();
+  // uwzględnij też świeższe theme/ui
+  const themeUiStamp = [localUi.updatedAt, getThemeUpdatedLocal()].filter(Boolean).sort().pop() || "";
+  const effectiveLocal = [localUpdated, themeUiStamp].filter(Boolean).sort().pop() || "";
 
   const { data } = await supabase
     .from("user_settings")
@@ -164,34 +171,60 @@ async function syncPlanAndTemplates(userId: string) {
   const row = data as {
     week_plan?: WeekPlan | null;
     templates?: Template[] | null;
+    theme?: ThemeSettings | null;
+    ui_prefs?: UiPrefs | null;
     updated_at?: string | null;
   } | null;
 
   const cloudUpdated = row?.updated_at ?? "";
   const cloudPlan = (row?.week_plan ?? null) as WeekPlan | null;
   const cloudTemplates = (row?.templates ?? null) as Template[] | null;
+  const cloudTheme = row?.theme ?? null;
+  const cloudUi = row?.ui_prefs ?? null;
 
-  if (cloudUpdated && (!localUpdated || cloudUpdated > localUpdated)) {
+  if (cloudUpdated && (!effectiveLocal || cloudUpdated > effectiveLocal)) {
     if (cloudPlan && Object.keys(cloudPlan).length > 0) {
       savePlan({ ...localPlan, ...cloudPlan });
     }
     if (Array.isArray(cloudTemplates)) {
       saveTemplates(cloudTemplates);
     }
+    if (cloudTheme && typeof cloudTheme === "object") {
+      saveTheme({
+        mode: cloudTheme.mode === "light" ? "light" : "dark",
+        accent: cloudTheme.accent ?? localTheme.accent,
+        customColor: cloudTheme.customColor,
+      });
+      setThemeUpdatedLocal(cloudUpdated);
+    }
+    if (cloudUi) {
+      const merged = mergeUiPrefs(localUi, cloudUi);
+      saveUiPrefs(merged);
+    }
     setSettingsUpdatedLocal(cloudUpdated);
     return;
   }
 
   const now = new Date().toISOString();
-  const { error } = await supabase.from("user_settings").upsert(
-    {
-      user_id: userId,
-      week_plan: localPlan as unknown as Json,
-      templates: localTemplates as unknown as Json,
-      updated_at: now,
-    },
-    { onConflict: "user_id" },
-  );
+  const payload: Record<string, unknown> = {
+    user_id: userId,
+    week_plan: localPlan as unknown as Json,
+    templates: localTemplates as unknown as Json,
+    theme: localTheme as unknown as Json,
+    ui_prefs: localUi as unknown as Json,
+    updated_at: now,
+  };
+  // zachowaj pola rezerwacji jeśli już są w wierszu
+  if (row && (row as { trainer_availability?: unknown }).trainer_availability) {
+    payload.trainer_availability = (row as { trainer_availability?: unknown }).trainer_availability;
+  }
+  if (row && (row as { trainer_bookings?: unknown }).trainer_bookings) {
+    payload.trainer_bookings = (row as { trainer_bookings?: unknown }).trainer_bookings;
+  }
+
+  const { error } = await supabase.from("user_settings").upsert(payload as never, {
+    onConflict: "user_id",
+  });
   if (error) {
     await supabase.from("user_settings").upsert(
       {
@@ -203,6 +236,38 @@ async function syncPlanAndTemplates(userId: string) {
     );
   }
   setSettingsUpdatedLocal(now);
+  setThemeUpdatedLocal(now);
+}
+
+const THEME_UPDATED_KEY = "trening-theme-updated-v1";
+
+function getThemeUpdatedLocal(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    return window.localStorage.getItem(THEME_UPDATED_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function setThemeUpdatedLocal(iso: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(THEME_UPDATED_KEY, iso);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Wywołaj po zmianie motywu – wymusi wypchnięcie przy sync. */
+export function touchThemeLocal() {
+  setThemeUpdatedLocal(new Date().toISOString());
+  touchSettingsLocal();
+}
+
+/** Wywołaj po zmianie UI (zwijanie dni itd.). */
+export function touchUiPrefsLocal() {
+  touchSettingsLocal();
 }
 
 /** Tylko na wyraźne żądanie użytkownika – NIGDY automatycznie na nowym telefonie. */
