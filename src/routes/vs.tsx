@@ -140,53 +140,71 @@ function loadFavs(): Profile[] {
   }
 }
 
-function StatRow({ label, mine, theirs, unit }: { label: string; mine: number; theirs: number; unit?: string }) {
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
+  return `${parts[0]![0] ?? ""}${parts[1]![0] ?? ""}`.toUpperCase();
+}
+
+function StatRow({
+  label,
+  mine,
+  theirs,
+  unit,
+}: {
+  label: string;
+  mine: number;
+  theirs: number;
+  unit?: string;
+}) {
   const total = mine + theirs;
   const minePct = total > 0 ? (mine / total) * 100 : 50;
   const diff = mine - theirs;
-  const fmt = (n: number) => `${Math.round(n).toLocaleString("pl-PL")}${unit ? ` ${unit}` : ""}`;
+  const fmt = (n: number) =>
+    `${Math.round(n).toLocaleString("pl-PL")}${unit ? ` ${unit}` : ""}`;
   const winner = mine > theirs ? "ty" : theirs > mine ? "rywal" : "remis";
 
   return (
-    <div className="rounded-xl border border-border bg-card p-3">
+    <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-card p-3.5 shadow-sm">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
         <span
-          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+          className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
             winner === "ty"
               ? "bg-primary/15 text-primary"
               : winner === "rywal"
-                ? "bg-foreground/10 text-foreground"
+                ? "bg-destructive/10 text-destructive"
                 : "bg-muted text-muted-foreground"
           }`}
         >
-          {winner === "ty" ? "Ty prowadzisz" : winner === "rywal" ? "Rywal prowadzi" : "Remis"}
+          {winner === "ty" ? "Ty" : winner === "rywal" ? "Rywal" : "Remis"}
         </span>
       </div>
 
-      <div className="mt-2 flex items-end justify-between gap-3">
+      <div className="mt-3 grid grid-cols-2 gap-2">
         <div>
           <p className="text-[10px] text-muted-foreground">Ty</p>
-          <p className={`text-lg font-bold tabular-nums ${mine >= theirs ? "text-primary" : "text-foreground"}`}>
+          <p className={`text-xl font-bold tabular-nums tracking-tight ${mine >= theirs ? "text-primary" : "text-foreground"}`}>
             {fmt(mine)}
           </p>
         </div>
         <div className="text-right">
           <p className="text-[10px] text-muted-foreground">Rywal</p>
-          <p className={`text-lg font-bold tabular-nums ${theirs > mine ? "text-primary" : "text-foreground"}`}>
+          <p className={`text-xl font-bold tabular-nums tracking-tight ${theirs > mine ? "text-foreground" : "text-muted-foreground"}`}>
             {fmt(theirs)}
           </p>
         </div>
       </div>
 
-      <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-muted">
-        <div className="bg-primary transition-all" style={{ width: `${minePct}%` }} />
-        <div className="bg-foreground/25" style={{ width: `${100 - minePct}%` }} />
+      <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-muted/80">
+        <div className="bg-primary transition-all duration-500" style={{ width: `${minePct}%` }} />
+        <div className="bg-foreground/20 transition-all duration-500" style={{ width: `${100 - minePct}%` }} />
       </div>
 
-      <p className="mt-1.5 text-[11px] text-muted-foreground">
+      <p className="mt-2 text-[11px] text-muted-foreground">
         Różnica:{" "}
-        <span className={diff >= 0 ? "text-primary" : "text-foreground"}>
+        <span className={`font-semibold ${diff >= 0 ? "text-primary" : "text-destructive"}`}>
           {diff >= 0 ? "+" : ""}
           {fmt(diff)}
         </span>
@@ -311,9 +329,18 @@ function VsPage() {
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="mx-auto max-w-2xl px-4 py-6">
-        <header className="mb-5 flex items-center gap-2">
-          <Swords className="h-5 w-5 text-primary" />
-          <h1 className="text-xl font-bold text-foreground">VS</h1>
+        <header className="mb-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/15">
+              <Swords className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-foreground">Arena VS</h1>
+              <p className="text-[11px] text-muted-foreground">
+                Objętość, regularność i rekordy — Ty kontra inni
+              </p>
+            </div>
+          </div>
         </header>
 
         {loading ? (
@@ -325,7 +352,7 @@ function VsPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="rounded-xl border border-border bg-card p-4">
+            <div className="rounded-2xl border border-border bg-gradient-to-b from-card to-background/40 p-4 shadow-sm">
               <label htmlFor="vs-search" className="text-xs text-muted-foreground">
                 Znajdź osobę po nazwie konta lub nazwie użytkownika
               </label>
@@ -441,19 +468,46 @@ function VsPage() {
               <p className="text-sm text-muted-foreground">Wczytywanie danych rywala…</p>
             ) : (
               <>
-                <div className="rounded-xl border border-border bg-card p-4">
-                  <div className="flex items-center justify-between gap-3">
+                <div className="rounded-2xl border border-border bg-gradient-to-b from-card to-background/40 p-4 shadow-sm">
+                  <div className="flex items-center gap-2">
                     <div className="flex min-w-0 flex-1 flex-col items-center text-center">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-sm font-bold text-primary">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-base font-bold text-primary-foreground shadow-lg shadow-primary/25 ring-4 ring-primary/20">
                         TY
                       </div>
                       <p className="mt-2 truncate text-sm font-semibold text-foreground">Ty</p>
                     </div>
 
-                    <div className="flex flex-col items-center gap-1">
-                      <span className="rounded-full bg-muted px-3 py-1 text-xs font-bold uppercase tracking-widest text-primary">
+                    <div className="flex flex-col items-center gap-1.5 px-1">
+                      <span className="rounded-full bg-primary/15 px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-primary">
                         VS
                       </span>
+                      {(() => {
+                        const pairs: [number, number][] = [
+                          [mine.volume, theirs.volume],
+                          [mine.sessions, theirs.sessions],
+                          [mine.sets, theirs.sets],
+                          [mine.avgVolume, theirs.avgVolume],
+                          [mine.prs, theirs.prs],
+                        ];
+                        let me = 0;
+                        let them = 0;
+                        for (const [a, b] of pairs) {
+                          if (a > b) me++;
+                          else if (b > a) them++;
+                        }
+                        const lead =
+                          me > them ? "Prowadzisz" : them > me ? "Rywal prowadzi" : "Remis";
+                        return (
+                          <div className="text-center">
+                            <p className="text-2xl font-black tabular-nums tracking-tight text-foreground">
+                              {me}
+                              <span className="mx-1 text-muted-foreground">:</span>
+                              {them}
+                            </p>
+                            <p className="text-[10px] font-medium text-muted-foreground">{lead}</p>
+                          </div>
+                        );
+                      })()}
                       <span className="text-[10px] text-muted-foreground">
                         {range === "all"
                           ? "cały czas"
@@ -464,16 +518,16 @@ function VsPage() {
                     </div>
 
                     <div className="flex min-w-0 flex-1 flex-col items-center text-center">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-foreground/10 text-sm font-bold text-foreground">
-                        {(rival.display_name || rival.username || "R").slice(0, 2).toUpperCase()}
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary text-base font-bold text-foreground ring-4 ring-border">
+                        {initials(rival.display_name || rival.username || "R")}
                       </div>
-                      <p className="mt-2 truncate text-sm font-semibold text-foreground">
+                      <p className="mt-2 max-w-[7rem] truncate text-sm font-semibold text-foreground">
                         {rival.display_name || rival.username || "Rywal"}
                       </p>
                     </div>
                   </div>
 
-                  <div className="mt-4 grid gap-2">
+                  <div className="mt-5 grid gap-2.5 sm:grid-cols-2">
                     <StatRow label="Objętość" mine={mine.volume} theirs={theirs.volume} unit="kg" />
                     <StatRow label="Treningi" mine={mine.sessions} theirs={theirs.sessions} />
                     <StatRow label="Serie" mine={mine.sets} theirs={theirs.sets} />
@@ -481,14 +535,26 @@ function VsPage() {
                     <StatRow label="Rekordy (PR)" mine={mine.prs} theirs={theirs.prs} />
                   </div>
 
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    Ostatni trening rywala: {theirs.lastDate ?? "brak danych"}
-                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                    <span className="rounded-lg bg-secondary/60 px-2 py-1">
+                      Ostatni trening rywala:{" "}
+                      <span className="font-medium text-foreground">
+                        {theirs.lastDate ?? "brak danych"}
+                      </span>
+                    </span>
+                    <span className="rounded-lg bg-secondary/60 px-2 py-1">
+                      Twoje treningi:{" "}
+                      <span className="font-medium text-foreground">{mine.sessions}</span>
+                    </span>
+                  </div>
                 </div>
 
                 {chartData.length >= 2 && (
-                  <div className="rounded-xl border border-border bg-card p-4">
-                    <h3 className="text-sm font-semibold text-foreground">Objętość — Ty vs rywal</h3>
+                  <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <h3 className="text-sm font-semibold text-foreground">Objętość w czasie</h3>
+                      <span className="text-[10px] text-muted-foreground">kg / dzień treningowy</span>
+                    </div>
                     <ClientOnly fallback={<div className="mt-2 h-52" />}>
                       <div className="mt-2 h-52">
                         <ResponsiveContainer width="100%" height="100%">
@@ -533,7 +599,7 @@ function VsPage() {
                 <div className="rounded-xl border border-border bg-card p-4">
                   <div className="flex items-center gap-2">
                     <Trophy className="h-4 w-4 text-primary" />
-                    <h3 className="text-sm font-semibold text-foreground">Wspólne ćwiczenia (max ciężar)</h3>
+                    <h3 className="text-sm font-semibold text-foreground">Pojedynek na ćwiczeniach</h3>
                   </div>
                   {commonExercises.length === 0 ? (
                     <p className="mt-1 text-xs text-muted-foreground">
