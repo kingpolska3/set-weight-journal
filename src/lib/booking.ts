@@ -565,37 +565,174 @@ export function downloadIcs(b: Booking): void {
   URL.revokeObjectURL(url);
 }
 
-// ——— Opcjonalnie: sync z Supabase (gdy tabela istnieje) ———
+// ——— Synchronizacja chmurowa (to samo konto na telefonie i komputerze) ———
 
 type Loose = { from: (t: string) => any }; // eslint-disable-line @typescript-eslint/no-explicit-any
 const db = supabase as unknown as Loose;
 
-export async function syncBookingsFromCloud(userId: string): Promise<Booking[]> {
+function availStamp(a: TrainerAvailability | null | undefined): string {
+  return a?.updatedAt || "";
+}
+
+/**
+ * Dwukierunkowy sync dostępności trenera + rezerwacji dla zalogowanego userId.
+ * Źródło: user_settings (trainer_availability, trainer_bookings) + opcjonalnie tabela trainer_bookings.
+ */
+export async function syncTrainerCloud(userId: string): Promise<{
+  availability: TrainerAvailability | null;
+  bookings: Booking[];
+}> {
+  if (typeof navigator !== "undefined" && !navigator.onLine) {
+    return {
+      availability: loadAvailability(userId),
+      bookings: loadAllBookings(),
+    };
+  }
+
+  let cloudAvail: TrainerAvailability | null = null;
+  let cloudBookings: Booking[] = [];
+  let settingsRow: Record<string, unknown> | null = null;
+
+  try {
+    const { data } = await db
+      .from("user_settings")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
+    settingsRow = (data as Record<string, unknown> | null) ?? null;
+    if (settingsRow?.trainer_availability) {
+      cloudAvail = normalizeAvailability(
+        settingsRow.trainer_availability as TrainerAvailability,
+      );
+    }
+    if (Array.isArray(settingsRow?.trainer_bookings)) {
+      cloudBookings = settingsRow.trainer_bookings as Booking[];
+    }
+  } catch {
+    /* brak kolumn / offline */
+  }
+
+  // Opcjonalna tabela trainer_bookings
   try {
     const { data, error } = await db
       .from("trainer_bookings")
-      .select("id, data")
+      .select("id, data, updated_at")
       .or(`data->>trainerId.eq.${userId},data->>clientId.eq.${userId}`);
-    if (error) throw error;
-    const cloud = ((data ?? []) as { id: string; data: Booking }[]).map((r) => ({
-      ...r.data,
-      id: r.data.id || r.id,
-    }));
-    const local = loadAllBookings();
-    const map = new Map<string, Booking>();
-    for (const b of [...local, ...cloud]) {
-      const prev = map.get(b.id);
-      if (!prev || (b.updatedAt || "") >= (prev.updatedAt || "")) map.set(b.id, b);
+    if (!error && data) {
+      for (const r of data as { id: string; data: Booking; updated_at?: string }[]) {
+        const b = { ...r.data, id: r.data?.id || r.id };
+        if (r.updated_at && (!b.updatedAt || r.updated_at > b.updatedAt)) {
+          b.updatedAt = r.updated_at;
+        }
+        cloudBookings.push(b);
+      }
     }
-    const merged = [...map.values()];
-    saveAllBookings(merged);
-    return merged;
   } catch {
-    return loadAllBookings();
+    /* tabela może nie istnieć */
   }
+
+  // ——— Availability merge ———
+  const localAvail = loadAvailability(userId);
+  let mergedAvail: TrainerAvailability | null = localAvail;
+
+  if (cloudAvail && localAvail) {
+    mergedAvail =
+      availStamp(cloudAvail) > availStamp(localAvail) ? cloudAvail : localAvail;
+    // zachowaj trainerId użytkownika
+    mergedAvail = {
+      ...mergedAvail,
+      trainerId: userId,
+      trainerName: mergedAvail.trainerName || localAvail.trainerName || cloudAvail.trainerName,
+    };
+  } else if (cloudAvail && !localAvail) {
+    mergedAvail = { ...cloudAvail, trainerId: userId };
+  } else if (localAvail) {
+    mergedAvail = localAvail;
+  }
+
+  if (mergedAvail) {
+    saveAvailability({ ...mergedAvail, trainerId: userId });
+  }
+
+  // ——— Bookings merge po id + updatedAt ———
+  const localBookings = loadAllBookings();
+  const map = new Map<string, Booking>();
+  for (const b of [...localBookings, ...cloudBookings]) {
+    if (!b?.id) continue;
+    const prev = map.get(b.id);
+    if (!prev || (b.updatedAt || "") >= (prev.updatedAt || "")) {
+      map.set(b.id, b);
+    }
+  }
+  const mergedBookings = [...map.values()];
+  saveAllBookings(mergedBookings);
+
+  // ——— Push do chmury ———
+  const now = new Date().toISOString();
+  try {
+    const payload: Record<string, unknown> = {
+      user_id: userId,
+      updated_at: now,
+    };
+    if (mergedAvail) {
+      payload.trainer_availability = {
+        ...mergedAvail,
+        trainerId: userId,
+        updatedAt: mergedAvail.updatedAt || now,
+      };
+    }
+    // tylko bookingi związane z tym userem
+    payload.trainer_bookings = mergedBookings.filter(
+      (b) => b.trainerId === userId || b.clientId === userId,
+    );
+
+    // zachowaj week_plan jeśli jest w wierszu
+    if (settingsRow?.week_plan) payload.week_plan = settingsRow.week_plan;
+    if (settingsRow?.templates) payload.templates = settingsRow.templates;
+
+    const { error } = await db.from("user_settings").upsert(payload, {
+      onConflict: "user_id",
+    });
+    if (error) {
+      // fallback bez nowych kolumn – nie rzucaj
+      console.warn("[booking-sync] user_settings upsert", error.message || error);
+    }
+  } catch (e) {
+    console.warn("[booking-sync] push settings", e);
+  }
+
+  // Push poszczególnych bookingów do tabeli (jeśli jest)
+  for (const b of mergedBookings) {
+    if (b.trainerId !== userId && b.clientId !== userId) continue;
+    try {
+      await db.from("trainer_bookings").upsert(
+        {
+          id: b.id,
+          owner_id: userId,
+          data: b,
+          updated_at: b.updatedAt || now,
+        },
+        { onConflict: "id" },
+      );
+    } catch {
+      break; // tabela nie istnieje – nie spamuj
+    }
+  }
+
+  return {
+    availability: mergedAvail,
+    bookings: mergedBookings,
+  };
+}
+
+/** @deprecated użyj syncTrainerCloud */
+export async function syncBookingsFromCloud(userId: string): Promise<Booking[]> {
+  const res = await syncTrainerCloud(userId);
+  return res.bookings;
 }
 
 export async function pushBookingToCloud(b: Booking, userId: string): Promise<void> {
+  upsertBooking(b);
   try {
     await db.from("trainer_bookings").upsert(
       {
@@ -607,7 +744,26 @@ export async function pushBookingToCloud(b: Booking, userId: string): Promise<vo
       { onConflict: "id" },
     );
   } catch {
-    /* tabela może jeszcze nie istnieć */
+    /* ignore */
+  }
+  // pełny sync dostępności+listy
+  try {
+    await syncTrainerCloud(userId);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Po lokalnej zmianie dostępności – wypchnij do chmury. */
+export async function pushAvailabilityToCloud(
+  a: TrainerAvailability,
+  userId: string,
+): Promise<void> {
+  saveAvailability({ ...a, trainerId: userId });
+  try {
+    await syncTrainerCloud(userId);
+  } catch {
+    /* ignore */
   }
 }
 
