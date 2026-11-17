@@ -27,12 +27,16 @@ import {
   ensureNotifyPermission,
   formatRest,
   loadRest,
+  loadRestEnabled,
   playSound,
   saveRest,
+  saveRestEnabled,
   vibrate,
   type RestSettings,
   type SoundKey,
 } from "@/lib/rest-settings";
+import { flushSync, touchSettingsLocal } from "@/lib/cloud-sync";
+import { useAuth } from "@/hooks/useAuth";
 import {
   downloadFile,
   loadPlan,
@@ -78,6 +82,7 @@ export const Route = createFileRoute("/narzedzia")({
 
 
 function ToolsPage() {
+  const { user } = useAuth();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [name, setName] = useState("");
