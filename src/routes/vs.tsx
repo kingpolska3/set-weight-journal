@@ -241,8 +241,8 @@ function VsPage() {
     setFavs(next);
     try {
       saveVsFavorites(next);
-    touchSettingsLocal();
-    if (user?.id) void flushSync(user.id);
+      touchSettingsLocal();
+      if (user?.id) void flushSync(user.id);
     } catch {
       /* quota */
     }
