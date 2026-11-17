@@ -18,6 +18,29 @@ import { syncTrainerPlansFromCloud } from "./trainer-plans";
 import { syncAllClientSessionsFromCloud } from "./client-sessions";
 import { applyTheme, loadTheme, saveTheme, type ThemeSettings } from "./theme";
 import { loadUiPrefs, mergeUiPrefs, saveUiPrefs, type UiPrefs } from "./ui-prefs";
+import {
+  getRestUpdatedAt,
+  loadRest,
+  loadRestEnabled,
+  saveRest,
+  saveRestEnabled,
+  setRestUpdatedAt,
+  type RestSettings,
+} from "./rest-settings";
+import {
+  getReceivedPlansUpdatedAt,
+  loadReceivedPlans,
+  saveReceivedPlans,
+  setReceivedPlansUpdatedAt,
+  type ReceivedPlan,
+} from "./received-plans";
+import {
+  getVsFavoritesUpdatedAt,
+  loadVsFavorites,
+  saveVsFavorites,
+  setVsFavoritesUpdatedAt,
+  type VsFavProfile,
+} from "./vs-favorites";
 
 export const WORKOUTS_UPDATED = "workouts-updated";
 
@@ -169,9 +192,21 @@ async function syncPlanAndTemplates(userId: string) {
   const localTemplates = loadTemplates();
   const localTheme = loadTheme();
   const localUi = loadUiPrefs();
+  const localRest = loadRest();
+  const localRestEnabled = loadRestEnabled();
+  const localFavs = loadVsFavorites();
+  const localReceived = loadReceivedPlans();
   const localUpdated = getSettingsUpdatedLocal();
-  // uwzględnij też świeższe theme/ui
-  const themeUiStamp = [localUi.updatedAt, getThemeUpdatedLocal()].filter(Boolean).sort().pop() || "";
+  const themeUiStamp = [
+    localUi.updatedAt,
+    getThemeUpdatedLocal(),
+    getRestUpdatedAt(),
+    getVsFavoritesUpdatedAt(),
+    getReceivedPlansUpdatedAt(),
+  ]
+    .filter(Boolean)
+    .sort()
+    .pop() || "";
   const effectiveLocal = [localUpdated, themeUiStamp].filter(Boolean).sort().pop() || "";
 
   const { data } = await supabase
@@ -185,6 +220,10 @@ async function syncPlanAndTemplates(userId: string) {
     templates?: Template[] | null;
     theme?: ThemeSettings | null;
     ui_prefs?: UiPrefs | null;
+    rest_settings?: RestSettings | null;
+    rest_enabled?: boolean | null;
+    vs_favorites?: VsFavProfile[] | null;
+    received_plans?: ReceivedPlan[] | null;
     updated_at?: string | null;
   } | null;
 
@@ -193,6 +232,10 @@ async function syncPlanAndTemplates(userId: string) {
   const cloudTemplates = (row?.templates ?? null) as Template[] | null;
   const cloudTheme = row?.theme ?? null;
   const cloudUi = row?.ui_prefs ?? null;
+  const cloudRest = row?.rest_settings ?? null;
+  const cloudRestEnabled = row?.rest_enabled;
+  const cloudFavs = row?.vs_favorites ?? null;
+  const cloudReceived = row?.received_plans ?? null;
 
   if (cloudUpdated && (!effectiveLocal || cloudUpdated > effectiveLocal)) {
     if (cloudPlan && Object.keys(cloudPlan).length > 0) {
@@ -213,6 +256,22 @@ async function syncPlanAndTemplates(userId: string) {
       const merged = mergeUiPrefs(localUi, cloudUi);
       saveUiPrefs(merged);
     }
+    if (cloudRest && typeof cloudRest === "object") {
+      saveRest({ ...localRest, ...cloudRest });
+      setRestUpdatedAt(cloudUpdated);
+    }
+    if (typeof cloudRestEnabled === "boolean") {
+      saveRestEnabled(cloudRestEnabled);
+      setRestUpdatedAt(cloudUpdated);
+    }
+    if (Array.isArray(cloudFavs)) {
+      saveVsFavorites(cloudFavs);
+      setVsFavoritesUpdatedAt(cloudUpdated);
+    }
+    if (Array.isArray(cloudReceived)) {
+      saveReceivedPlans(cloudReceived);
+      setReceivedPlansUpdatedAt(cloudUpdated);
+    }
     setSettingsUpdatedLocal(cloudUpdated);
     return;
   }
@@ -224,6 +283,10 @@ async function syncPlanAndTemplates(userId: string) {
     templates: localTemplates as unknown as Json,
     theme: localTheme as unknown as Json,
     ui_prefs: localUi as unknown as Json,
+    rest_settings: localRest as unknown as Json,
+    rest_enabled: localRestEnabled,
+    vs_favorites: localFavs as unknown as Json,
+    received_plans: localReceived as unknown as Json,
     updated_at: now,
   };
   // zachowaj pola rezerwacji jeśli już są w wierszu
