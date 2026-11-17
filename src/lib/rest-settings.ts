@@ -34,6 +34,8 @@ export const DEFAULT_REST: RestSettings = {
 };
 
 const KEY = "trening-przerwa-v1";
+const REST_ENABLED_KEY = "rest-enabled-v1";
+const REST_STAMP_KEY = "trening-przerwa-updated-v1";
 
 export function loadRest(): RestSettings {
   if (typeof window === "undefined") return { ...DEFAULT_REST };
@@ -63,8 +65,48 @@ export function saveRest(settings: RestSettings) {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(KEY, JSON.stringify(settings));
+    window.localStorage.setItem(REST_STAMP_KEY, new Date().toISOString());
   } catch {
     /* quota */
+  }
+}
+
+export function loadRestEnabled(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    const val = window.localStorage.getItem(REST_ENABLED_KEY);
+    if (val === null) return true;
+    return JSON.parse(val) !== false;
+  } catch {
+    return true;
+  }
+}
+
+export function saveRestEnabled(enabled: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(REST_ENABLED_KEY, JSON.stringify(enabled));
+    window.localStorage.setItem(REST_STAMP_KEY, new Date().toISOString());
+  } catch {
+    /* ignore */
+  }
+}
+
+export function getRestUpdatedAt(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    return window.localStorage.getItem(REST_STAMP_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function setRestUpdatedAt(iso: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(REST_STAMP_KEY, iso);
+  } catch {
+    /* ignore */
   }
 }
 
