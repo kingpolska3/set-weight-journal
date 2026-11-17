@@ -44,6 +44,7 @@ import {
   createPlan,
   deletePlan,
   fetchPlans,
+  syncTrainerPlansFromCloud,
   leavePlan,
   listShares,
   removeShare,
@@ -197,7 +198,7 @@ function PlansPage() {
           }
           void navigate({ to: "/plany", search: {}, replace: true });
         }
-        const rows = await fetchPlans(user.id);
+        const rows = await syncTrainerPlansFromCloud(user.id);
         if (cancelled) return;
         setPlans(rows);
         if (claimed) setActiveId(claimed);
@@ -276,7 +277,7 @@ function PlansPage() {
     clearTimeout(timers.current[row.id]);
     timers.current[row.id] = setTimeout(() => {
       savePlanData(row.id, data).catch(() => toast.error("Nie zapisano zmian w planie"));
-    }, 600);
+    }, 400);
   };
 
   const flushPlan = async (row: PlanRow, data: Client) => {
