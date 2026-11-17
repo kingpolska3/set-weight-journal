@@ -76,7 +76,6 @@ export const Route = createFileRoute("/narzedzia")({
   component: ToolsPage,
 });
 
-const REST_ENABLED_KEY = "rest-enabled-v1";
 
 function ToolsPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -97,10 +96,7 @@ function ToolsPage() {
     setReceived(loadReceivedPlans());
     setRest(loadRest());
     if (typeof window !== "undefined") {
-      const val = window.localStorage.getItem(REST_ENABLED_KEY);
-      if (val !== null) {
-        setRestEnabled(JSON.parse(val));
-      }
+      setRestEnabled(loadRestEnabled());
     }
     setLoaded(true);
   }, []);
@@ -109,7 +105,9 @@ function ToolsPage() {
     const next = !restEnabled;
     setRestEnabled(next);
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(REST_ENABLED_KEY, JSON.stringify(next));
+      saveRestEnabled(next);
+      touchSettingsLocal();
+      if (user?.id) void flushSync(user.id);
     }
     toast.success(next ? "Włączono timery przerw" : "Wyłączono timery przerw");
   };
@@ -218,6 +216,8 @@ function ToolsPage() {
   const updateRest = (next: RestSettings) => {
     setRest(next);
     saveRest(next);
+    touchSettingsLocal();
+    if (user?.id) void flushSync(user.id);
   };
 
   const exportPDF = () => exportSessionsToPdf(loadSessions(), loadPlan());
