@@ -132,6 +132,36 @@ export async function syncClientSessionsFromCloud(
   return merged.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 }
 
+
+/** Pobiera wszystkie sesje podopiecznych właściciela i scala z localStorage. */
+export async function syncAllClientSessionsFromCloud(
+  userId: string,
+): Promise<ClientSession[]> {
+  const { data, error } = await db
+    .from("trainer_client_sessions")
+    .select("id, plan_id, owner_id, data")
+    .eq("owner_id", userId);
+  if (error) throw error;
+
+  const cloud = ((data ?? []) as CloudRow[]).map(rowToSession);
+  const local = loadAll();
+  const byId = new Map<string, ClientSession>();
+  for (const s of local) byId.set(s.id, s);
+  for (const s of cloud) {
+    const prev = byId.get(s.id);
+    if (!prev) {
+      byId.set(s.id, s);
+      continue;
+    }
+    const pt = prev.updatedAt || prev.date || "";
+    const ct = s.updatedAt || s.date || "";
+    if (ct >= pt) byId.set(s.id, s);
+  }
+  const merged = [...byId.values()];
+  saveAll(merged);
+  return merged;
+}
+
 export async function saveClientSessionWithCloud(
   session: ClientSession,
   userId?: string | null,
