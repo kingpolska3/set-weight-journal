@@ -25,6 +25,7 @@ export type ReceivedPlan = {
 };
 
 const KEY = "received-training-plans-v1";
+const STAMP_KEY = "received-training-plans-updated-v1";
 
 export const WEEKDAY_TO_JS: Record<string, number> = {
   Nd: 0,
@@ -52,8 +53,27 @@ export function saveReceivedPlans(list: ReceivedPlan[]) {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(KEY, JSON.stringify(list));
+    localStorage.setItem(STAMP_KEY, new Date().toISOString());
   } catch {
     /* quota */
+  }
+}
+
+export function getReceivedPlansUpdatedAt(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    return localStorage.getItem(STAMP_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function setReceivedPlansUpdatedAt(iso: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(STAMP_KEY, iso);
+  } catch {
+    /* ignore */
   }
 }
 
