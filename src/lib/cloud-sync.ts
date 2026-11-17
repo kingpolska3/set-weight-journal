@@ -16,7 +16,7 @@ import {
 import { syncTrainerCloud } from "./booking";
 import { syncTrainerPlansFromCloud } from "./trainer-plans";
 import { syncAllClientSessionsFromCloud } from "./client-sessions";
-import { applyTheme, loadTheme, saveTheme, type ThemeSettings } from "./theme";
+import { loadTheme, saveTheme, type ThemeSettings } from "./theme";
 import { loadUiPrefs, mergeUiPrefs, saveUiPrefs, type UiPrefs } from "./ui-prefs";
 import {
   getRestUpdatedAt,
