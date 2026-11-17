@@ -13,6 +13,8 @@ import {
 } from "recharts";
 import { Eye, EyeOff, Search, Star, Swords, Trophy } from "lucide-react";
 import { toast } from "sonner";
+import { loadVsFavorites, saveVsFavorites } from "@/lib/vs-favorites";
+import { flushSync, touchSettingsLocal } from "@/lib/cloud-sync";
 import { AppNav } from "@/components/AppNav";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -59,7 +61,6 @@ const RANGES: { key: RangeKey; label: string }[] = [
   { key: "custom", label: "Własny" },
 ];
 
-const FAV_KEY = "trening-vs-ulubieni-v1";
 
 type Agg = {
   volume: number;
@@ -128,16 +129,6 @@ function isoDaysAgo(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() - days);
   return d.toISOString().slice(0, 10);
-}
-
-function loadFavs(): Profile[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(FAV_KEY);
-    return raw ? (JSON.parse(raw) as Profile[]) : [];
-  } catch {
-    return [];
-  }
 }
 
 function initials(name: string): string {
@@ -230,7 +221,7 @@ function VsPage() {
 
   useEffect(() => {
     setMySessions(loadSessions());
-    setFavs(loadFavs());
+    setFavs(loadVsFavorites() as Profile[]);
   }, []);
 
   const bounds = useMemo<{ from: string | null; to: string | null }>(() => {
@@ -249,7 +240,9 @@ function VsPage() {
     const next = favs.some((f) => f.id === p.id) ? favs.filter((f) => f.id !== p.id) : [p, ...favs].slice(0, 8);
     setFavs(next);
     try {
-      window.localStorage.setItem(FAV_KEY, JSON.stringify(next));
+      saveVsFavorites(next);
+    touchSettingsLocal();
+    if (user?.id) void flushSync(user.id);
     } catch {
       /* quota */
     }
