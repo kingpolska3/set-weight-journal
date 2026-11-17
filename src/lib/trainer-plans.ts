@@ -1,9 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export type PlanSet = {
-  reps: string;       // "8-10", "15", "5 min", "12-15"
-  weight: string;     // kg albo puste
-  warmup?: boolean;   // seria rozgrzewkowa
+  reps: string;
+  weight: string;
+  warmup?: boolean;
   restSec?: number | undefined;
   note?: string;
 };
@@ -12,16 +12,20 @@ export type PlanExercise = {
   id: string;
   name: string;
   sets: PlanSet[];
-  note: string;       // uwagi dla podopiecznego
-  rest?: string;      // przerwa, np. "2,5 minuty", "90s / 2 min"
-  range?: string;     // zakres powtórzeń / czas, np. "8-12", "30-45s"
+  note: string;
+  rest?: string;
+  range?: string;
+  /** aliasy używane w UI */
+  coachNote?: string;
+  coachRest?: string;
+  coachRange?: string;
 };
 
 export type PlanDay = {
   id: string;
   name: string;
   exercises: PlanExercise[];
-  weekday?: string;   // Pon, Wt, …
+  weekday?: string;
 };
 
 export type Client = {
@@ -52,7 +56,6 @@ export type ShareEntry = {
   can_edit: boolean;
 };
 
-// Nowe tabele nie są jeszcze w wygenerowanych typach – luźny klient.
 type Loose = {
   from: (t: string) => any; // eslint-disable-line @typescript-eslint/no-explicit-any
   rpc: (f: string, a?: Record<string, unknown>) => any; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -61,44 +64,154 @@ const db = supabase as unknown as Loose;
 
 export const LOCAL_KEY = "trainer-plans-v1";
 
+function normalizeExercise(ex: PlanExercise): PlanExercise {
+  return {
+    ...ex,
+    note: ex.note || ex.coachNote || "",
+    rest: ex.rest || ex.coachRest || "",
+    range: ex.range || ex.coachRange || "",
+    coachNote: ex.coachNote || ex.note || "",
+    coachRest: ex.coachRest || ex.rest || "",
+    coachRange: ex.coachRange || ex.range || "",
+    sets: (ex.sets || []).map((s) => ({ ...s })),
+  };
+}
+
+function normalizeClient(data: Client): Client {
+  return {
+    ...data,
+    goal: data.goal || data.intake?.goal || "",
+    trainingDays: data.trainingDays || [],
+    intake: data.intake || {},
+    days: (data.days || []).map((d) => ({
+      ...d,
+      exercises: (d.exercises || []).map(normalizeExercise),
+    })),
+  };
+}
+
+/** Publiczna część planu (dni, ćwiczenia) – pełny blob w trainer_plans. */
+function planPayload(data: Client): Client {
+  const n = normalizeClient(data);
+  return {
+    id: n.id,
+    name: n.name,
+    goal: n.goal,
+    days: n.days,
+    trainingDays: n.trainingDays,
+    // intake też w blobie – dzięki temu nic nie ginie, nawet bez private
+    intake: n.intake,
+  };
+}
+
+function privatePayload(data: Client) {
+  const n = normalizeClient(data);
+  return {
+    intake: n.intake ?? {},
+    goal: n.goal ?? "",
+    trainingDays: n.trainingDays ?? [],
+  };
+}
+
 export async function fetchPlans(userId: string): Promise<PlanRow[]> {
-  const [{ data: plans, error }, { data: shares }, { data: privateRows, error: privateError }] =
+  const [{ data: plans, error }, { data: shares }, { data: privateRows }] =
     await Promise.all([
       db.from("trainer_plans").select("id, owner_id, data, link_token, link_access").order("created_at"),
       db.from("plan_shares").select("plan_id, can_edit").eq("user_id", userId),
-      supabase.from("trainer_client_private").select("plan_id,data"),
+      db.from("trainer_client_private").select("plan_id, data"),
     ]);
   if (error) throw error;
-  if (privateError) throw privateError;
+
   const intake = new Map(
-    (privateRows ?? []).map((p) => [p.plan_id, p.data as unknown as Partial<Client>]),
+    (privateRows ?? []).map((p: { plan_id: string; data: Partial<Client> }) => [
+      p.plan_id,
+      p.data as Partial<Client>,
+    ]),
   );
   const sh = new Map<string, boolean>(
     (shares ?? []).map((s: { plan_id: string; can_edit: boolean }) => [s.plan_id, s.can_edit]),
   );
-  return (plans ?? []).map((p: Omit<PlanRow, "access">) => ({
-    ...p,
-    data: p.owner_id === userId ? { ...p.data, ...intake.get(p.id) } : { ...p.data, goal: "" },
-    access: p.owner_id === userId ? "owner" : sh.get(p.id) ? "edit" : "view",
-  }));
+
+  return (plans ?? []).map((p: Omit<PlanRow, "access" | "data"> & { data: Client }) => {
+    const priv = intake.get(p.id);
+    const merged =
+      p.owner_id === userId
+        ? normalizeClient({
+            ...p.data,
+            ...priv,
+            intake: { ...(p.data?.intake || {}), ...(priv?.intake || {}) },
+            goal: priv?.goal || p.data?.goal || "",
+            trainingDays: priv?.trainingDays || p.data?.trainingDays || [],
+          })
+        : normalizeClient({ ...p.data, goal: "", intake: {} });
+    return {
+      ...p,
+      data: merged,
+      access: (p.owner_id === userId
+        ? "owner"
+        : sh.has(p.id)
+          ? sh.get(p.id)
+            ? "edit"
+            : "view"
+          : "view") as Access,
+    };
+  });
 }
 
 export async function createPlan(userId: string, data: Client): Promise<PlanRow> {
+  const payload = planPayload(data);
   const { data: row, error } = await db
     .from("trainer_plans")
-    .insert({ owner_id: userId, data })
+    .insert({ owner_id: userId, data: payload })
     .select("id, owner_id, data, link_token, link_access")
     .single();
   if (error) throw error;
-  return { ...row, data, access: "owner" };
+
+  try {
+    await db.from("trainer_client_private").upsert(
+      {
+        plan_id: row.id,
+        data: privatePayload(data),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "plan_id" },
+    );
+  } catch {
+    /* private opcjonalne */
+  }
+
+  return { ...row, data: normalizeClient(data), access: "owner" };
 }
 
+/** Zapis całego planu: trainer_plans + trainer_client_private (intake / cel). */
 export async function savePlanData(id: string, data: Client) {
-  const { error } = await db.from("trainer_plans").update({ data }).eq("id", id);
+  const payload = planPayload(data);
+  const { error } = await db
+    .from("trainer_plans")
+    .update({ data: payload })
+    .eq("id", id);
   if (error) throw error;
+
+  try {
+    await db.from("trainer_client_private").upsert(
+      {
+        plan_id: id,
+        data: privatePayload(data),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "plan_id" },
+    );
+  } catch {
+    /* brak tabeli / RLS – plan i tak jest w trainer_plans */
+  }
 }
 
 export async function deletePlan(id: string) {
+  try {
+    await db.from("trainer_client_private").delete().eq("plan_id", id);
+  } catch {
+    /* ignore */
+  }
   const { error } = await db.from("trainer_plans").delete().eq("id", id);
   if (error) throw error;
 }
@@ -137,5 +250,13 @@ export async function removeShare(id: string, userId: string) {
 export async function claimLink(token: string): Promise<string | null> {
   const { data, error } = await db.rpc("claim_plan_link", { _token: token });
   if (error) throw error;
-  return (data as string | null) ?? null;
+  return (data as string) || null;
+}
+
+/**
+ * Pełna synchronizacja sekcji planów po zalogowaniu:
+ * zwraca aktualne plany z chmury (owner + udostępnione).
+ */
+export async function syncTrainerPlansFromCloud(userId: string): Promise<PlanRow[]> {
+  return fetchPlans(userId);
 }
