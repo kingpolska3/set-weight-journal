@@ -14,6 +14,8 @@ import {
   type WeekPlan,
 } from "./workout-store";
 import { syncTrainerCloud } from "./booking";
+import { syncTrainerPlansFromCloud } from "./trainer-plans";
+import { syncAllClientSessionsFromCloud } from "./client-sessions";
 import { applyTheme, loadTheme, saveTheme, type ThemeSettings } from "./theme";
 import { loadUiPrefs, mergeUiPrefs, saveUiPrefs, type UiPrefs } from "./ui-prefs";
 
@@ -146,6 +148,16 @@ export async function syncNow(userId: string): Promise<{ pulled: number; pushed:
     await syncTrainerCloud(userId);
   } catch {
     /* rezerwacje – opcjonalne kolumny */
+  }
+  try {
+    await syncTrainerPlansFromCloud(userId);
+  } catch {
+    /* plany trenera */
+  }
+  try {
+    await syncAllClientSessionsFromCloud(userId);
+  } catch {
+    /* sesje podopiecznych */
   }
   setLastSyncAt();
   emit();
