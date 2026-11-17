@@ -1,5 +1,4 @@
 import type { Client, PlanDay, PlanExercise, PlanSet } from "@/lib/trainer-plans";
-import { parseRestToSeconds } from "@/lib/received-plans";
 import { supabase } from "@/integrations/supabase/client";
 import {
   todayISO,
@@ -21,7 +20,22 @@ export type ClientSession = {
   note?: string;
   startedAt?: string; // ISO
   endedAt?: string; // ISO
+  updatedAt?: string; // ISO – sync
 };
+
+
+function parseRestToSeconds(raw?: string): number | undefined {
+  if (!raw?.trim()) return undefined;
+  const s = raw.trim().toLowerCase().replace(",", ".");
+  const colon = s.match(/^(\d+):(\d+)$/);
+  if (colon) return Number(colon[1]) * 60 + Number(colon[2]);
+  const min = s.match(/(\d+(?:\.\d+)?)\s*min/);
+  if (min) return Math.round(parseFloat(min[1]) * 60);
+  const sec = s.match(/(\d+)\s*s(ec)?/);
+  if (sec) return Number(sec[1]);
+  const n = Number(s);
+  return Number.isFinite(n) ? n : undefined;
+}
 
 const KEY = "trainer-client-sessions-v1";
 
