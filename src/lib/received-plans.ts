@@ -295,18 +295,71 @@ function exNoteFromDay(day: PlanDay): string {
   return `Plan: ${day.name}`;
 }
 
+function cloneDays(days: PlanDay[] | undefined): PlanDay[] {
+  return (days ?? []).map((d) => ({
+    id: d.id,
+    name: d.name,
+    weekday: d.weekday,
+    exercises: (d.exercises ?? []).map((ex) => ({
+      id: ex.id,
+      name: ex.name,
+      note: ex.note || ex.coachNote || "",
+      rest: ex.rest || ex.coachRest || "",
+      range: ex.range || ex.coachRange || "",
+      coachNote: ex.coachNote || ex.note || "",
+      coachRest: ex.coachRest || ex.rest || "",
+      coachRange: ex.coachRange || ex.range || "",
+      sets: (ex.sets ?? []).map((s) => ({
+        reps: s.reps ?? "",
+        weight: s.weight ?? "",
+        warmup: Boolean(s.warmup),
+        restSec: s.restSec,
+        note: s.note,
+      })),
+    })),
+  }));
+}
+
 export function clientToReceivedPlan(
   planId: string,
   data: Client,
-  opts?: { token?: string; sourceLabel?: string },
+  opts?: { token?: string; sourceLabel?: string; receivedAt?: string },
 ): ReceivedPlan {
+  const days = cloneDays(data.days);
+  const trainingDays =
+    (data.trainingDays && data.trainingDays.length > 0
+      ? data.trainingDays
+      : days.map((d) => d.weekday || d.name).filter(Boolean)) ?? [];
   return {
     id: planId,
     ...(opts?.token !== undefined ? { token: opts.token } : {}),
     name: data.name || "Plan treningowy",
-    receivedAt: new Date().toISOString(),
-    trainingDays: data.trainingDays ?? data.days.map((d) => d.weekday || "").filter(Boolean),
-    days: data.days ?? [],
+    receivedAt: opts?.receivedAt || new Date().toISOString(),
+    trainingDays,
+    days,
     ...(opts?.sourceLabel !== undefined ? { sourceLabel: opts.sourceLabel } : {}),
   };
 }
+
+/**
+ * Pobiera publikacje od trenerów (plan_shares) i scala do lokalnych „Otrzymanych planów”.
+ */
+export async function pullPublishedPlansFromCloud(userId: string): Promise<ReceivedPlan[]> {
+  const { fetchPublishedPlansForUser } = await import("@/lib/trainer-plans");
+  const published = await fetchPublishedPlansForUser(userId);
+  let list = loadReceivedPlans();
+  for (const p of published) {
+    const incoming = clientToReceivedPlan(p.id, p.data, {
+      sourceLabel: "Aktualizacja od trenera",
+      receivedAt: p.published_at,
+    });
+    const prev = list.find((x) => x.id === p.id);
+    // nadpisz gdy publikacja nowsza lub brak lokalnie
+    if (!prev || (p.published_at && p.published_at >= (prev.receivedAt || ""))) {
+      list = [incoming, ...list.filter((x) => x.id !== p.id)];
+    }
+  }
+  saveReceivedPlans(list);
+  return list;
+}
+
