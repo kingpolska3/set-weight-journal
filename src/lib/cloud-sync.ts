@@ -16,6 +16,7 @@ import {
 import { syncTrainerCloud } from "./booking";
 import { syncTrainerPlansFromCloud } from "./trainer-plans";
 import { syncAllClientSessionsFromCloud } from "./client-sessions";
+import { pullPublishedPlansFromCloud } from "./received-plans";
 import { loadTheme, saveTheme, type ThemeSettings } from "./theme";
 import { loadUiPrefs, mergeUiPrefs, saveUiPrefs, type UiPrefs } from "./ui-prefs";
 import {
@@ -181,6 +182,11 @@ export async function syncNow(userId: string): Promise<{ pulled: number; pushed:
     await syncAllClientSessionsFromCloud(userId);
   } catch {
     /* sesje podopiecznych */
+  }
+  try {
+    await pullPublishedPlansFromCloud(userId);
+  } catch {
+    /* aktualizacje planów od trenerów */
   }
   setLastSyncAt();
   emit();
