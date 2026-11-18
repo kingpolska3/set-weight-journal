@@ -260,3 +260,70 @@ export async function claimLink(token: string): Promise<string | null> {
 export async function syncTrainerPlansFromCloud(userId: string): Promise<PlanRow[]> {
   return fetchPlans(userId);
 }
+
+/**
+ * Zapisuje plan i publikuje snapshot dla podopiecznych (received plans).
+ * Klienci z share / claim pobierają to przez pullPublishedPlansForUser.
+ */
+export async function publishPlanUpdate(id: string, data: Client): Promise<void> {
+  await savePlanData(id, data);
+  const snapshot = planPayload(data);
+  const now = new Date().toISOString();
+  const { error } = await db
+    .from("trainer_plans")
+    .update({
+      data: snapshot,
+      published_data: snapshot,
+      published_at: now,
+    })
+    .eq("id", id);
+  if (error) {
+    // fallback bez kolumn published_*
+    const { error: e2 } = await db.from("trainer_plans").update({ data: snapshot }).eq("id", id);
+    if (e2) throw e2;
+    throw new Error(
+      "Brak kolumn published_data/published_at – uruchom SQL migracji. Plan zapisany, ale publikacja ograniczona.",
+    );
+  }
+}
+
+/** Pobiera opublikowane snapshoty planów udostępnionych zalogowanemu userowi. */
+export async function fetchPublishedPlansForUser(
+  userId: string,
+): Promise<{ id: string; data: Client; published_at: string; owner_id: string }[]> {
+  const { data: shares, error: shErr } = await db
+    .from("plan_shares")
+    .select("plan_id")
+    .eq("user_id", userId);
+  if (shErr) throw shErr;
+  const ids = (shares ?? []).map((s: { plan_id: string }) => s.plan_id);
+  if (!ids.length) return [];
+
+  const { data: plans, error } = await db
+    .from("trainer_plans")
+    .select("id, owner_id, data, published_data, published_at")
+    .in("id", ids);
+  if (error) throw error;
+
+  return (plans ?? [])
+    .map(
+      (p: {
+        id: string;
+        owner_id: string;
+        data: Client;
+        published_data?: Client | null;
+        published_at?: string | null;
+      }) => {
+        const payload = (p.published_data || p.data) as Client;
+        if (!payload) return null;
+        return {
+          id: p.id,
+          owner_id: p.owner_id,
+          data: normalizeClient(payload),
+          published_at: p.published_at || new Date().toISOString(),
+        };
+      },
+    )
+    .filter(Boolean) as { id: string; data: Client; published_at: string; owner_id: string }[];
+}
+
