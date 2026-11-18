@@ -12,6 +12,7 @@ import {
   Pencil,
   Plus,
   Share2,
+  Upload,
   Timer,
   Trash2,
   UserPlus,
@@ -49,6 +50,7 @@ import {
   listShares,
   removeShare,
   savePlanData,
+  publishPlanUpdate,
   setLinkAccess,
   sharePlan,
   type Client,
@@ -475,6 +477,24 @@ function PlansPage() {
                 search: { plan: active.id },
               });
             }}
+            onPublishUpdate={async (data) => {
+              if (!user) {
+                toast.info("Zaloguj się, aby wysłać uaktualnienie podopiecznym");
+                return;
+              }
+              try {
+                await flushPlan(active, data);
+                await publishPlanUpdate(active.id, data);
+                toast.success("Wysłano uaktualnienie planu do podopiecznych");
+              } catch (e) {
+                const msg = e instanceof Error ? e.message : "";
+                if (msg.includes("published_data")) {
+                  toast.error("Uruchom migrację SQL (published_data) – plan zapisany lokalnie w chmurze");
+                } else {
+                  toast.error("Nie udało się wysłać uaktualnienia");
+                }
+              }
+            }}
           />
         ) : null}
         <ExerciseAtlas />
@@ -743,6 +763,7 @@ function ClientEditor({
   onShare,
   onStartDay,
   onStartFree,
+  onPublishUpdate,
 }: {
   row: PlanRow;
   onChange: (c: Client) => void;
@@ -750,6 +771,7 @@ function ClientEditor({
   onShare: () => void;
   onStartDay: (dayId: string, data: Client) => void | Promise<void>;
   onStartFree: (data: Client) => void | Promise<void>;
+  onPublishUpdate?: (data: Client) => void | Promise<void>;
 }) {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -811,12 +833,23 @@ function ClientEditor({
             className="min-w-0 flex-1 bg-transparent text-lg font-semibold text-foreground outline-none"
           />
           {row.access === "owner" ? (
-            <button
-              onClick={onShare}
-              className="inline-flex items-center gap-1 rounded-lg bg-primary/15 px-2.5 py-1.5 text-xs font-medium text-primary"
-            >
-              <Share2 className="h-3.5 w-3.5" /> Udostępnij plan
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => void onPublishUpdate?.(client)}
+                className="inline-flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-xs font-medium text-primary"
+                title="Wyślij aktualną wersję planu do otrzymanych planów podopiecznych"
+              >
+                <Upload className="h-3.5 w-3.5" /> Udostępnij uaktualnienie
+              </button>
+              <button
+                type="button"
+                onClick={onShare}
+                className="inline-flex items-center gap-1 rounded-lg bg-primary/15 px-2.5 py-1.5 text-xs font-medium text-primary"
+              >
+                <Share2 className="h-3.5 w-3.5" /> Udostępnij plan
+              </button>
+            </>
           ) : row.access === "local" ? (
             <button
               onClick={() => toast.info("Zaloguj się w Profilu, aby udostępniać plany")}
