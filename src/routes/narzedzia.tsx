@@ -53,6 +53,7 @@ import {
 import {
   activateReceivedPlan,
   loadReceivedPlans,
+  pullPublishedPlansFromCloud,
   removeReceivedPlan,
   saveAllReceivedDaysAsTemplates,
   saveReceivedDayAsTemplate,
@@ -100,6 +101,12 @@ function ToolsPage() {
     setSessions(loadSessions());
     setReceived(loadReceivedPlans());
     setRest(loadRest());
+    // uaktualnienia od trenerów
+    if (user?.id) {
+      void pullPublishedPlansFromCloud(user.id)
+        .then((list) => setReceived(list))
+        .catch(() => undefined);
+    }
     if (typeof window !== "undefined") {
       setRestEnabled(loadRestEnabled());
     }
