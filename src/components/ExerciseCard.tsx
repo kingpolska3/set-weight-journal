@@ -17,6 +17,10 @@ import {
 } from "lucide-react";
 import { ExerciseChart } from "@/components/ExerciseChart";
 import { RestTimer } from "@/components/RestTimer";
+import {
+  loadRestEnabled,
+  REST_ENABLED_CHANGED,
+} from "@/lib/rest-settings";
 import { ATLAS_NAMES } from "@/lib/exercise-atlas";
 import {
   best1RM,
@@ -51,7 +55,6 @@ type Props = {
 };
 
 const COLLAPSED_KEY = "trening-ex-collapsed-v1";
-const REST_ENABLED_KEY = "rest-enabled-v1"; // Klucz ustawienia przerw
 
 function loadCollapsedIds(date: string): Set<string> {
   if (typeof window === "undefined") return new Set();
@@ -122,7 +125,18 @@ export function ExerciseCard({
   const [nameQuery, setNameQuery] = useState("");
   
   // Stan sprawdzający, czy timery przerw są włączone w localStorage (domyślnie true)
-  const [restEnabled, setRestEnabled] = useState(true);
+  const [restEnabled, setRestEnabled] = useState(() => loadRestEnabled());
+
+  useEffect(() => {
+    const sync = () => setRestEnabled(loadRestEnabled());
+    sync();
+    window.addEventListener(REST_ENABLED_CHANGED, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(REST_ENABLED_CHANGED, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
