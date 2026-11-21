@@ -495,15 +495,19 @@ export function createBookingRequest(input: {
   return { ok: true, booking };
 }
 
-export function confirmBooking(id: string): Booking | null {
+/** Tylko trener rezerwacji może potwierdzić (client-side guard; RLS + trigger pilnuje chmury). */
+export function confirmBooking(id: string, actorId?: string | null): Booking | null {
   const b = loadAllBookings().find((x) => x.id === id);
   if (!b || b.status !== "pending") return null;
+  if (actorId && b.trainerId !== actorId) return null;
   return upsertBooking({ ...b, status: "confirmed" });
 }
 
-export function declineBooking(id: string): Booking | null {
+/** Tylko trener rezerwacji może odrzucić. */
+export function declineBooking(id: string, actorId?: string | null): Booking | null {
   const b = loadAllBookings().find((x) => x.id === id);
   if (!b || b.status !== "pending") return null;
+  if (actorId && b.trainerId !== actorId) return null;
   return upsertBooking({ ...b, status: "declined" });
 }
 
