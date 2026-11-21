@@ -4,6 +4,7 @@ import {
   DEFAULT_REST,
   formatRest,
   loadRest,
+  loadRestEnabled,
   notifyRestOver,
   playSound,
   vibrate,
@@ -74,6 +75,7 @@ export function RestTimer({
 
   useEffect(() => {
     if (!autoSignal) return;
+    if (!loadRestEnabled()) return;
     if (!loadRest().autoStart) return;
     setSettings(loadRest());
     firedRef.current = false;
