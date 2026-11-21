@@ -23,6 +23,7 @@ import {
   normalizeName,
   sessionVolume,
   shortDatePL,
+  todayISO,
   topWeight,
   workingSets,
   type Session,
@@ -259,13 +260,66 @@ function VsPage() {
     }
     const list = ((data as Profile[] | null) ?? []).filter((p) => p.id !== user?.id);
     setResults(list);
-    if (list.length === 0) toast.info("Brak użytkowników o tej nazwie");
-  };
-
-  const pick = useCallback(async (p: Profile) => {
+    if (list.length === 0) toast.info("Brak użytkowników o tej nazwie  const pick = useCallback(async (p: Profile) => {
     setRival(p);
     setShowPlan(false);
     setRivalSessions(null);
+    setRivalShares(false);
+
+    // 1) Agregaty tylko przez RPC (respektuje prywatność w public_stats)
+    const daysParam =
+      range === "30" ? 30 : range === "90" ? 90 : range === "all" ? 3650 : 30;
+    const { data: stats, error: statsErr } = await supabase.rpc("public_stats", {
+      target: p.id,
+      days: daysParam,
+    });
+    if (statsErr) {
+      toast.error("Nie udało się pobrać statystyk rywala");
+      return;
+    }
+    const row = Array.isArray(stats) ? stats[0] : stats;
+    if (!row) {
+      setRivalSessions([]);
+      return;
+    }
+
+    // 2) Pełne dni treningowe – wyłącznie gdy rywal ma share_full
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("share_full")
+      .eq("id", p.id)
+      .maybeSingle();
+    const shareFull = Boolean(prof?.share_full);
+    setRivalShares(shareFull);
+
+    if (!shareFull) {
+      // Syntetyczna sesja tylko do sum (bez szczegółów ćwiczeń)
+      const vol = Number(row.total_volume) || 0;
+      const sess = Number(row.sessions) || 0;
+      const sets = Number(row.total_sets) || 0;
+      const synthetic: Session[] = [];
+      if (sess > 0) {
+        // rozłóż objętość na N „pustych” dni – aggregate policzy sessions/volume/sets
+        for (let i = 0; i < sess; i++) {
+          synthetic.push({
+            date: row.last_date || todayISO(),
+            exercises: [
+              {
+                id: `vs-agg-${i}`,
+                name: "—",
+                sets: Array.from({ length: Math.max(1, Math.round(sets / sess)) }, () => ({
+                  reps: 1,
+                  weight: sets > 0 ? vol / sets : 0,
+                })),
+              },
+            ],
+          } as Session);
+        }
+      }
+      setRivalSessions(synthetic);
+      return;
+    }
+
     const { data: days, error } = await supabase
       .from("workout_days")
       .select("date, data")
@@ -276,14 +330,13 @@ function VsPage() {
       toast.error("Nie udało się pobrać danych rywala");
       return;
     }
-    const rows = days ?? [];
-    setRivalShares(rows.length > 0);
     setRivalSessions(
-      rows.map((row) => {
-        const payload = row.data as unknown as Partial<Session>;
-        return { ...payload, date: row.date, exercises: payload.exercises ?? [] } as Session;
+      (days ?? []).map((r) => {
+        const payload = (r.data || {}) as Session;
+        return { ...payload, date: r.date, exercises: payload.exercises ?? [] } as Session;
       }),
     );
+  }, [range]););
   }, []);
 
   const chartData = useMemo(() => {
