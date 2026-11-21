@@ -140,7 +140,7 @@ export function ExerciseCard({
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const val = window.localStorage.getItem(REST_ENABLED_KEY);
+      const val = window.localStorage.getItem("rest-enabled-v1");
       if (val !== null) {
         setRestEnabled(JSON.parse(val));
       }

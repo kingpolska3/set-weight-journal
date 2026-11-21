@@ -367,7 +367,6 @@ export async function pushPlan(userId: string, plan: WeekPlan) {
     {
       user_id: userId,
       week_plan: plan as unknown as Json,
-      templates: loadTemplates() as unknown as Json,
       updated_at: now,
     },
     { onConflict: "user_id" },

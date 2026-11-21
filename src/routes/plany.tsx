@@ -1221,7 +1221,7 @@ function ClientEditor({
                         ...d.exercises,
                         {
                           id: uid(),
-                          name: "",
+                          name: "", note: "",
                           sets: [{ reps: "10", weight: "", warmup: false }],
                           coachRange: "",
                           coachRest: "",

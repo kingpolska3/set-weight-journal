@@ -133,7 +133,7 @@ export async function fetchPlans(userId: string): Promise<PlanRow[]> {
   );
 
   return (plans ?? []).map((p: Omit<PlanRow, "access" | "data"> & { data: Client }) => {
-    const priv = intake.get(p.id);
+    const priv = intake.get(p.id) as Partial<Client> | undefined;
     const merged =
       p.owner_id === userId
         ? normalizeClient({
