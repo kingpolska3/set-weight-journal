@@ -22,7 +22,6 @@ import {
   REST_ENABLED_CHANGED,
 } from "@/lib/rest-settings";
 import { getCollapsedExerciseIds, setCollapsedExercise } from "@/lib/ui-prefs";
-import { touchUiPrefsLocal } from "@/lib/cloud-sync";
 import { ATLAS_NAMES } from "@/lib/exercise-atlas";
 import {
   best1RM,
@@ -129,7 +128,6 @@ export function ExerciseCard({
   const toggleCollapsed = (next: boolean) => {
     setCollapsed(next);
     setCollapsedExercise(date, exercise.id, next);
-    touchUiPrefsLocal();
   };
 
   const bumpRest = (i: number, s: { reps: number; weight: number }) => {
