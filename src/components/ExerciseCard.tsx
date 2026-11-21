@@ -21,6 +21,8 @@ import {
   loadRestEnabled,
   REST_ENABLED_CHANGED,
 } from "@/lib/rest-settings";
+import { getCollapsedExerciseIds, setCollapsedExercise } from "@/lib/ui-prefs";
+import { touchUiPrefsLocal } from "@/lib/cloud-sync";
 import { ATLAS_NAMES } from "@/lib/exercise-atlas";
 import {
   best1RM,
@@ -54,33 +56,6 @@ type Props = {
   canMoveDown?: boolean;
 };
 
-const COLLAPSED_KEY = "trening-ex-collapsed-v1";
-
-function loadCollapsedIds(date: string): Set<string> {
-  if (typeof window === "undefined") return new Set();
-  try {
-    const raw = window.localStorage.getItem(COLLAPSED_KEY);
-    const all = raw ? (JSON.parse(raw) as Record<string, string[]>) : {};
-    return new Set(all[date] ?? []);
-  } catch {
-    return new Set();
-  }
-}
-
-function persistCollapsed(date: string, exerciseId: string, collapsed: boolean) {
-  if (typeof window === "undefined") return;
-  try {
-    const raw = window.localStorage.getItem(COLLAPSED_KEY);
-    const all = raw ? (JSON.parse(raw) as Record<string, string[]>) : {};
-    const set = new Set(all[date] ?? []);
-    if (collapsed) set.add(exerciseId);
-    else set.delete(exerciseId);
-    all[date] = [...set];
-    window.localStorage.setItem(COLLAPSED_KEY, JSON.stringify(all));
-  } catch {
-    /* quota */
-  }
-}
 
 function pctLabel(v: number) {
   const sign = v > 0 ? "+" : "";
@@ -120,7 +95,7 @@ export function ExerciseCard({
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<number[]>([]);
   const [restSignal, setRestSignal] = useState<Record<number, number>>({});
-  const [collapsed, setCollapsed] = useState(() => loadCollapsedIds(date).has(exercise.id));
+  const [collapsed, setCollapsed] = useState(() => getCollapsedExerciseIds(date).has(exercise.id));
   const [nameOpen, setNameOpen] = useState(false);
   const [nameQuery, setNameQuery] = useState("");
   
@@ -140,7 +115,7 @@ export function ExerciseCard({
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const val = window.localStorage.getItem("rest-enabled-v1");
+      const val = window.localStorage.getItem(REST_ENABLED_KEY);
       if (val !== null) {
         setRestEnabled(JSON.parse(val));
       }
@@ -148,12 +123,13 @@ export function ExerciseCard({
   }, []);
 
   useEffect(() => {
-    setCollapsed(loadCollapsedIds(date).has(exercise.id));
+    setCollapsed(getCollapsedExerciseIds(date).has(exercise.id));
   }, [date, exercise.id]);
 
   const toggleCollapsed = (next: boolean) => {
     setCollapsed(next);
-    persistCollapsed(date, exercise.id, next);
+    setCollapsedExercise(date, exercise.id, next);
+    touchUiPrefsLocal();
   };
 
   const bumpRest = (i: number, s: { reps: number; weight: number }) => {
