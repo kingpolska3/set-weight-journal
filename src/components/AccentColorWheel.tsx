@@ -40,7 +40,7 @@ export function AccentColorWheel({ theme, onChange }: { theme: ThemeSettings; on
 
   return (
     <div className="mt-4 space-y-3">
-      <Button variant="outline" className="w-full justify-between" onClick={() => setOpen(!open)} aria-expanded={open}>
+      <Button variant="outline" className="w-full justify-between hover:bg-secondary hover:text-foreground hover:border-border" onClick={() => setOpen(!open)} aria-expanded={open}>
         <span className="flex items-center gap-2"><span className="h-5 w-5 rounded-full border border-border bg-primary" /> Kolor akcentu</span>
         <span className="text-xs text-muted-foreground">{color}</span>
       </Button>
