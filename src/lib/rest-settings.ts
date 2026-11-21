@@ -37,6 +37,9 @@ const KEY = "trening-przerwa-v1";
 const REST_ENABLED_KEY = "rest-enabled-v1";
 const REST_STAMP_KEY = "trening-przerwa-updated-v1";
 
+/** Event: zmiana globalnego włącznika przerw (ta sama karta / inne urządzenia po sync). */
+export const REST_ENABLED_CHANGED = "rest-enabled-changed";
+
 export function loadRest(): RestSettings {
   if (typeof window === "undefined") return { ...DEFAULT_REST };
   try {
@@ -87,6 +90,7 @@ export function saveRestEnabled(enabled: boolean): void {
   try {
     window.localStorage.setItem(REST_ENABLED_KEY, JSON.stringify(enabled));
     window.localStorage.setItem(REST_STAMP_KEY, new Date().toISOString());
+    window.dispatchEvent(new CustomEvent(REST_ENABLED_CHANGED, { detail: enabled }));
   } catch {
     /* ignore */
   }
