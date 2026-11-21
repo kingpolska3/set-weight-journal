@@ -73,6 +73,30 @@ export type Database = {
         }
         Relationships: []
       }
+      trainer_bookings: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          owner_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          id: string
+          owner_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          owner_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       trainer_client_private: {
         Row: {
           data: Json
@@ -104,6 +128,8 @@ export type Database = {
           link_access: string
           link_token: string
           owner_id: string
+          published_at: string | null
+          published_data: Json | null
           updated_at: string
         }
         Insert: {
@@ -113,6 +139,8 @@ export type Database = {
           link_access?: string
           link_token?: string
           owner_id: string
+          published_at?: string | null
+          published_data?: Json | null
           updated_at?: string
         }
         Update: {
@@ -122,24 +150,50 @@ export type Database = {
           link_access?: string
           link_token?: string
           owner_id?: string
+          published_at?: string | null
+          published_data?: Json | null
           updated_at?: string
         }
         Relationships: []
       }
       user_settings: {
         Row: {
+          received_plans: Json | null
+          rest_enabled: boolean | null
+          rest_settings: Json | null
+          theme: Json | null
+          trainer_availability: Json | null
+          trainer_bookings: Json | null
+          ui_prefs: Json | null
           updated_at: string
           user_id: string
+          vs_favorites: Json | null
           week_plan: Json
         }
         Insert: {
+          received_plans?: Json | null
+          rest_enabled?: boolean | null
+          rest_settings?: Json | null
+          theme?: Json | null
+          trainer_availability?: Json | null
+          trainer_bookings?: Json | null
+          ui_prefs?: Json | null
           updated_at?: string
           user_id: string
+          vs_favorites?: Json | null
           week_plan?: Json
         }
         Update: {
+          received_plans?: Json | null
+          rest_enabled?: boolean | null
+          rest_settings?: Json | null
+          theme?: Json | null
+          trainer_availability?: Json | null
+          trainer_bookings?: Json | null
+          ui_prefs?: Json | null
           updated_at?: string
           user_id?: string
+          vs_favorites?: Json | null
           week_plan?: Json
         }
         Relationships: []
