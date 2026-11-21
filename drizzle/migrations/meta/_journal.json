@@ -22,6 +22,13 @@
       "when": 1791787485690,
       "tag": "0002_enforce_safe_shared_plan_payload",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795247777905,
+      "tag": "0003_invoker_search_and_share_list",
+      "breakpoints": true
     }
   ]
 }

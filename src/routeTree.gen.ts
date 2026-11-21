@@ -14,6 +14,7 @@ import { Route as HistoriaRouteImport } from './routes/historia'
 import { Route as NarzedziaRouteImport } from './routes/narzedzia'
 import { Route as PlanyRouteImport } from './routes/plany'
 import { Route as ProfilRouteImport } from './routes/profil'
+import { Route as RezerwacjeRouteImport } from './routes/rezerwacje'
 import { Route as TreningPodopiecznyRouteImport } from './routes/trening-podopieczny'
 import { Route as VsRouteImport } from './routes/vs'
 import { Route as PlanyTreningRouteImport } from './routes/plany.trening'
@@ -43,6 +44,11 @@ const ProfilRoute = ProfilRouteImport.update({
   path: '/profil',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RezerwacjeRoute = RezerwacjeRouteImport.update({
+  id: '/rezerwacje',
+  path: '/rezerwacje',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TreningPodopiecznyRoute = TreningPodopiecznyRouteImport.update({
   id: '/trening-podopieczny',
   path: '/trening-podopieczny',
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/narzedzia': typeof NarzedziaRoute
   '/plany': typeof PlanyRouteWithChildren
   '/profil': typeof ProfilRoute
+  '/rezerwacje': typeof RezerwacjeRoute
   '/trening-podopieczny': typeof TreningPodopiecznyRoute
   '/vs': typeof VsRoute
   '/plany/trening': typeof PlanyTreningRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByTo {
   '/narzedzia': typeof NarzedziaRoute
   '/plany': typeof PlanyRouteWithChildren
   '/profil': typeof ProfilRoute
+  '/rezerwacje': typeof RezerwacjeRoute
   '/trening-podopieczny': typeof TreningPodopiecznyRoute
   '/vs': typeof VsRoute
   '/plany/trening': typeof PlanyTreningRoute
@@ -86,6 +94,7 @@ export interface FileRoutesById {
   '/narzedzia': typeof NarzedziaRoute
   '/plany': typeof PlanyRouteWithChildren
   '/profil': typeof ProfilRoute
+  '/rezerwacje': typeof RezerwacjeRoute
   '/trening-podopieczny': typeof TreningPodopiecznyRoute
   '/vs': typeof VsRoute
   '/plany/trening': typeof PlanyTreningRoute
@@ -98,6 +107,7 @@ export interface FileRouteTypes {
     | '/narzedzia'
     | '/plany'
     | '/profil'
+    | '/rezerwacje'
     | '/trening-podopieczny'
     | '/vs'
     | '/plany/trening'
@@ -108,6 +118,7 @@ export interface FileRouteTypes {
     | '/narzedzia'
     | '/plany'
     | '/profil'
+    | '/rezerwacje'
     | '/trening-podopieczny'
     | '/vs'
     | '/plany/trening'
@@ -118,6 +129,7 @@ export interface FileRouteTypes {
     | '/narzedzia'
     | '/plany'
     | '/profil'
+    | '/rezerwacje'
     | '/trening-podopieczny'
     | '/vs'
     | '/plany/trening'
@@ -129,6 +141,7 @@ export interface RootRouteChildren {
   NarzedziaRoute: typeof NarzedziaRoute
   PlanyRoute: typeof PlanyRouteWithChildren
   ProfilRoute: typeof ProfilRoute
+  RezerwacjeRoute: typeof RezerwacjeRoute
   TreningPodopiecznyRoute: typeof TreningPodopiecznyRoute
   VsRoute: typeof VsRoute
 }
@@ -168,6 +181,13 @@ declare module '@tanstack/react-router' {
       path: '/profil'
       fullPath: '/profil'
       preLoaderRoute: typeof ProfilRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rezerwacje': {
+      id: '/rezerwacje'
+      path: '/rezerwacje'
+      fullPath: '/rezerwacje'
+      preLoaderRoute: typeof RezerwacjeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/trening-podopieczny': {
@@ -210,6 +230,7 @@ const rootRouteChildren: RootRouteChildren = {
   NarzedziaRoute: NarzedziaRoute,
   PlanyRoute: PlanyRouteWithChildren,
   ProfilRoute: ProfilRoute,
+  RezerwacjeRoute: RezerwacjeRoute,
   TreningPodopiecznyRoute: TreningPodopiecznyRoute,
   VsRoute: VsRoute,
 }
