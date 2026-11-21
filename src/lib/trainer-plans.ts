@@ -133,7 +133,7 @@ export async function fetchPlans(userId: string): Promise<PlanRow[]> {
   );
 
   return (plans ?? []).map((p: Omit<PlanRow, "access" | "data"> & { data: Client }) => {
-    const priv = intake.get(p.id) as Partial<Client> | undefined;
+    const priv = intake.get(p.id);
     const merged =
       p.owner_id === userId
         ? normalizeClient({
@@ -222,6 +222,19 @@ export async function leavePlan(id: string, userId: string) {
 }
 
 export async function setLinkAccess(id: string, access: LinkAccess) {
+  // Wyłączenie linku: rotacja tokena + unieważnienie share z grant_source=link
+  if (access === "none") {
+    const { error } = await db.rpc("revoke_plan_link", { _plan: id });
+    if (error) {
+      // fallback bez RPC
+      const { error: e2 } = await db
+        .from("trainer_plans")
+        .update({ link_access: "none" })
+        .eq("id", id);
+      if (e2) throw e2;
+    }
+    return;
+  }
   const { error } = await db.from("trainer_plans").update({ link_access: access }).eq("id", id);
   if (error) throw error;
 }
