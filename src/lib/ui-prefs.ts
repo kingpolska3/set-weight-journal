@@ -7,6 +7,8 @@ export type UiPrefs = {
   collapsedPlanDays: Record<string, Record<string, boolean>>;
   /** inne panele: klucz -> zwinięty */
   collapsedPanels: Record<string, boolean>;
+  /** data YYYY-MM-DD -> lista id zwiniętych ćwiczeń */
+  collapsedExercises: Record<string, string[]>;
 };
 
 const KEY = "trening-ui-prefs-v1";
@@ -15,13 +17,14 @@ export const DEFAULT_UI_PREFS: UiPrefs = {
   updatedAt: "",
   collapsedPlanDays: {},
   collapsedPanels: {},
+  collapsedExercises: {},
 };
 
 export function loadUiPrefs(): UiPrefs {
-  if (typeof window === "undefined") return { ...DEFAULT_UI_PREFS, collapsedPlanDays: {}, collapsedPanels: {} };
+  if (typeof window === "undefined") return { ...DEFAULT_UI_PREFS, collapsedPlanDays: {}, collapsedPanels: {}, collapsedExercises: {} };
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return { ...DEFAULT_UI_PREFS, collapsedPlanDays: {}, collapsedPanels: {} };
+    if (!raw) return { ...DEFAULT_UI_PREFS, collapsedPlanDays: {}, collapsedPanels: {}, collapsedExercises: {} };
     const p = JSON.parse(raw) as Partial<UiPrefs>;
     return {
       updatedAt: typeof p.updatedAt === "string" ? p.updatedAt : "",
@@ -31,9 +34,13 @@ export function loadUiPrefs(): UiPrefs {
           : {},
       collapsedPanels:
         p.collapsedPanels && typeof p.collapsedPanels === "object" ? p.collapsedPanels : {},
+      collapsedExercises:
+        p.collapsedExercises && typeof p.collapsedExercises === "object"
+          ? p.collapsedExercises
+          : {},
     };
   } catch {
-    return { ...DEFAULT_UI_PREFS, collapsedPlanDays: {}, collapsedPanels: {} };
+    return { ...DEFAULT_UI_PREFS, collapsedPlanDays: {}, collapsedPanels: {}, collapsedExercises: {} };
   }
 }
 
@@ -94,7 +101,30 @@ export function mergeUiPrefs(local: UiPrefs, cloud: UiPrefs | null | undefined):
       updatedAt: cAt,
       collapsedPlanDays: cloud.collapsedPlanDays ?? {},
       collapsedPanels: cloud.collapsedPanels ?? {},
+      collapsedExercises: cloud.collapsedExercises ?? {},
     };
   }
   return local;
+}
+
+
+export function getCollapsedExerciseIds(date: string): Set<string> {
+  const list = loadUiPrefs().collapsedExercises[date] ?? [];
+  return new Set(list);
+}
+
+export function setCollapsedExercise(date: string, exerciseId: string, collapsed: boolean): void {
+  const prefs = loadUiPrefs();
+  const set = new Set(prefs.collapsedExercises[date] ?? []);
+  if (collapsed) set.add(exerciseId);
+  else set.delete(exerciseId);
+  const next: UiPrefs = {
+    ...prefs,
+    updatedAt: new Date().toISOString(),
+    collapsedExercises: {
+      ...prefs.collapsedExercises,
+      [date]: [...set],
+    },
+  };
+  saveUiPrefs(next);
 }
