@@ -29,6 +29,13 @@
       "when": 1795247777905,
       "tag": "0003_invoker_search_and_share_list",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795248886091,
+      "tag": "0004_enforce_training_security",
+      "breakpoints": true
     }
   ]
 }

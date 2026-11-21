@@ -8,7 +8,6 @@ import {
   Copy,
   Eye,
   Flame,
-  KeyRound,
   Pencil,
   Plus,
   Share2,
@@ -23,6 +22,8 @@ import { AppNav } from "@/components/AppNav";
 import { ClientIntake } from "@/components/ClientIntake";
 import { ExerciseAtlas } from "@/components/ExerciseAtlas";
 import { useAuth } from "@/hooks/useAuth";
+import { useTrainerAccess } from "@/hooks/useTrainerAccess";
+import { Button } from "@/components/ui/button";
 import { getCollapsedPlanDays, setCollapsedPlanDay } from "@/lib/ui-prefs";
 import { flushSync, touchUiPrefsLocal } from "@/lib/cloud-sync";
 import { ATLAS_NAMES } from "@/lib/exercise-atlas";
@@ -85,9 +86,6 @@ export const Route = createFileRoute("/plany")({
   component: PlansPage,
 });
 
-const TRAINER_AUTH_KEY = "trainer-auth-unlocked-v1";
-const CORRECT_PIN = "trener personalny";
-
 function setTonnage(s: PlanSet) {
   if (s.warmup) return 0;
   const p = parseRepsOrTime(s.reps);
@@ -97,43 +95,9 @@ function setTonnage(s: PlanSet) {
 
 function PlansPage() {
   const { user, loading } = useAuth();
+  const { isTrainer, checking } = useTrainerAccess(user?.id);
   const { plan: linkToken } = Route.useSearch();
   const navigate = useNavigate();
-
-  const [unlocked, setUnlocked] = useState(false);
-  const [pinInput, setPinInput] = useState("");
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const saved = window.localStorage.getItem(TRAINER_AUTH_KEY);
-      if (saved === "true") {
-        setUnlocked(true);
-      }
-    }
-  }, []);
-
-  const handleUnlock = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (pinInput.trim().toLowerCase() === CORRECT_PIN) {
-      setUnlocked(true);
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(TRAINER_AUTH_KEY, "true");
-      }
-      toast.success("Uzyskano dostęp do strefy trenera");
-    } else {
-      toast.error("Nieprawidłowy kod dostępu");
-    }
-  };
-
-  const handleLogoutTrainer = () => {
-    setUnlocked(false);
-    setPinInput("");
-    if (typeof window !== "undefined") {
-      window.localStorage.removeItem(TRAINER_AUTH_KEY);
-    }
-    toast.info("Wylogowano ze strefy trenera");
-    void navigate({ to: "/narzedzia", search: {}, replace: true });
-  };
 
   const [plans, setPlans] = useState<PlanRow[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -143,7 +107,7 @@ function PlansPage() {
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   useEffect(() => {
-    if (loading || !unlocked) return;
+    if (loading || checking || !user) { setPlans([]); setReady(false); return; }
     let cancelled = false;
     (async () => {
       let local: Client[] = [];
@@ -167,7 +131,7 @@ function PlansPage() {
         return;
       }
       try {
-        if (local.length) {
+        if (isTrainer && local.length) {
           for (const c of local) await createPlan(user.id, c);
           localStorage.removeItem(LOCAL_KEY);
         }
@@ -213,13 +177,9 @@ function PlansPage() {
     return () => {
       cancelled = true;
     };
-  }, [user?.id, loading, unlocked, linkToken, navigate]);
+  }, [user?.id, loading, checking, isTrainer, linkToken, navigate]);
 
-  useEffect(() => {
-    if (ready && !user && unlocked) localStorage.setItem(LOCAL_KEY, JSON.stringify(plans.map((p) => p.data)));
-  }, [plans, ready, user, unlocked]);
-
-  if (!unlocked) {
+  if (loading || checking || !user || (!isTrainer && !plans.length)) {
     return (
       <main className="min-h-screen bg-background pb-24">
         <header className="border-b border-border px-4 pb-5 pt-8">
@@ -236,33 +196,10 @@ function PlansPage() {
         </header>
 
         <section className="mx-auto max-w-md px-4 py-12">
-          <form onSubmit={handleUnlock} className="rounded-2xl border border-border bg-card p-6 space-y-4 shadow-lg">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/15 text-primary mx-auto">
-              <KeyRound className="h-6 w-6" />
-            </div>
-            <div className="text-center">
-              <h2 className="text-base font-semibold text-foreground">Wprowadź kod trenera</h2>
-              <p className="text-xs text-muted-foreground mt-1">
-                Ta sekcja jest zastrzeżona dla trenera personalnego.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <input
-                type="password"
-                value={pinInput}
-                onChange={(e) => setPinInput(e.target.value)}
-                placeholder="Wpisz kod dostępu..."
-                autoFocus
-                className="w-full rounded-xl border border-input bg-secondary px-3 py-2.5 text-sm outline-none focus:border-primary text-center"
-              />
-              <button
-                type="submit"
-                className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground shadow transition-colors hover:bg-primary/90"
-              >
-                Odblokuj dostęp
-              </button>
-            </div>
-          </form>
+          <div className="space-y-4 text-center">
+            <h2 className="font-semibold">{loading || checking || (user && !ready) ? "Sprawdzanie dostępu…" : user ? "Brak uprawnień trenera" : "Zaloguj się na konto trenera"}</h2>
+            {!user && !loading ? <Button asChild><Link to="/profil">Przejdź do Profilu</Link></Button> : null}
+          </div>
         </section>
         <AppNav />
       </main>
@@ -312,6 +249,7 @@ function PlansPage() {
   };
 
   const addClient = async () => {
+    if (!user || !isTrainer) return;
     const name = newName.trim();
     if (!name) return;
     const data: Client = { id: uid(), name, goal: "", days: [] };
@@ -399,12 +337,7 @@ function PlansPage() {
             </div>
             <h1 className="mt-2 text-2xl font-bold text-foreground">Tworzenie planów treningowych</h1>
           </div>
-          <button
-            onClick={handleLogoutTrainer}
-            className="text-xs text-muted-foreground hover:text-foreground border border-border px-2.5 py-1.5 rounded-lg"
-          >
-            Wyloguj jako trener
-          </button>
+          <Button asChild variant="outline" size="sm"><Link to="/profil">Konto</Link></Button>
         </div>
       </header>
       <section className="mx-auto max-w-2xl space-y-4 px-4 py-6">
@@ -417,7 +350,7 @@ function PlansPage() {
             , aby je synchronizować i udostępniać.
           </p>
         ) : null}
-        <div className="flex gap-2">
+        {isTrainer ? <div className="flex gap-2">
           <input
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
@@ -432,7 +365,7 @@ function PlansPage() {
           >
             <UserPlus className="h-4 w-4" /> Dodaj
           </button>
-        </div>
+        </div> : null}
         {ready && plans.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
             Brak podopiecznych. Dodaj pierwszą osobę, aby zacząć tworzyć jej plan.

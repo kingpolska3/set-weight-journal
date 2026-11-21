@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { AppNav } from "@/components/AppNav";
 import { useAuth } from "@/hooks/useAuth";
+import { useTrainerAccess } from "@/hooks/useTrainerAccess";
 import { supabase } from "@/integrations/supabase/client";
 import {
   activeLocations,
@@ -45,14 +46,12 @@ import {
   saveAvailability,
   syncTrainerCloud,
   pushAvailabilityToCloud,
+  pushBookingToCloud,
   uid,
   weekdayPL,
   formatOverrideLabel,
   type DateOverride,
 } from "@/lib/booking";
-
-const TRAINER_AUTH_KEY = "trainer-auth-unlocked-v1";
-const CORRECT_PIN = "trener personalny";
 
 export const Route = createFileRoute("/rezerwacje")({
   head: () => ({
@@ -63,6 +62,10 @@ export const Route = createFileRoute("/rezerwacje")({
         content:
           "Ustal dostępność, rezerwuj terminy treningów personalnych i synchronizuj z kalendarzem.",
       },
+      { property: "og:title", content: "Rezerwacje treningów personalnych" },
+      { property: "og:description", content: "Rezerwuj treningi i zarządzaj dostępnymi terminami trenera." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: BookingsPage,
@@ -80,13 +83,12 @@ const DOW_LABELS: { v: DayOfWeek; l: string }[] = [
 
 function BookingsPage() {
   const { user, loading } = useAuth();
+  const { isTrainer: trainerUnlocked } = useTrainerAccess(user?.id);
   const [tab, setTab] = useState<"book" | "manage" | "mine">("book");
   const [avail, setAvail] = useState<TrainerAvailability | null>(null);
   const [trainerBookings, setTrainerBookings] = useState<Booking[]>([]);
   const [myBookings, setMyBookings] = useState<Booking[]>([]);
   const [trainers, setTrainers] = useState<TrainerAvailability[]>([]);
-  const [trainerUnlocked, setTrainerUnlocked] = useState(false);
-  const [pinInput, setPinInput] = useState("");
   const [displayName, setDisplayName] = useState("");
 
   // client booking flow
@@ -123,11 +125,6 @@ function BookingsPage() {
     setMyBookings(loadBookingsForClient(userId));
     setTrainers(listPublicTrainers());
   };
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    setTrainerUnlocked(window.localStorage.getItem(TRAINER_AUTH_KEY) === "true");
-  }, []);
 
   useEffect(() => {
     if (loading || !user) return;
@@ -207,6 +204,7 @@ function BookingsPage() {
 
   // ——— Trainer: init / save availability ———
   const ensureAvailability = () => {
+    if (!user || !trainerUnlocked) return;
     const name = userName.trim() || "Trener";
     const current = loadAvailability(userId) ?? defaultAvailability(userId, name);
     current.trainerName = name;
@@ -219,7 +217,7 @@ function BookingsPage() {
   };
 
   const patchAvail = (patch: Partial<TrainerAvailability>) => {
-    if (!avail) return;
+    if (!avail || !user || !trainerUnlocked) return;
     const next = {
       ...avail,
       ...patch,
@@ -258,7 +256,7 @@ function BookingsPage() {
   };
 
   // ——— Actions ———
-  const requestSlot = (startMin: number) => {
+  const requestSlot = async (startMin: number) => {
     if (!selectedTrainer || !selectedDate) return;
     if (!user) {
       toast.error("Zaloguj się w Profilu, aby rezerwować terminy");
@@ -277,31 +275,43 @@ function BookingsPage() {
       toast.error(res.error);
       return;
     }
+    try { await pushBookingToCloud(res.booking, user.id); }
+    catch { deleteBooking(res.booking.id); refresh(); toast.error("Nie wysłano rezerwacji. Sprawdź połączenie."); return; }
     toast.success("Wysłano prośbę o rezerwację – czekaj na potwierdzenie trenera");
     setNote("");
     refresh();
     setTab("mine");
   };
 
-  const onConfirm = (id: string) => {
+  const onConfirm = async (id: string) => {
+    if (!user || !trainerUnlocked) return;
     const b = confirmBooking(id);
     if (b) {
+      try { await pushBookingToCloud(b, user.id); }
+      catch { await syncTrainerCloud(user.id); refresh(); toast.error("Nie potwierdzono rezerwacji."); return; }
       toast.success(`Potwierdzono trening z ${b.clientName}`);
       refresh();
     }
   };
 
-  const onDecline = (id: string) => {
+  const onDecline = async (id: string) => {
+    if (!user || !trainerUnlocked) return;
     const b = declineBooking(id);
     if (b) {
+      try { await pushBookingToCloud(b, user.id); }
+      catch { await syncTrainerCloud(user.id); refresh(); toast.error("Nie zapisano zmiany rezerwacji."); return; }
       toast.message(`Odrzucono termin dla ${b.clientName}`);
       refresh();
     }
   };
 
-  const onCancel = (id: string) => {
+  const onCancel = async (id: string) => {
+    if (!user) return;
     if (!confirm("Anulować tę rezerwację?")) return;
-    cancelBooking(id);
+    const b = cancelBooking(id);
+    if (!b) return;
+    try { await pushBookingToCloud(b, user.id); }
+    catch { await syncTrainerCloud(user.id); refresh(); toast.error("Nie anulowano rezerwacji."); return; }
     toast.message("Anulowano rezerwację");
     refresh();
   };
@@ -361,43 +371,6 @@ function BookingsPage() {
             </button>
           ))}
         </div>
-        {!trainerUnlocked ? (
-          <form
-            className="mt-3 rounded-2xl border border-border bg-card p-3 space-y-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (pinInput.trim().toLowerCase() === CORRECT_PIN) {
-                setTrainerUnlocked(true);
-                window.localStorage.setItem(TRAINER_AUTH_KEY, "true");
-                setTab("manage");
-                toast.success("Odblokowano panel trenera");
-                setPinInput("");
-              } else {
-                toast.error("Nieprawidłowy kod trenera");
-              }
-            }}
-          >
-            <p className="text-[11px] text-muted-foreground">
-              Zakładka „Dostępność (trener)” jest tylko dla trenera personalnego. Wpisz kod jak w
-              Dzienniku trenera.
-            </p>
-            <div className="flex gap-2">
-              <input
-                type="password"
-                value={pinInput}
-                onChange={(e) => setPinInput(e.target.value)}
-                placeholder="Kod trenera…"
-                className="min-w-0 flex-1 rounded-xl border border-input bg-secondary px-3 py-2 text-sm outline-none focus:border-primary"
-              />
-              <button
-                type="submit"
-                className="rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
-              >
-                Odblokuj
-              </button>
-            </div>
-          </form>
-        ) : null}
       </div>
 
       <section className="mx-auto max-w-2xl space-y-4 px-4 py-5">

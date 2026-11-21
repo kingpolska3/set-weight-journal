@@ -17,19 +17,25 @@ export type Database = {
       plan_shares: {
         Row: {
           can_edit: boolean
+          claimed_token: string | null
           created_at: string
+          grant_source: string
           plan_id: string
           user_id: string
         }
         Insert: {
           can_edit?: boolean
+          claimed_token?: string | null
           created_at?: string
+          grant_source?: string
           plan_id: string
           user_id: string
         }
         Update: {
           can_edit?: boolean
+          claimed_token?: string | null
           created_at?: string
+          grant_source?: string
           plan_id?: string
           user_id?: string
         }
@@ -156,6 +162,32 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_settings: {
         Row: {
           received_plans: Json | null
@@ -229,6 +261,13 @@ export type Database = {
     Functions: {
       claim_plan_link: { Args: { _token: string }; Returns: string }
       delete_my_account: { Args: never; Returns: undefined }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       list_plan_shares: {
         Args: { _plan: string }
         Returns: {
@@ -266,7 +305,7 @@ export type Database = {
       username_available: { Args: { u: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "trainer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -393,6 +432,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["trainer"],
+    },
   },
 } as const

@@ -12,3 +12,7 @@
 - Store trainee intake in the owner-only trainer_client_private table; trainer_plans.data contains only the shared prescription so recipients cannot fetch health or coach data.
 - Generate training drafts through an owner-authorized server function using Lovable AI, with structured output and explicit trainer approval before replacing prescriptions.
 - Count account streaks across scheduled training dates, ignoring planned rest and the unfinished current day, so legitimate rest does not reset consistency.
+- Enforce trainer capabilities with protected user_roles and database policies, never a shared browser PIN; UI role checks are presentation only.
+- Track direct versus token-derived plan grants and validate the current token/access on every read and write, so revocation and downgrades apply immediately.
+- Treat trainer_bookings as the only booking authority and validate participants and trainer-only status changes in a database trigger; settings copies are not trusted.
+- Keep security dependency overrides at patched compatible major versions until upstream packages adopt them, to prevent transitive vulnerability regressions.

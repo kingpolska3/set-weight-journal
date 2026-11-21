@@ -1,5 +1,8 @@
 # Roadmap
 
+- [ ] Bezpieczeństwo: dostęp trenera, prywatne statystyki, cofanie linków i zatwierdzanie rezerwacji
+- [ ] Bezpieczeństwo: aktualizacja podatnych zależności i testy uprawnień
+
 - [ ] Podopieczni: logiczny układ i zwijanie danych, automatyczne dni treningowe
 - [ ] Prywatność: udostępnianie tylko rozpisanego planu
 - [ ] Generowanie planu z danych podopiecznego i podgląd przed zatwierdzeniem
