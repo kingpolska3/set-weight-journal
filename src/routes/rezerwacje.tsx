@@ -285,7 +285,7 @@ function BookingsPage() {
 
   const onConfirm = async (id: string) => {
     if (!user || !trainerUnlocked) return;
-    const b = confirmBooking(id);
+    const b = confirmBooking(id, user.id);
     if (b) {
       try { await pushBookingToCloud(b, user.id); }
       catch { await syncTrainerCloud(user.id); refresh(); toast.error("Nie potwierdzono rezerwacji."); return; }
@@ -296,7 +296,7 @@ function BookingsPage() {
 
   const onDecline = async (id: string) => {
     if (!user || !trainerUnlocked) return;
-    const b = declineBooking(id);
+    const b = declineBooking(id, user.id);
     if (b) {
       try { await pushBookingToCloud(b, user.id); }
       catch { await syncTrainerCloud(user.id); refresh(); toast.error("Nie zapisano zmiany rezerwacji."); return; }
