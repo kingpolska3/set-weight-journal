@@ -435,7 +435,7 @@ function ProfilePage() {
               <Palette className="h-4 w-4 text-primary" />
               <h2 className="text-sm font-semibold text-foreground">Wygląd aplikacji</h2>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">Motyw i kolor akcentu zapisują się na tym urządzeniu.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Motyw, kolor akcentu i wybory interfejsu synchronizują się między urządzeniami po zalogowaniu.</p>
             <div className="mt-3 grid grid-cols-2 gap-2">
               {(["dark", "light"] as const).map((mode) => (
                 <button
@@ -444,7 +444,7 @@ function ProfilePage() {
                   className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                     theme.mode === mode
                       ? "border-primary bg-primary/10 text-primary"
-                      : "border-border text-foreground hover:border-primary"
+                      : "border-border text-foreground hover:border-border hover:bg-secondary"
                   }`}
                 >
                   {mode === "dark" ? "Ciemny" : "Jasny"}
@@ -452,7 +452,7 @@ function ProfilePage() {
               ))}
             </div>
             <AccentColorWheel theme={theme} onChange={(customColor) => updateTheme({ ...theme, customColor })} />
-            <Button variant="ghost" size="sm" className="mt-2" onClick={() => updateTheme({ ...theme, accent: DEFAULT_THEME.accent, customColor: undefined })}>Przywróć</Button>
+            <Button variant="ghost" size="sm" className="mt-2 hover:bg-secondary hover:text-foreground" onClick={() => updateTheme({ ...theme, accent: DEFAULT_THEME.accent, customColor: undefined })}>Przywróć</Button>
           </div>
 
           {user ? (
