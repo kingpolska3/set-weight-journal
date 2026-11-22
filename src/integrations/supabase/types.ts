@@ -289,6 +289,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      revoke_plan_link: { Args: { _plan: string }; Returns: undefined }
       search_profiles: {
         Args: { q: string }
         Returns: {
