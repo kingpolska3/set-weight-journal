@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Przywrócenie działania strony: błędy kompilacji, zapis rezerwacji i sprawdzenie dziennika
+
 - [ ] Bezpieczeństwo: dostęp trenera, prywatne statystyki, cofanie linków i zatwierdzanie rezerwacji
 - [ ] Bezpieczeństwo: aktualizacja podatnych zależności i testy uprawnień
 

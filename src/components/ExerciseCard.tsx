@@ -113,15 +113,6 @@ export function ExerciseCard({
   }, []);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const val = window.localStorage.getItem(REST_ENABLED_KEY);
-      if (val !== null) {
-        setRestEnabled(JSON.parse(val));
-      }
-    }
-  }, []);
-
-  useEffect(() => {
     setCollapsed(getCollapsedExerciseIds(date).has(exercise.id));
   }, [date, exercise.id]);
 

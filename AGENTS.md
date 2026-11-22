@@ -15,4 +15,6 @@
 - Enforce trainer capabilities with protected user_roles and database policies, never a shared browser PIN; UI role checks are presentation only.
 - Track direct versus token-derived plan grants and validate the current token/access on every read and write, so revocation and downgrades apply immediately.
 - Treat trainer_bookings as the only booking authority and validate participants and trainer-only status changes in a database trigger; settings copies are not trusted.
+- Persist existing bookings with UPDATE without changing owner_id, and new requests with INSERT; check errors and read the accepted record so insert-time approval guards do not block legitimate updates.
+- Redirect the legacy /index URL to / and keep other unknown paths as not-found, so older entry links still open the diary.
 - Keep security dependency overrides at patched compatible major versions until upstream packages adopt them, to prevent transitive vulnerability regressions.

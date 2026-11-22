@@ -122,8 +122,8 @@ export async function fetchPlans(userId: string): Promise<PlanRow[]> {
     ]);
   if (error) throw error;
 
-  const intake = new Map(
-    (privateRows ?? []).map((p: { plan_id: string; data: Partial<Client> }) => [
+  const intake = new Map<string, Partial<Client>>(
+    (privateRows ?? []).map((p: { plan_id: string; data: Partial<Client> }): [string, Partial<Client>] => [
       p.plan_id,
       p.data as Partial<Client>,
     ]),

@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LegacyRouteImport } from './routes/$legacy'
 import { Route as HistoriaRouteImport } from './routes/historia'
 import { Route as NarzedziaRouteImport } from './routes/narzedzia'
 import { Route as PlanyRouteImport } from './routes/plany'
@@ -22,6 +23,11 @@ import { Route as PlanyTreningRouteImport } from './routes/plany.trening'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegacyRoute = LegacyRouteImport.update({
+  id: '/$legacy',
+  path: '/$legacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HistoriaRoute = HistoriaRouteImport.update({
@@ -67,6 +73,7 @@ const PlanyTreningRoute = PlanyTreningRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$legacy': typeof LegacyRoute
   '/historia': typeof HistoriaRoute
   '/narzedzia': typeof NarzedziaRoute
   '/plany': typeof PlanyRouteWithChildren
@@ -78,6 +85,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$legacy': typeof LegacyRoute
   '/historia': typeof HistoriaRoute
   '/narzedzia': typeof NarzedziaRoute
   '/plany': typeof PlanyRouteWithChildren
@@ -90,6 +98,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$legacy': typeof LegacyRoute
   '/historia': typeof HistoriaRoute
   '/narzedzia': typeof NarzedziaRoute
   '/plany': typeof PlanyRouteWithChildren
@@ -103,6 +112,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/$legacy'
     | '/historia'
     | '/narzedzia'
     | '/plany'
@@ -114,6 +124,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/$legacy'
     | '/historia'
     | '/narzedzia'
     | '/plany'
@@ -125,6 +136,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/$legacy'
     | '/historia'
     | '/narzedzia'
     | '/plany'
@@ -137,6 +149,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LegacyRoute: typeof LegacyRoute
   HistoriaRoute: typeof HistoriaRoute
   NarzedziaRoute: typeof NarzedziaRoute
   PlanyRoute: typeof PlanyRouteWithChildren
@@ -153,6 +166,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$legacy': {
+      id: '/$legacy'
+      path: '/$legacy'
+      fullPath: '/$legacy'
+      preLoaderRoute: typeof LegacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/historia': {
@@ -226,6 +246,7 @@ const PlanyRouteWithChildren = PlanyRoute._addFileChildren(PlanyRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LegacyRoute: LegacyRoute,
   HistoriaRoute: HistoriaRoute,
   NarzedziaRoute: NarzedziaRoute,
   PlanyRoute: PlanyRouteWithChildren,
