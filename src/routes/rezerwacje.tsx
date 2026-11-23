@@ -26,6 +26,7 @@ import {
   type WeeklySlot,
   cancelBooking,
   deleteBooking,
+  deleteBookingFromCloud,
   checkAndNotifyReminders,
   confirmBooking,
   createBookingRequest,
@@ -316,6 +317,17 @@ function BookingsPage() {
     refresh();
   };
 
+  const onDeleteBooking = async (id: string) => {
+    if (!confirm("Usunąć ten termin z listy? (tylko odrzucone / anulowane / zakończone)")) return;
+    try {
+      await deleteBookingFromCloud(id, user?.id);
+      toast.message("Usunięto z listy");
+      refresh();
+    } catch {
+      toast.error("Nie udało się usunąć");
+    }
+  };
+
   if (loading) {
     return (
       <main className="min-h-screen bg-background pb-24 px-4 pt-10">
@@ -588,7 +600,7 @@ function BookingsPage() {
                 Nie masz jeszcze rezerwacji. Wybierz trenera w zakładce „Rezerwuj”.
               </p>
             ) : (
-              myBookings.map((b) => <BookingCard key={b.id} b={b} role="client" onCancel={onCancel} />)
+              myBookings.map((b) => <BookingCard key={b.id} b={b} role="client" onCancel={onCancel} onDelete={onDeleteBooking} />)
             )}
             <button
               type="button"
