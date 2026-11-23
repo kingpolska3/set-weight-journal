@@ -952,6 +952,16 @@ export const ATLAS_DATA: Record<string, { groups: AtlasGroup[]; note: string }> 
       "tips": "Utrzymaj łokcie przy ciele i nie ruszaj ramionami; ruch powinien odbywać się wyłącznie w stawach łokciowych, z pełnym wyprostem na dole."
      },
      {
+      "name": "Single-arm cable tricep extension",
+      "desc": "Jednostronna izolacja tricepsa pozwalająca wyrównać dysproporcje siłowe między rękami oraz mocniej zaangażować mięśnie stabilizujące tułów. Ruch od góry lub z boku wyciągu świetnie akcentuje wyprost w stawie łokciowym.",
+      "tips": "Ustaw tułów stabilnie, trzymaj łokieć w stałym punkcie w przestrzeni i nie kompensuj ruchu pochyleniem korpusu ani rotacją barku."
+     },
+     {
+      "name": "Single-arm cable tricep pushdown supported on pole",
+      "desc": "Skuteczna izolacja tricepsa z dodatkowym punktem podparcia, który zwiększa stabilność ciała i pozwala wygenerować większą siłę bez bujania tułowiem. Świetnie sprawdza się do precyzyjnego dopięcia mięśnia na końcu ruchu.",
+      "tips": "Zaprzyj wolną dłoń o słup lub bramę wyciągu, zachowaj lekki opad tułowia i pilnuj, aby pracował wyłącznie staw łokciowy aż do pełnego wyprostu."
+     }
+     {
       "name": "Overhead Cable Extension (prostowanie nad głową)",
       "desc": "Efektywnie angażuje głowę długą tricepsa, zapewniając stałe napięcie mięśnia w pełnym zakresie ruchu. Pomaga w budowaniu masy i rzeźby górnej części tricepsa.",
       "tips": "Utrzymaj ramiona blisko głowy i łokcie skierowane do przodu, prostując ramiona całkowicie, by zmaksymalizować skurcz tricepsa."
