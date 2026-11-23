@@ -94,12 +94,12 @@ export function ExerciseCard({
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<number[]>([]);
   const [restSignal, setRestSignal] = useState<Record<number, number>>({});
-  const [collapsed, setCollapsed] = useState(() => getCollapsedExerciseIds(date).has(exercise.id));
+  const [collapsed, setCollapsed] = useState(false);
   const [nameOpen, setNameOpen] = useState(false);
   const [nameQuery, setNameQuery] = useState("");
   
   // Stan sprawdzający, czy timery przerw są włączone w localStorage (domyślnie true)
-  const [restEnabled, setRestEnabled] = useState(() => loadRestEnabled());
+  const [restEnabled, setRestEnabled] = useState(true);
 
   useEffect(() => {
     const sync = () => setRestEnabled(loadRestEnabled());

@@ -960,7 +960,7 @@ export const ATLAS_DATA: Record<string, { groups: AtlasGroup[]; note: string }> 
       "name": "Single-arm cable tricep pushdown supported on pole",
       "desc": "Skuteczna izolacja tricepsa z dodatkowym punktem podparcia, który zwiększa stabilność ciała i pozwala wygenerować większą siłę bez bujania tułowiem. Świetnie sprawdza się do precyzyjnego dopięcia mięśnia na końcu ruchu.",
       "tips": "Zaprzyj wolną dłoń o słup lub bramę wyciągu, zachowaj lekki opad tułowia i pilnuj, aby pracował wyłącznie staw łokciowy aż do pełnego wyprostu."
-     }
+     },
      {
       "name": "Overhead Cable Extension (prostowanie nad głową)",
       "desc": "Efektywnie angażuje głowę długą tricepsa, zapewniając stałe napięcie mięśnia w pełnym zakresie ruchu. Pomaga w budowaniu masy i rzeźby górnej części tricepsa.",

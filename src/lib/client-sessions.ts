@@ -202,10 +202,10 @@ export async function removeClientSessionWithCloud(
   id: string,
   userId?: string | null,
 ): Promise<void> {
-  removeClientSession(id);
-  if (!userId) return;
+  if (!userId) { removeClientSession(id); return; }
   const { error } = await db.from("trainer_client_sessions").delete().eq("id", id);
   if (error) throw error;
+  removeClientSession(id);
 }
 
 /**

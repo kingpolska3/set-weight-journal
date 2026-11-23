@@ -246,11 +246,9 @@ function CoachWorkoutPage() {
         await saveClientSessionWithCloud(done, user?.id);
       } catch (cloudErr) {
         console.warn("Cloud save failed, saving locally:", cloudErr);
-        const existing = loadClientSessions(done.planId);
-        const updated = [done, ...existing.filter((s) => s.id !== done.id)];
-        if (typeof window !== "undefined") {
-          localStorage.setItem(`client-sessions-${done.planId}`, JSON.stringify(updated));
-        }
+        setSession(done);
+        toast.warning("Trening zapisany na tym urządzeniu, ale nie w chmurze. Możesz ponowić zapis.");
+        return;
       }
 
       toast.success(

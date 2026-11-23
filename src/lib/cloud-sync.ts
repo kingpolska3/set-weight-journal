@@ -215,11 +215,12 @@ async function syncPlanAndTemplates(userId: string) {
     .pop() || "";
   const effectiveLocal = [localUpdated, themeUiStamp].filter(Boolean).sort().pop() || "";
 
-  const { data } = await supabase
+  const { data, error: readError } = await supabase
     .from("user_settings")
     .select("*")
     .eq("user_id", userId)
     .maybeSingle();
+  if (readError) throw readError;
 
   const row = data as {
     week_plan?: WeekPlan | null;
@@ -286,7 +287,6 @@ async function syncPlanAndTemplates(userId: string) {
   const payload: Record<string, unknown> = {
     user_id: userId,
     week_plan: localPlan as unknown as Json,
-    templates: localTemplates as unknown as Json,
     theme: localTheme as unknown as Json,
     ui_prefs: localUi as unknown as Json,
     rest_settings: localRest as unknown as Json,
@@ -306,16 +306,7 @@ async function syncPlanAndTemplates(userId: string) {
   const { error } = await supabase.from("user_settings").upsert(payload as never, {
     onConflict: "user_id",
   });
-  if (error) {
-    await supabase.from("user_settings").upsert(
-      {
-        user_id: userId,
-        week_plan: localPlan as unknown as Json,
-        updated_at: now,
-      },
-      { onConflict: "user_id" },
-    );
-  }
+  if (error) throw error;
   setSettingsUpdatedLocal(now);
   setThemeUpdatedLocal(now);
 }
@@ -371,16 +362,7 @@ export async function pushPlan(userId: string, plan: WeekPlan) {
     },
     { onConflict: "user_id" },
   );
-  if (error) {
-    await supabase.from("user_settings").upsert(
-      {
-        user_id: userId,
-        week_plan: plan as unknown as Json,
-        updated_at: now,
-      },
-      { onConflict: "user_id" },
-    );
-  }
+  if (error) throw error;
   setSettingsUpdatedLocal(now);
 }
 

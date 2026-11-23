@@ -289,7 +289,7 @@ function BookingsPage() {
     const b = confirmBooking(id, user.id);
     if (b) {
       try { await pushBookingToCloud(b, user.id); }
-      catch { await syncTrainerCloud(user.id); refresh(); toast.error("Nie potwierdzono rezerwacji."); return; }
+      catch { refresh(); toast.error("Nie potwierdzono rezerwacji."); return; }
       toast.success(`Potwierdzono trening z ${b.clientName}`);
       refresh();
     }
@@ -300,7 +300,7 @@ function BookingsPage() {
     const b = declineBooking(id, user.id);
     if (b) {
       try { await pushBookingToCloud(b, user.id); }
-      catch { await syncTrainerCloud(user.id); refresh(); toast.error("Nie zapisano zmiany rezerwacji."); return; }
+      catch { refresh(); toast.error("Nie zapisano zmiany rezerwacji."); return; }
       toast.message(`Odrzucono termin dla ${b.clientName}`);
       refresh();
     }
@@ -312,7 +312,7 @@ function BookingsPage() {
     const b = cancelBooking(id);
     if (!b) return;
     try { await pushBookingToCloud(b, user.id); }
-    catch { await syncTrainerCloud(user.id); refresh(); toast.error("Nie anulowano rezerwacji."); return; }
+    catch { refresh(); toast.error("Nie anulowano rezerwacji."); return; }
     toast.message("Anulowano rezerwację");
     refresh();
   };
@@ -320,7 +320,8 @@ function BookingsPage() {
   const onDeleteBooking = async (id: string) => {
     if (!confirm("Usunąć ten termin z listy? (tylko odrzucone / anulowane / zakończone)")) return;
     try {
-      await deleteBookingFromCloud(id, user?.id);
+      const removed = await deleteBookingFromCloud(id, user?.id);
+      if (!removed) { toast.error("Nie znaleziono terminu do usunięcia."); return; }
       toast.message("Usunięto z listy");
       refresh();
     } catch {
@@ -959,11 +960,6 @@ function BookingsPage() {
                           b={b}
                           role="trainer"
                           onCancel={onCancel}
-                          onDelete={(id) => {
-                            deleteBooking(id);
-                            toast.message("Usunięto z listy");
-                            refresh();
-                          }}
                         />
                       ))
                   )}

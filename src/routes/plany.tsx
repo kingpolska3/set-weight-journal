@@ -232,11 +232,7 @@ function PlansPage() {
       } catch { /* ignore */ }
       return;
     }
-    try {
-      await savePlanData(row.id, data);
-    } catch {
-      toast.error("Nie zapisano planu przed startem treningu");
-    }
+    await savePlanData(row.id, data);
   };
 
   const stashStartSnapshot = (planId: string, data: Client, dayId?: string) => {
@@ -409,7 +405,8 @@ function PlansPage() {
             onRemove={() => void removeActive()}
             onShare={() => setShareOpen(true)}
             onStartDay={async (dayId, data) => {
-              await flushPlan(active, data);
+              try { await flushPlan(active, data); }
+              catch { toast.error("Nie zapisano planu przed startem treningu"); return; }
               stashStartSnapshot(active.id, data, dayId);
               void navigate({
                 to: "/trening-podopieczny",
@@ -417,7 +414,8 @@ function PlansPage() {
               });
             }}
             onStartFree={async (data) => {
-              await flushPlan(active, data);
+              try { await flushPlan(active, data); }
+              catch { toast.error("Nie zapisano planu przed startem treningu"); return; }
               stashStartSnapshot(active.id, data);
               void navigate({
                 to: "/trening-podopieczny",

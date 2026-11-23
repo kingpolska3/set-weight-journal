@@ -500,7 +500,7 @@ export function confirmBooking(id: string, actorId?: string | null): Booking | n
   const b = loadAllBookings().find((x) => x.id === id);
   if (!b || b.status !== "pending") return null;
   if (actorId && b.trainerId !== actorId) return null;
-  return upsertBooking({ ...b, status: "confirmed" });
+  return { ...b, status: "confirmed", updatedAt: new Date().toISOString() };
 }
 
 /** Tylko trener rezerwacji może odrzucić. */
@@ -508,7 +508,7 @@ export function declineBooking(id: string, actorId?: string | null): Booking | n
   const b = loadAllBookings().find((x) => x.id === id);
   if (!b || b.status !== "pending") return null;
   if (actorId && b.trainerId !== actorId) return null;
-  return upsertBooking({ ...b, status: "declined" });
+  return { ...b, status: "declined", updatedAt: new Date().toISOString() };
 }
 
 export function deleteBooking(id: string): boolean {
@@ -521,26 +521,18 @@ export function deleteBooking(id: string): boolean {
 
 /** Usuń lokalnie i z chmury (odrzucone / anulowane / zakończone). */
 export async function deleteBookingFromCloud(id: string, userId?: string | null): Promise<boolean> {
-  const ok = deleteBooking(id);
-  if (!ok) return false;
-  if (!userId) return true;
-  try {
-    await db.from("trainer_bookings").delete().eq("id", id);
-  } catch {
-    /* ignore */
+  if (userId) {
+    const { data, error } = await db.from("trainer_bookings").delete().eq("id", id).select("id");
+    if (error) throw error;
+    if (!data?.length) throw new Error("Nie usunięto rezerwacji.");
   }
-  try {
-    await syncTrainerCloud(userId);
-  } catch {
-    /* ignore */
-  }
-  return true;
+  return deleteBooking(id);
 }
 
 export function cancelBooking(id: string): Booking | null {
   const b = loadAllBookings().find((x) => x.id === id);
   if (!b || (b.status !== "pending" && b.status !== "confirmed")) return null;
-  return upsertBooking({ ...b, status: "cancelled" });
+  return { ...b, status: "cancelled", updatedAt: new Date().toISOString() };
 }
 
 // ——— Przypomnienia (dzień przed) ———
@@ -660,6 +652,19 @@ function availStamp(a: TrainerAvailability | null | undefined): string {
   return a?.updatedAt || "";
 }
 
+async function persistBooking(b: Booking, userId: string): Promise<Booking> {
+  const { data: existing, error: readError } = await db.from("trainer_bookings")
+    .select("id").eq("id", b.id).maybeSingle();
+  if (readError) throw readError;
+  const mutation = existing
+    ? db.from("trainer_bookings").update({ data: b }).eq("id", b.id)
+    : db.from("trainer_bookings").insert({ id: b.id, owner_id: userId, data: b });
+  const { data: row, error } = await mutation.select("id, data, updated_at").single();
+  if (error) throw error;
+  if (!row) throw new Error("Nie zapisano rezerwacji.");
+  return { ...row.data, id: row.id, updatedAt: row.updated_at } as Booking;
+}
+
 /**
  * Dwukierunkowy sync dostępności trenera + rezerwacji dla zalogowanego userId.
  * Źródło: user_settings (trainer_availability, trainer_bookings) + opcjonalnie tabela trainer_bookings.
@@ -691,9 +696,6 @@ export async function syncTrainerCloud(userId: string): Promise<{
         settingsRow.trainer_availability as TrainerAvailability,
       );
     }
-    if (Array.isArray(settingsRow?.trainer_bookings)) {
-      cloudBookings = settingsRow.trainer_bookings as Booking[];
-    }
   } catch {
     /* brak kolumn / offline */
   }
@@ -704,7 +706,8 @@ export async function syncTrainerCloud(userId: string): Promise<{
       .from("trainer_bookings")
       .select("id, data, updated_at")
       .or(`data->>trainerId.eq.${userId},data->>clientId.eq.${userId}`);
-    if (!error && data) {
+    if (error) throw error;
+    if (data) {
       for (const r of data as { id: string; data: Booking; updated_at?: string }[]) {
         const b = { ...r.data, id: r.data?.id || r.id };
         if (r.updated_at && (!b.updatedAt || r.updated_at > b.updatedAt)) {
@@ -713,8 +716,8 @@ export async function syncTrainerCloud(userId: string): Promise<{
         cloudBookings.push(b);
       }
     }
-  } catch {
-    /* tabela może nie istnieć */
+  } catch (error) {
+    throw error;
   }
 
   // ——— Availability merge ———
@@ -767,14 +770,8 @@ export async function syncTrainerCloud(userId: string): Promise<{
         updatedAt: mergedAvail.updatedAt || now,
       };
     }
-    // tylko bookingi związane z tym userem
-    payload.trainer_bookings = mergedBookings.filter(
-      (b) => b.trainerId === userId || b.clientId === userId,
-    );
-
     // zachowaj week_plan jeśli jest w wierszu
     if (settingsRow?.week_plan) payload.week_plan = settingsRow.week_plan;
-    if (settingsRow?.templates) payload.templates = settingsRow.templates;
 
     const { error } = await db.from("user_settings").upsert(payload, {
       onConflict: "user_id",
@@ -790,24 +787,26 @@ export async function syncTrainerCloud(userId: string): Promise<{
   // Push poszczególnych bookingów do tabeli (jeśli jest)
   for (const b of mergedBookings) {
     if (b.trainerId !== userId && b.clientId !== userId) continue;
+    const cloud = cloudBookings.find((row) => row.id === b.id);
+    // Do not rewrite unchanged or closed records during background sync.
+    if (cloud && (cloud.updatedAt >= b.updatedAt || ["completed", "declined", "cancelled"].includes(cloud.status))) {
+      map.set(cloud.id, cloud);
+      continue;
+    }
     try {
-      await db.from("trainer_bookings").upsert(
-        {
-          id: b.id,
-          owner_id: userId,
-          data: b,
-          updated_at: b.updatedAt || now,
-        },
-        { onConflict: "id" },
-      );
+      const stored = await persistBooking(b, userId);
+      map.set(stored.id, stored);
     } catch {
-      break; // tabela nie istnieje – nie spamuj
+      if (cloud) map.set(cloud.id, cloud);
+      else map.delete(b.id);
     }
   }
+  const accepted = [...map.values()];
+  saveAllBookings(accepted);
 
   return {
     availability: mergedAvail,
-    bookings: mergedBookings,
+    bookings: accepted,
   };
 }
 
@@ -818,26 +817,8 @@ export async function syncBookingsFromCloud(userId: string): Promise<Booking[]> 
 }
 
 export async function pushBookingToCloud(b: Booking, userId: string): Promise<void> {
-  upsertBooking(b);
-  try {
-    await db.from("trainer_bookings").upsert(
-      {
-        id: b.id,
-        owner_id: userId,
-        data: b,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "id" },
-    );
-  } catch {
-    /* ignore */
-  }
-  // pełny sync dostępności+listy
-  try {
-    await syncTrainerCloud(userId);
-  } catch {
-    /* ignore */
-  }
+  const stored = await persistBooking(b, userId);
+  saveAllBookings([stored, ...loadAllBookings().filter((row) => row.id !== stored.id)]);
 }
 
 /** Po lokalnej zmianie dostępności – wypchnij do chmury. */

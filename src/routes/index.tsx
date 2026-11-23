@@ -76,7 +76,7 @@ function Index() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [date, setDate] = useState<string>(todayISO());
   const [loaded, setLoaded] = useState(false);
-  const [plan, setPlan] = useState<WeekPlan>(() => loadPlan());
+  const [plan, setPlan] = useState<WeekPlan>(() => ({ ...DEFAULT_DAY_PLAN }));
   const [editPlan, setEditPlan] = useState(false);
   const photoRef = useRef<HTMLInputElement>(null);
   const statsRef = useRef<HTMLDivElement>(null);
@@ -653,7 +653,7 @@ function Index() {
                       const next = { ...plan, [d]: e.target.value };
                       setPlan(next);
                       savePlan(next);
-                      if (user) void pushPlan(user.id, next);
+                      if (user) void pushPlan(user.id, next).catch(() => toast.warning("Rozkład zapisany na urządzeniu, ale nie w chmurze."));
                     }}
                     placeholder="np. Klata i plecy"
                     className="w-48 rounded-lg border border-input bg-secondary px-2 py-1 text-right text-sm outline-none focus:border-primary"
@@ -669,7 +669,7 @@ function Index() {
               onClick={() => {
                 setPlan({ ...DEFAULT_DAY_PLAN });
                 savePlan({ ...DEFAULT_DAY_PLAN });
-                if (user) void pushPlan(user.id, { ...DEFAULT_DAY_PLAN });
+                if (user) void pushPlan(user.id, { ...DEFAULT_DAY_PLAN }).catch(() => toast.warning("Rozkład zapisany na urządzeniu, ale nie w chmurze."));
               }}
               className="mt-3 text-xs text-muted-foreground underline hover:text-primary"
             >

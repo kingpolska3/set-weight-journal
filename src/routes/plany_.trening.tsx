@@ -19,7 +19,7 @@ import { daySummary, todayISO, uid, type Exercise, type Session } from "@/lib/wo
 
 type Search = { plan?: string | undefined; day?: string | undefined };
 
-export const Route = createFileRoute("/plany/trening")({
+export const Route = createFileRoute("/plany_/trening")({
   validateSearch: (s: Record<string, unknown>): Search => ({
     plan: typeof s["plan"] === "string" ? s["plan"] : undefined,
     day: typeof s["day"] === "string" ? s["day"] : undefined,
@@ -184,7 +184,7 @@ function CoachWorkoutPage() {
     try {
       const done: ClientSession = {
         ...session,
-        endedAt: new Date().toISOString(),
+        endedAt: session.endedAt || new Date().toISOString(),
         date: session.date || todayISO(),
       };
       await saveClientSessionWithCloud(done, user?.id);
@@ -196,7 +196,7 @@ function CoachWorkoutPage() {
       void navigate({ to: "/plany", search: {} });
     } catch (e) {
       console.error(e);
-      toast.error("Nie udało się zapisać (sprawdź tabelę / RLS w Supabase)");
+      toast.warning("Trening zapisany na tym urządzeniu, ale nie w chmurze. Możesz ponowić zapis.");
     }
     setSaving(false);
   };

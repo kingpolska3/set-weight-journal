@@ -167,18 +167,14 @@ export async function createPlan(userId: string, data: Client): Promise<PlanRow>
     .single();
   if (error) throw error;
 
-  try {
-    await db.from("trainer_client_private").upsert(
+  const { error: privateError } = await db.from("trainer_client_private").upsert(
       {
         plan_id: row.id,
         data: privatePayload(data),
-        updated_at: new Date().toISOString(),
       },
       { onConflict: "plan_id" },
     );
-  } catch {
-    /* private opcjonalne */
-  }
+  if (privateError) throw privateError;
 
   return { ...row, data: normalizeClient(data), access: "owner" };
 }
@@ -186,24 +182,23 @@ export async function createPlan(userId: string, data: Client): Promise<PlanRow>
 /** Zapis całego planu: trainer_plans + trainer_client_private (intake / cel). */
 export async function savePlanData(id: string, data: Client) {
   const payload = planPayload(data);
-  const { error } = await db
+  const { data: saved, error } = await db
     .from("trainer_plans")
     .update({ data: payload })
-    .eq("id", id);
+    .eq("id", id).select("id, owner_id").single();
   if (error) throw error;
-
-  try {
-    await db.from("trainer_client_private").upsert(
+  if (!saved) throw new Error("Nie zapisano planu.");
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError) throw authError;
+  if (saved.owner_id !== authData.user?.id) return;
+  const { error: privateError } = await db.from("trainer_client_private").upsert(
       {
         plan_id: id,
         data: privatePayload(data),
-        updated_at: new Date().toISOString(),
       },
       { onConflict: "plan_id" },
     );
-  } catch {
-    /* brak tabeli / RLS – plan i tak jest w trainer_plans */
-  }
+  if (privateError) throw privateError;
 }
 
 export async function deletePlan(id: string) {
@@ -280,7 +275,7 @@ export async function syncTrainerPlansFromCloud(userId: string): Promise<PlanRow
  */
 export async function publishPlanUpdate(id: string, data: Client): Promise<void> {
   await savePlanData(id, data);
-  const snapshot = planPayload(data);
+  const snapshot = { id: data.id, name: data.name, days: data.days };
   const now = new Date().toISOString();
   const { error } = await db
     .from("trainer_plans")

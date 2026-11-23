@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Latest build failure: verify current compilation and remaining save-flow fixes
+
 - [x] Przywrócenie działania strony: błędy kompilacji, zapis rezerwacji i sprawdzenie dziennika
 
 - [ ] Bezpieczeństwo: dostęp trenera, prywatne statystyki, cofanie linków i zatwierdzanie rezerwacji

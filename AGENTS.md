@@ -18,3 +18,5 @@
 - Persist existing bookings with UPDATE without changing owner_id, and new requests with INSERT; check errors and read the accepted record so insert-time approval guards do not block legitimate updates.
 - Redirect the legacy /index URL to / and keep other unknown paths as not-found, so older entry links still open the diary.
 - Keep security dependency overrides at patched compatible major versions until upstream packages adopt them, to prevent transitive vulnerability regressions.
+- Propagate failed cloud writes instead of reporting success; offline client sessions stay in their canonical local store, and background booking sync never rewrites closed records.
+- Keep the legacy coach workout route un-nested from the plans editor so its own page renders without requiring the editor to act as a layout.

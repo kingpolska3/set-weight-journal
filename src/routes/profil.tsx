@@ -199,7 +199,8 @@ function ProfilePage() {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) { toast.error("Nie udało się wylogować. Spróbuj ponownie."); return; }
     toast.success("Wylogowano");
   };
 

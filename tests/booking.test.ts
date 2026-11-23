@@ -29,7 +29,7 @@ mock.module("@/integrations/supabase/client", () => ({
   } },
 }));
 
-const { pushBookingToCloud } = await import("../src/lib/booking");
+const { pushBookingToCloud, confirmBooking, declineBooking, cancelBooking } = await import("../src/lib/booking");
 const values = new Map<string, string>();
 Object.defineProperty(globalThis, "window", { configurable: true, value: {
   localStorage: { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value) },
@@ -58,5 +58,14 @@ describe("booking persistence", () => {
     rejected = true;
     await expect(pushBookingToCloud(booking, "client-test")).rejects.toThrow("trainer approval required");
     expect(values.get("trainer-bookings-v1")).toBeUndefined();
+  });
+
+  test("approval, rejection and cancellation do not change the local status before cloud acceptance", () => {
+    const pending = { ...booking, status: "pending" };
+    values.set("trainer-bookings-v1", JSON.stringify([pending]));
+    expect(confirmBooking(booking.id, booking.trainerId)?.status).toBe("confirmed");
+    expect(declineBooking(booking.id, booking.trainerId)?.status).toBe("declined");
+    expect(cancelBooking(booking.id)?.status).toBe("cancelled");
+    expect(JSON.parse(values.get("trainer-bookings-v1") ?? "[]")[0].status).toBe("pending");
   });
 });
