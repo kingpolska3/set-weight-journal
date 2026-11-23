@@ -94,7 +94,9 @@ function ToolsPage() {
   const [previewId, setPreviewId] = useState<string | null>(null);
 
   // Stan włącznika timerów przerw z localStorage
-  const [restEnabled, setRestEnabled] = useState(true);
+  const [restEnabled, setRestEnabled] = useState(() =>
+    typeof window !== "undefined" ? loadRestEnabled() : true,
+  );
 
   useEffect(() => {
     setTemplates(loadTemplates());
