@@ -337,7 +337,21 @@ function PlansPage() {
             </div>
             <h1 className="mt-2 text-2xl font-bold text-foreground">Tworzenie planów treningowych</h1>
           </div>
-          <Button asChild variant="outline" size="sm"><Link to="/profil">Konto</Link></Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              try {
+                sessionStorage.removeItem("trainer-workspace-open-v1");
+                localStorage.removeItem("trainer-auth-unlocked-v1");
+              } catch { /* ignore */ }
+              toast.message("Wylogowano z dziennika trenera");
+              void navigate({ to: "/narzedzia" });
+            }}
+          >
+            Wyloguj z konta trenerskiego
+          </Button>
         </div>
       </header>
       <section className="mx-auto max-w-2xl space-y-4 px-4 py-6">
