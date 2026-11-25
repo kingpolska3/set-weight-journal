@@ -275,7 +275,7 @@ function ToolsPage() {
 
       <section className="mx-auto max-w-2xl space-y-6 px-4 py-6">
         <Link
-          to="/plany"
+          to="/trener"
           className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3 text-sm font-semibold text-primary-foreground"
         >
           <ClipboardList className="h-4 w-4" /> Tworzenie planów treningowych
