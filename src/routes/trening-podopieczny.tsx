@@ -256,7 +256,10 @@ function CoachWorkoutPage() {
           ? `Zaktualizowano trening u ${done.clientName}`
           : `Zapisano trening u ${done.clientName}`
       );
-      void navigate({ to: "/plany" });
+      void navigate({
+        to: "/trener",
+        search: { tab: "podopieczni", client: planId },
+      });
     } catch (e) {
       console.error(e);
       toast.error("Nie udało się zapisać");
@@ -277,11 +280,14 @@ function CoachWorkoutPage() {
   if (!planId || !row || !session) {
     return (
       <main className="min-h-screen bg-background pb-24 px-4 pt-10">
-        <Link to="/plany" className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-          <ArrowLeft className="h-3.5 w-3.5" /> Plany
+        <Link
+          to="/trener"
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Panel trenera
         </Link>
         <p className="mt-6 text-sm text-muted-foreground">
-          Brak planu. Wróć do planów i wybierz podopiecznego oraz dzień.
+          Brak planu. Wróć do panelu trenera i wybierz podopiecznego.
         </p>
         <AppNav />
       </main>
@@ -292,8 +298,12 @@ function CoachWorkoutPage() {
     <main className="min-h-screen bg-background pb-28">
       <header className="border-b border-border px-4 pb-4 pt-8">
         <div className="mx-auto max-w-2xl">
-          <Link to="/plany" className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-            <ArrowLeft className="h-3.5 w-3.5" /> Plany
+          <Link
+            to="/trener"
+            search={{ tab: "podopieczni", client: planId }}
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Panel podopiecznego
           </Link>
           <div className="mt-2 flex items-center gap-2 text-primary">
             <Play className="h-4 w-4" />
@@ -365,7 +375,12 @@ function CoachWorkoutPage() {
 
         <button
           type="button"
-          onClick={() => void navigate({ to: "/plany" })}
+          onClick={() =>
+            void navigate({
+              to: "/trener",
+              search: { tab: "podopieczni", client: planId },
+            })
+          }
           className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border py-2.5 text-xs text-muted-foreground"
         >
           <Square className="h-3.5 w-3.5" /> Anuluj bez zapisu
