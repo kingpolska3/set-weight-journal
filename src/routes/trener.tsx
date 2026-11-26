@@ -15,6 +15,7 @@ import {
   Share2,
   Trash2,
   Users,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppNav } from "@/components/AppNav";
@@ -131,6 +132,8 @@ function TrainerPanelPage() {
   const [newName, setNewName] = useState("");
   const [notes, setNotes] = useState<Record<string, string>>(() => loadPrivateNotes());
   const [publishing, setPublishing] = useState<string | null>(null);
+  /** Wybór dnia treningu przed startem sesji z podopiecznym */
+  const [startPickPlanId, setStartPickPlanId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!user) {
@@ -185,6 +188,20 @@ function TrainerPanelPage() {
   const openClient = (id: string) => {
     void navigate({ to: "/trener", search: { tab: "podopieczni", client: id } });
   };
+
+  const openStartPicker = (planId: string) => {
+    setStartPickPlanId(planId);
+  };
+
+  const startWithDay = (planId: string, dayId?: string) => {
+    setStartPickPlanId(null);
+    void navigate({
+      to: "/trening-podopieczny",
+      search: dayId ? { plan: planId, day: dayId } : { plan: planId },
+    });
+  };
+
+  const startPickPlan = plans.find((p) => p.id === startPickPlanId) ?? null;
 
   const closeClient = () => {
     void navigate({ to: "/trener", search: { tab: "podopieczni" } });
@@ -345,12 +362,7 @@ function TrainerPanelPage() {
             }}
             onPublish={() => void publish(active)}
             publishing={publishing === active.id}
-            onStartTraining={() =>
-              void navigate({
-                to: "/trening-podopieczny",
-                search: { plan: active.id },
-              })
-            }
+            onStartTraining={() => openStartPicker(active.id)}
             onOpenFullPlan={() =>
               void navigate({
                 to: "/plany",
@@ -369,9 +381,7 @@ function TrainerPanelPage() {
             setNewName={setNewName}
             onAdd={() => void addClient()}
             onOpen={openClient}
-            onStart={(id) =>
-              void navigate({ to: "/trening-podopieczny", search: { plan: id } })
-            }
+            onStart={(id) => openStartPicker(id)}
             onPublish={(p) => void publish(p)}
             publishing={publishing}
             onOpenPlanEditor={() => void navigate({ to: "/plany", search: { from: "trener" } })}
@@ -384,6 +394,106 @@ function TrainerPanelPage() {
           <UstawieniaTab userId={user.id} onRefresh={() => void refresh()} />
         )}
       </section>
+      {startPickPlan ? (
+        <div
+          className="fixed inset-0 z-40 flex items-end justify-center bg-black/60 p-4 sm:items-center"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Wybierz trening"
+          onClick={() => setStartPickPlanId(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-border bg-card p-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-start justify-between gap-2">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                  Start treningu
+                </p>
+                <h2 className="text-lg font-bold text-foreground">
+                  {startPickPlan.data.name || "Podopieczny"}
+                </h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Wybierz dzień z planu albo wolny trening
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStartPickPlanId(null)}
+                className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                aria-label="Zamknij"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <ul className="space-y-2">
+              {(startPickPlan.data.days ?? [])
+                .filter((d) => (d.exercises ?? []).length > 0)
+                .map((d) => {
+                  const label =
+                    d.weekday?.trim() ||
+                    d.name?.trim() ||
+                    "Trening";
+                  const sub =
+                    d.weekday && d.name && d.weekday.trim() !== d.name.trim()
+                      ? d.name
+                      : `${(d.exercises ?? []).length} ćw.`;
+                  return (
+                    <li key={d.id}>
+                      <button
+                        type="button"
+                        onClick={() => startWithDay(startPickPlan.id, d.id)}
+                        className="flex w-full items-center gap-3 rounded-xl border border-border bg-secondary/40 px-3 py-3 text-left transition-colors hover:border-primary"
+                      >
+                        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                          <Play className="h-4 w-4" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-semibold text-foreground">
+                            Start: {label}
+                          </span>
+                          <span className="block text-[11px] text-muted-foreground">
+                            {sub}
+                          </span>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+
+              <li>
+                <button
+                  type="button"
+                  onClick={() => startWithDay(startPickPlan.id)}
+                  className="flex w-full items-center gap-3 rounded-xl border border-dashed border-border px-3 py-3 text-left transition-colors hover:border-primary"
+                >
+                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-muted-foreground">
+                    <Plus className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-foreground">
+                      Wolny trening
+                    </span>
+                    <span className="block text-[11px] text-muted-foreground">
+                      Pusty dziennik — dodajesz ćwiczenia od zera
+                    </span>
+                  </span>
+                </button>
+              </li>
+            </ul>
+
+            {(startPickPlan.data.days ?? []).filter((d) => (d.exercises ?? []).length > 0)
+              .length === 0 ? (
+              <p className="mt-3 text-center text-[11px] text-muted-foreground">
+                Brak dni z ćwiczeniami w planie. Użyj „Edytuj plan” albo wybierz wolny trening.
+              </p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
       <AppNav />
     </main>
   );
