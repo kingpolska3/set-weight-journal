@@ -3,8 +3,6 @@ import { useEffect, useState } from "react";
 import { ExerciseAtlas } from "@/components/ExerciseAtlas";
 import {
   Check,
-  Calendar,
-  ClipboardList,
   ChevronDown,
   ChevronRight,
   Download,
@@ -274,28 +272,6 @@ function ToolsPage() {
       </header>
 
       <section className="mx-auto max-w-2xl space-y-6 px-4 py-6">
-        <Link
-          to="/trener"
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3 text-sm font-semibold text-primary-foreground"
-        >
-          <ClipboardList className="h-4 w-4" /> Tworzenie planów treningowych
-        </Link>
-
-          <Link
-            to="/rezerwacje"
-            className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 transition-colors hover:border-primary"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
-              <Calendar className="h-5 w-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-sm font-semibold text-foreground">Rezerwacje treningów</h2>
-              <p className="text-xs text-muted-foreground">
-                Dostępność trenera, terminy, potwierdzenia i przypomnienia
-              </p>
-            </div>
-          </Link>
-
         <ExerciseAtlas />
 
         <section className="rounded-2xl border border-border bg-card p-4">
