@@ -384,7 +384,6 @@ function TrainerPanelPage() {
             onStart={(id) => openStartPicker(id)}
             onPublish={(p) => void publish(p)}
             publishing={publishing}
-            onOpenPlanEditor={() => void navigate({ to: "/plany", search: { from: "trener" } })}
           />
         ) : tab === "kalendarz" ? (
           <KalendarzTab bookings={bookings} />
@@ -510,7 +509,6 @@ function PodopieczniTab({
   onStart,
   onPublish,
   publishing,
-  onOpenPlanEditor,
 }: {
   plans: PlanRow[];
   allSessions: ClientSession[];
@@ -522,7 +520,6 @@ function PodopieczniTab({
   onStart: (id: string) => void;
   onPublish: (p: PlanRow) => void;
   publishing: string | null;
-  onOpenPlanEditor: () => void;
 }) {
   return (
     <div className="space-y-4">
@@ -543,14 +540,6 @@ function PodopieczniTab({
           <Plus className="h-4 w-4" /> Dodaj
         </button>
       </div>
-
-      <button
-        type="button"
-        onClick={onOpenPlanEditor}
-        className="w-full rounded-xl border border-dashed border-border px-3 py-2 text-left text-xs text-muted-foreground hover:border-primary hover:text-foreground"
-      >
-        Pełny edytor planów (dni, serie, udostępnianie) →
-      </button>
 
       {plans.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card p-6 text-center">
