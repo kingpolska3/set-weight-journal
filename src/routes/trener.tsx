@@ -7,11 +7,13 @@ import {
   ClipboardList,
   History,
   NotebookPen,
+  Pencil,
   Play,
   Plus,
   RefreshCw,
   Settings2,
   Share2,
+  Trash2,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -31,6 +33,7 @@ import {
   clientSessionAsSession,
   loadAllClientSessions,
   loadClientSessions,
+  removeClientSessionWithCloud,
   syncAllClientSessionsFromCloud,
   type ClientSession,
 } from "@/lib/client-sessions";
@@ -295,7 +298,7 @@ function TrainerPanelPage() {
       </header>
 
       {!active && (
-        <div className="mx-auto max-w-2xl px-4 pt-4">
+        <div className="mx-auto max-w-2xl space-y-3 px-4 pt-4">
           <div className="flex gap-1 rounded-xl border border-border bg-card p-1">
             {TABS.map(({ id, label, icon: Icon }) => (
               <button
@@ -313,6 +316,13 @@ function TrainerPanelPage() {
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            onClick={() => void navigate({ to: "/plany", search: { from: "trener" } })}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-3 text-sm font-semibold text-primary-foreground"
+          >
+            <ClipboardList className="h-4 w-4" /> Tworzenie planów treningowych
+          </button>
         </div>
       )}
 
@@ -342,8 +352,13 @@ function TrainerPanelPage() {
               })
             }
             onOpenFullPlan={() =>
-              void navigate({ to: "/plany", search: { plan: undefined } })
+              void navigate({
+                to: "/plany",
+                search: { planId: active.id, from: "trener" },
+              })
             }
+            userId={user.id}
+            onSessionsChanged={() => void refresh()}
           />
         ) : tab === "podopieczni" ? (
           <PodopieczniTab
@@ -359,7 +374,7 @@ function TrainerPanelPage() {
             }
             onPublish={(p) => void publish(p)}
             publishing={publishing}
-            onOpenPlanEditor={() => void navigate({ to: "/plany" })}
+            onOpenPlanEditor={() => void navigate({ to: "/plany", search: { from: "trener" } })}
           />
         ) : tab === "kalendarz" ? (
           <KalendarzTab bookings={bookings} />
@@ -532,6 +547,8 @@ function ClientDetail({
   publishing,
   onStartTraining,
   onOpenFullPlan,
+  userId,
+  onSessionsChanged,
 }: {
   plan: PlanRow;
   sessions: ClientSession[];
@@ -542,7 +559,11 @@ function ClientDetail({
   publishing: boolean;
   onStartTraining: () => void;
   onOpenFullPlan: () => void;
+  userId: string;
+  onSessionsChanged: () => void;
 }) {
+  const navigate = useNavigate();
+
   const progress = useMemo(() => {
     let volume = 0;
     let sets = 0;
@@ -570,6 +591,17 @@ function ClientDetail({
     .filter((b) => b.status === "pending" || b.status === "confirmed")
     .sort((a, b) => (a.date + a.startMin).localeCompare(b.date + b.startMin))
     .slice(0, 5);
+
+  const deleteSession = async (id: string) => {
+    if (!confirm("Usunąć ten trening z historii? Zmiana zsynchronizuje się w chmurze.")) return;
+    try {
+      await removeClientSessionWithCloud(id, userId);
+      toast.success("Usunięto trening");
+      onSessionsChanged();
+    } catch {
+      toast.error("Nie udało się usunąć treningu");
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -642,20 +674,20 @@ function ClientDetail({
       <section className="rounded-2xl border border-border bg-card p-4">
         <h2 className="text-sm font-semibold text-foreground">Historia treningów</h2>
         <p className="mt-0.5 text-[11px] text-muted-foreground">
-          Sesje z „Trening z podopiecznym”
+          Synchronizowana w chmurze między urządzeniami tego konta. Możesz edytować i usuwać.
         </p>
         {sessions.length === 0 ? (
-          <p className="mt-2 text-xs text-muted-foreground">Brak zapisionych sesji.</p>
+          <p className="mt-2 text-xs text-muted-foreground">Brak zapisanych sesji.</p>
         ) : (
           <ul className="mt-3 space-y-2">
-            {sessions.slice(0, 12).map((s) => {
+            {sessions.slice(0, 30).map((s) => {
               const vol = sessionVolume(clientSessionAsSession(s));
               return (
                 <li
                   key={s.id}
-                  className="flex items-center justify-between rounded-lg border border-border/70 px-3 py-2 text-xs"
+                  className="flex items-center justify-between gap-2 rounded-lg border border-border/70 px-3 py-2 text-xs"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-medium text-foreground">
                       {shortDatePL(s.date)}
                       {s.dayName ? ` · ${s.dayName}` : ""}
@@ -663,6 +695,29 @@ function ClientDetail({
                     <p className="text-muted-foreground">
                       {(s.exercises ?? []).length} ćw. · {Math.round(vol)} kg
                     </p>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <button
+                      type="button"
+                      title="Edytuj trening"
+                      onClick={() =>
+                        void navigate({
+                          to: "/trening-podopieczny",
+                          search: { plan: plan.id, session: s.id },
+                        })
+                      }
+                      className="rounded-lg border border-border p-1.5 text-muted-foreground hover:border-primary hover:text-primary"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Usuń trening"
+                      onClick={() => void deleteSession(s.id)}
+                      className="rounded-lg border border-border p-1.5 text-muted-foreground hover:border-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </li>
               );
@@ -700,7 +755,7 @@ function ClientDetail({
       <section className="rounded-2xl border border-border bg-card p-4">
         <div className="flex items-center gap-2">
           <NotebookPen className="h-4 w-4 text-primary" />
-         <h2 className="text-sm font-semibold text-foreground">Notatki trenera</h2>
+          <h2 className="text-sm font-semibold text-foreground">Notatki trenera</h2>
         </div>
         <p className="mt-0.5 text-[11px] text-muted-foreground">
           Widoczne tylko dla Ciebie — nie trafiają do planu klienta.
