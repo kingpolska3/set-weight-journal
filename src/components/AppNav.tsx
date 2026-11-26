@@ -27,8 +27,8 @@ const clientItems: NavItem[] = [
 
 const trainerItems: NavItem[] = [
   { to: "/historia", label: "Historia", icon: BarChart3 },
-  { to: "/", label: "Trening", icon: Dumbbell, exact: true },
   { to: "/trener", label: "Trener", icon: ClipboardList },
+  { to: "/", label: "Trening", icon: Dumbbell, exact: true },
   { to: "/rezerwacje", label: "Rezerwacje", icon: CalendarDays },
   { to: "/profil", label: "Profil", icon: User },
 ];
