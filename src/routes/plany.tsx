@@ -65,8 +65,11 @@ import {
 import { clientToReceivedPlan, upsertReceivedPlan } from "@/lib/received-plans";
 
 export const Route = createFileRoute("/plany")({
-  validateSearch: (s: Record<string, unknown>): { plan?: string } =>
-    typeof s["plan"] === "string" ? { plan: s["plan"] } : {},
+  validateSearch: (s: Record<string, unknown>): { plan?: string; planId?: string; from?: string } => ({
+    plan: typeof s["plan"] === "string" ? s["plan"] : undefined,
+    planId: typeof s["planId"] === "string" ? s["planId"] : undefined,
+    from: typeof s["from"] === "string" ? s["from"] : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Tworzenie planów treningowych dla podopiecznych" },
@@ -96,7 +99,7 @@ function setTonnage(s: PlanSet) {
 function PlansPage() {
   const { user, loading } = useAuth();
   const { isTrainer, checking } = useTrainerAccess(user?.id);
-  const { plan: linkToken } = Route.useSearch();
+  const { plan: linkToken, planId: openPlanId, from } = Route.useSearch();
   const navigate = useNavigate();
 
   const [plans, setPlans] = useState<PlanRow[]>([]);
@@ -168,6 +171,9 @@ function PlansPage() {
         if (cancelled) return;
         setPlans(rows);
         if (claimed) setActiveId(claimed);
+        else if (openPlanId && rows.some((r) => r.id === openPlanId)) {
+          setActiveId(openPlanId);
+        }
       } catch (e) {
         toast.error("Nie udało się wczytać planów");
         console.error(e);
@@ -177,15 +183,19 @@ function PlansPage() {
     return () => {
       cancelled = true;
     };
-  }, [user?.id, loading, checking, isTrainer, linkToken, navigate]);
+  }, [user?.id, loading, checking, isTrainer, linkToken, openPlanId, navigate]);
 
   if (loading || checking || !user || (!isTrainer && !plans.length)) {
     return (
       <main className="min-h-screen bg-background pb-24">
         <header className="border-b border-border px-4 pb-5 pt-8">
           <div className="mx-auto max-w-2xl">
-            <Link to="/narzedzia" className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-              <ArrowLeft className="h-3.5 w-3.5" /> Narzędzia
+            <Link
+              to={from === "trener" ? "/trener" : "/narzedzia"}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />{" "}
+              {from === "trener" ? "Panel trenera" : "Narzędzia"}
             </Link>
             <div className="mt-2 flex items-center gap-2 text-primary">
               <ClipboardList className="h-5 w-5" />
@@ -324,8 +334,12 @@ function PlansPage() {
       <header className="border-b border-border px-4 pb-5 pt-8">
         <div className="mx-auto max-w-2xl flex items-center justify-between">
           <div>
-            <Link to="/narzedzia" className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-              <ArrowLeft className="h-3.5 w-3.5" /> Narzędzia
+            <Link
+              to={from === "trener" ? "/trener" : "/narzedzia"}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />{" "}
+              {from === "trener" ? "Panel trenera" : "Narzędzia"}
             </Link>
             <div className="mt-2 flex items-center gap-2 text-primary">
               <ClipboardList className="h-5 w-5" />
