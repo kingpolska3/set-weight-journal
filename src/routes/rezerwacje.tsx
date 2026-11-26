@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-  ArrowLeft,
   Bell,
   Calendar,
   CalendarPlus,
@@ -342,10 +341,7 @@ function BookingsPage() {
     <main className="min-h-screen bg-background pb-24">
       <header className="border-b border-border px-4 pb-4 pt-8">
         <div className="mx-auto max-w-2xl">
-          <Link to="/narzedzia" className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-            <ArrowLeft className="h-3.5 w-3.5" /> Narzędzia
-          </Link>
-          <div className="mt-2 flex items-center gap-2 text-primary">
+          <div className="flex items-center gap-2 text-primary">
             <Calendar className="h-5 w-5" />
             <span className="text-xs font-semibold uppercase tracking-[0.2em]">Rezerwacje</span>
           </div>
