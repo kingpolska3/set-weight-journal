@@ -1071,15 +1071,9 @@ function UstawieniaTab({
       </section>
 
       <section className="rounded-2xl border border-border bg-card p-4">
-        <h2 className="text-sm font-semibold text-foreground">Narzędzia</h2>
-        <div className="mt-2 flex flex-col gap-2">
-          <Link to="/narzedzia" className="text-sm text-primary">
-            Narzędzia treningowe (szablony, przerwy) →
-          </Link>
-          <Link to="/plany" className="text-sm text-primary">
-            Klasyczny edytor planów →
-          </Link>
-        </div>
+        <Link to="/narzedzia" className="block text-sm font-semibold text-primary">
+          Narzędzia
+        </Link>
       </section>
 
       <button
